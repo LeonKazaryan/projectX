@@ -1,0 +1,122 @@
+.mtproto-auth {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.auth-step {
+  text-align: center;
+}
+
+.auth-step h3 {
+  color: #0088cc;
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.auth-step p {
+  color: #64748b;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.input-group {
+  margin-bottom: 1.5rem;
+}
+
+.phone-input,
+.code-input,
+.password-input {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  background: #ffffff;
+}
+
+.phone-input:focus,
+.code-input:focus,
+.password-input:focus {
+  outline: none;
+  border-color: #0088cc;
+  box-shadow: 0 0 0 3px rgba(0, 136, 204, 0.1);
+}
+
+.phone-input:disabled,
+.code-input:disabled,
+.password-input:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.code-input {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.5rem;
+}
+
+.auth-button {
+  width: 100%;
+  padding: 1rem;
+  background: #0088cc;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 1rem;
+}
+
+.auth-button:hover:not(:disabled) {
+  background: #0077b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);
+}
+
+.auth-button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.back-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-button:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.back-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .mtproto-auth {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+} 

@@ -1,9 +1,34 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, Link, useNavigate } from "react-router-dom";
 import "./Home.css";
 
 export default function Home() {
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    navigate("/telegram");
+  };
+
+  const handleDemo = () => {
+    // Можно добавить демо или тоже вести на телеграм
+    navigate("/telegram");
+  };
+
   return (
     <div className="home-container">
+      {/* Navigation Header */}
+      <nav className="navigation">
+        <div className="nav-content">
+          <div className="nav-logo">
+            <span className="logo-text">Communication AI</span>
+          </div>
+          <div className="nav-links">
+            <Link to="/telegram" className="nav-link telegram-link">
+              🚀 Try Telegram Client
+            </Link>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Section */}
       <section className="hero">
         <div className="hero-content">
@@ -17,8 +42,12 @@ export default function Home() {
             again.
           </p>
           <div className="hero-buttons">
-            <button className="btn btn-primary">Start Writing Better</button>
-            <button className="btn btn-secondary">See How It Works</button>
+            <button className="btn btn-primary" onClick={handleGetStarted}>
+              Start with Telegram
+            </button>
+            <button className="btn btn-secondary" onClick={handleDemo}>
+              Try Demo
+            </button>
           </div>
         </div>
         <div className="hero-image">
@@ -65,7 +94,7 @@ export default function Home() {
         <div className="features-container">
           <h2 className="section-title">Communicate Like a Pro Everywhere</h2>
           <div className="features-grid">
-            <div className="feature-card telegram">
+            <div className="feature-card telegram" onClick={handleGetStarted}>
               <div className="feature-icon">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-.38.24-1.27.84-.12.08-.64.42-1.67.85-.22.06-.37.04-.51-.05-.32-.2-.72-.32-1.17-.42-.56-.12-.37-.24-.37-.24s.93-.3 1.81-.62c1.55-.57 3.1-1.2 4.11-1.55.17-.06.28-.05.37.05.08.09.05.24-.01.28z" />
@@ -77,6 +106,9 @@ export default function Home() {
                 private messages. Analyze tone and improve your Telegram
                 communication.
               </p>
+              <div className="feature-cta">
+                <span className="cta-text">Try Now →</span>
+              </div>
             </div>
 
             <div className="feature-card whatsapp">
@@ -91,6 +123,9 @@ export default function Home() {
                 Real-time analysis helps you maintain the right tone for every
                 contact.
               </p>
+              <div className="feature-cta coming-soon">
+                <span className="cta-text">Coming Soon</span>
+              </div>
             </div>
 
             <div className="feature-card instagram">
@@ -104,6 +139,9 @@ export default function Home() {
                 Engage authentically with followers and respond to DMs like a
                 social media pro. Get suggestions that match your brand voice.
               </p>
+              <div className="feature-cta coming-soon">
+                <span className="cta-text">Coming Soon</span>
+              </div>
             </div>
           </div>
         </div>
@@ -151,10 +189,15 @@ export default function Home() {
             skills and built better relationships through smarter communication.
           </p>
           <div className="cta-buttons">
-            <button className="btn btn-primary btn-large">
-              Try It Free Now
+            <button
+              className="btn btn-primary btn-large"
+              onClick={handleGetStarted}
+            >
+              Try Telegram Client Now
             </button>
-            <button className="btn btn-outline btn-large">Watch Demo</button>
+            <button className="btn btn-outline btn-large" onClick={handleDemo}>
+              Watch Demo
+            </button>
           </div>
         </div>
       </section>

@@ -1,0 +1,650 @@
+.telegram-client {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background: #f8fafc;
+}
+
+/* Authentication Styles */
+.auth-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}
+
+.auth-options {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.auth-header h1 {
+  color: #1e293b;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.auth-header p {
+  color: #64748b;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.error-message {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 1rem;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  border: 1px solid #fecaca;
+}
+
+.error-message button {
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.auth-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.auth-method {
+  padding: 2rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.auth-method:hover {
+  border-color: #0088cc;
+  box-shadow: 0 4px 12px rgba(0, 136, 204, 0.1);
+}
+
+.auth-method h3 {
+  color: #1e293b;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.auth-method p {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.auth-method small {
+  color: #94a3b8;
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  display: block;
+}
+
+.telegram-widget {
+  margin: 1rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.mtproto-button {
+  background: #0088cc;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 1rem;
+}
+
+.mtproto-button:hover {
+  background: #0077b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);
+}
+
+.auth-divider {
+  position: relative;
+  text-align: center;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.auth-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e2e8f0;
+  z-index: 1;
+}
+
+.auth-divider span {
+  background: white;
+  padding: 0 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.mtproto-auth-container {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.back-to-options {
+  background: none;
+  border: none;
+  color: #0088cc;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  margin-bottom: 2rem;
+  transition: color 0.2s ease;
+}
+
+.back-to-options:hover {
+  color: #0077b3;
+}
+
+/* Main Interface Styles */
+.telegram-interface {
+  display: flex;
+  height: 100vh;
+  position: relative;
+}
+
+.widget-auth-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+}
+
+.user-info {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+}
+
+.user-info h2 {
+  color: #1e293b;
+  margin-bottom: 1rem;
+}
+
+.user-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin: 1rem auto;
+  display: block;
+  border: 3px solid #0088cc;
+}
+
+.user-info p {
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.upgrade-auth-button {
+  background: #0088cc;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upgrade-auth-button:hover {
+  background: #0077b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);
+}
+
+.user-menu {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
+}
+
+.logout-button {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-button:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .auth-container {
+    padding: 1rem;
+  }
+  
+  .auth-options,
+  .mtproto-auth-container {
+    padding: 2rem 1.5rem;
+    margin: 0 0.5rem;
+  }
+  
+  .auth-methods {
+    gap: 1.5rem;
+  }
+  
+  .auth-method {
+    padding: 1.5rem;
+  }
+  
+  .telegram-interface {
+    flex-direction: column;
+  }
+  
+  .user-info {
+    margin: 1rem;
+    padding: 2rem;
+  }
+  
+  .user-menu {
+    position: static;
+    padding: 1rem;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .auth-header p {
+    font-size: 1rem;
+  }
+  
+  .auth-method h3 {
+    font-size: 1.1rem;
+  }
+  
+  .mtproto-button,
+  .upgrade-auth-button {
+    padding: 0.875rem 1.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Navigation Buttons */
+.back-to-home {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e1e5e9;
+  border-radius: 25px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #54656f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+}
+
+.back-to-home:hover {
+  background: white;
+  color: #0088cc;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.home-button {
+  background: #0088cc;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.home-button:hover {
+  background: #0077b3;
+  transform: translateY(-1px);
+}
+
+.back-to-options {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e1e5e9;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  color: #54656f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 20px;
+  align-self: flex-start;
+}
+
+.back-to-options:hover {
+  background: white;
+  color: #0088cc;
+}
+
+/* Auth Container */
+.auth-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+}
+
+.auth-options {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  width: 100%;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.auth-header h1 {
+  color: #1e293b;
+  margin-bottom: 10px;
+  font-size: 2rem;
+}
+
+.auth-header p {
+  color: #64748b;
+  font-size: 1rem;
+}
+
+.auth-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.auth-method {
+  text-align: center;
+  padding: 20px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.auth-method:hover {
+  border-color: #0088cc;
+  background: #f8fafc;
+}
+
+.auth-method h3 {
+  color: #1e293b;
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+}
+
+.auth-method p {
+  color: #64748b;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.auth-method small {
+  display: block;
+  margin-top: 10px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.auth-divider span {
+  padding: 0 15px;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.mtproto-button {
+  background: #0088cc;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.mtproto-button:hover {
+  background: #0077b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 136, 204, 0.3);
+}
+
+.mtproto-auth-container {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.error-message button {
+  background: none;
+  border: none;
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  margin-left: 10px;
+}
+
+.widget-auth-info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  background: white;
+}
+
+.user-info {
+  text-align: center;
+  padding: 40px;
+  max-width: 500px;
+}
+
+.user-info h2 {
+  color: #1e293b;
+  margin-bottom: 20px;
+  font-size: 1.8rem;
+}
+
+.user-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin: 20px 0;
+  object-fit: cover;
+}
+
+.user-info p {
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 30px;
+  font-size: 1rem;
+}
+
+.upgrade-auth-button {
+  background: #0088cc;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 15px 30px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upgrade-auth-button:hover {
+  background: #0077b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 136, 204, 0.3);
+}
+
+.user-menu {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+  z-index: 1000;
+}
+
+.logout-button {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-button:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .telegram-interface {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  
+  .auth-container {
+    padding: 20px 15px;
+  }
+  
+  .auth-options {
+    padding: 30px 20px;
+    margin: 0 10px;
+  }
+  
+  .mtproto-auth-container {
+    padding: 30px 20px;
+    margin: 0 10px;
+  }
+  
+  .user-menu {
+    position: relative;
+    top: auto;
+    right: auto;
+    justify-content: center;
+    margin: 20px 0;
+  }
+  
+  .back-to-home {
+    position: relative;
+    top: auto;
+    left: auto;
+    margin-bottom: 20px;
+  }
+} 
