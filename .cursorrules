@@ -52,7 +52,7 @@ Stick to these, and we'll build something awesome without creating a fucking mes
 
 ## Updating README.md in the root directory
 
-- Keep writing the changes we have done very shortly under the version number, just to keep the update and version list актуальным, do not commit to github anything, user will do that himself. Do no delete the data in this file about the old versions
+- Keep writing the changes we have done very shortly under the version number, just to keep the update and version list актуальным. Do not write every single small code change, just write what is the new, like for the users, not for the programmers.Do not commit to github anything, user will do that himself. Do no delete the data in this file about the old versions
 
 ## About .env
 
