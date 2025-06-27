@@ -1,0 +1,63 @@
+# Project Short discription
+
+We are building a modern AI smart messager client for several messangers, currently for telegram.
+
+# Design
+
+We are using ShadCN UI for modern, beautiful, simple and user-friendly deisgn.
+Do not hesitate to import any components from the external library ShadCN,
+if you need so, you can write CSS code as well, but mainly keep project beautiful
+and organized
+
+# Project Rules
+
+Yo, listen up. Here are the rules for this project. Stick to 'em and we'll be golden.
+
+## General Principles
+
+- **Keep Shit Organized:** A clean project is a happy project. We're talking clear structure for files and folders. Don't just dump files anywhere.
+- **Freedom to Create:** If you need a new file or folder to keep things tidy, just fucking do it. Don't hesitate. More files are better than one giant messy one.
+- **Modern Tech Only:** We're using the latest and greatest. Use modern features from Python, TypeScript, React, and whatever else we're using. No old-school bullshit.
+- **Clear Separation of Concerns:** This is a big one.
+  - **Backend Code:** All Python and backend-related logic lives in the `back/` directory.
+  - **Frontend Code:** All TypeScript, React, and UI stuff goes in the `front/` directory.
+
+## Backend (`back/`)
+
+- **API Endpoints:** New API routes go in the `back/api/` folder. Create new files for different resources (e.g., `users.py`, `products.py`).
+- **Main Entrypoint (`main.py`):** Keep `main.py` clean as a whistle. It's just for starting the FastAPI app and hooking up the API routers from `back/api/`. No business logic here.
+- **Database Models:** Define all Pydantic or ORM models in the `back/models/` directory.
+- **Authentication:** All things related to logging in, signing up, and tokens go in `back/auth/`.
+- **Telegram Integration:** Anything related to the Telegram API lives in `back/telegram/`.
+- **Utilities:** Reusable helper functions and utilities for the backend go into `back/utils/`.
+
+## Frontend (`front/`)
+
+- **Components:** All React components are in `front/components/`.
+- **Component Structure:** Organize components by feature. For example, if you're working on a chat feature, create a `front/components/chat/` directory.
+  - Each component should have its own folder containing the `.tsx` file and its corresponding `.css` file (e.g., `front/components/chat/Chat.tsx`, `front/components/chat/Chat.css`).
+- **State Management:** For global state, use the `front/components/store/` directory. Looks like we might use something like Zustand or Redux here.
+- **UI Helpers:** Small, reusable UI components can go into `front/components/ui/`.
+- **Frontend Utilities:** Reusable helper functions for the frontend go into `front/components/utils/`.
+- **API Client:** Logic for talking to our backend API should be centralized, maybe in something like `front/components/TelegramClient.tsx` or a dedicated API client file.
+
+## Code Style
+
+- **Readability is King:** Write code that's easy to read. Another developer (or your future self) should be able to understand it without wanting to gouge their eyes out.
+- **Don't Over-comment:** Comment complex parts, but don't state the obvious. Good code should be self-documenting for the most part.
+- **Keep it DRY:** Don't Repeat Yourself. If you're copying and pasting code, you're probably doing it wrong. Turn it into a reusable function or component.
+- **Linter is Law:** Pay attention to the linter. It's there to help us not write shitty code.
+
+Stick to these, and we'll build something awesome without creating a fucking mess. I'll make sure to follow these rules to save your ass from a world of pain.
+
+## Updating README.md in the root directory
+
+- Keep writing the changes we have done very shortly under the version number, just to keep the update and version list актуальным, do not commit to github anything, user will do that himself. Do no delete the data in this file about the old versions
+
+## About .env
+
+- There is a envcopty.txt, you can freely check it, I trust you. It is the exact copy of .env with all real keys, you can modify it if needed, I will then manually update the actual .env file
+
+## Other sources
+
+- If you need user to interact with docker application or any other application that you do not have straight accsess to, then ask user to do so.

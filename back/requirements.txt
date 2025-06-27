@@ -1,0 +1,20 @@
+telethon==1.32.1
+fastapi==0.108.0
+uvicorn[standard]==0.25.0
+python-multipart==0.0.6
+aiofiles==23.2.1
+python-dotenv==1.0.0
+pydantic==2.9.0
+httpx==0.25.2
+websockets==12.0
+openai>=1.0.0
+# RAG and AI dependencies
+langchain>=0.1.0
+langchain-openai>=0.0.5
+qdrant-client>=1.7.0
+# Vector database and embeddings
+sentence-transformers>=2.2.0
+tiktoken>=0.5.0
+# Additional AI tools
+transformers>=4.30.0
+numpy>=2.1.0 
