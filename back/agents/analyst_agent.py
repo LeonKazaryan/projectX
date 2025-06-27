@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any, List
 from .base import Agent
 from .agent_prompts import ANALYST_AGENT_PROMPT
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -26,15 +27,18 @@ class AnalystAgent(Agent):
         try:
             # Call the LLM to get the persona profile
             response = await self.llm_client.chat.completions.create(
-                model="gpt-4-turbo",  # Or any other suitable model
+                model="gpt-4-turbo",
                 messages=[
                     {"role": "system", "content": ANALYST_AGENT_PROMPT},
                     {"role": "user", "content": f"Here is the message history:\n\n{formatted_history}"}
-                ]
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.0
             )
             
-            persona_profile = response.choices[0].message.content
-            logger.info(f"AnalystAgent: Successfully generated persona profile.")
+            # The response is now a JSON object
+            persona_profile = json.loads(response.choices[0].message.content)
+            logger.info(f"AnalystAgent: Successfully generated persona profile (JSON).")
             state['persona_profile'] = persona_profile
 
         except Exception as e:

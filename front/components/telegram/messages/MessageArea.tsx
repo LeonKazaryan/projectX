@@ -20,6 +20,7 @@ import {
   Trash2,
   RefreshCw,
 } from "lucide-react";
+import { RAGService } from "../utils/ragService";
 
 interface Message {
   id: number;
@@ -137,7 +138,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({
               }
 
               aiSuggestionTimeoutRef.current = setTimeout(() => {
-                getManualAISuggestion();
+                regenerateAISuggestion();
               }, aiSettings.suggestion_delay * 1000);
             }
           }
@@ -187,58 +188,49 @@ const MessageArea: React.FC<MessageAreaProps> = ({
     setConnectionStatus("disconnected");
   }, []);
 
-  const getManualAISuggestion = useCallback(async () => {
-    if (!sessionId || !chatId || !userId) {
-      return;
-    }
+  const regenerateAISuggestion = useCallback(async () => {
+    if (aiSuggestionLoading) return;
+    setAiSuggestionLoading(true);
+    setAiSuggestion("");
+
+    const historyForAgent = messages.slice(-15);
+    const lastContactMessage = [...historyForAgent]
+      .filter((m) => !m.is_outgoing)
+      .pop();
+    const query = lastContactMessage?.text || "Что ответить?";
 
     try {
-      setAiSuggestionLoading(true);
-      setShowAiSuggestion(false);
-      setRagEnhanced(false);
-      setSimilarContext([]);
-
-      // Use our new multi-agent system if RAG is enabled
-      if (ragEnabled) {
-        try {
-          // Use the new agent-based response system
-          const agentResponse = await ragService.getAgentResponse(
-            sessionId,
-            chatId,
-            newMessage || "Что ответить?", // Use current message or default query
-            messages.slice(-20) // Pass last 20 messages for context
-          );
-
-          if (agentResponse && agentResponse.suggestion) {
-            setAiSuggestion(agentResponse.suggestion);
-            setRagEnhanced(agentResponse.rag_enhanced);
-            setSimilarContext(agentResponse.similar_context || []);
-            setShowAiSuggestion(true);
-            setHasSuggestion(true);
-            setSuggestionDismissed(false);
-            console.log("Multi-agent response:", agentResponse);
-            return;
-          }
-        } catch (agentError) {
-          console.error("Failed to get agent response:", agentError);
-          setError("Ошибка получения AI-ответа от агентов.");
-          // Do not fall back, just fail gracefully
-        }
-      } else {
-        setError("RAG-сервис отключен.");
-      }
-
-      // If we are here, it means our agent system failed or was disabled.
-      console.log(
-        "No AI suggestion available because agent system failed or is disabled."
+      const ragService = new RAGService();
+      const suggestion = await ragService.getAgentResponse(
+        sessionId,
+        chatId,
+        query,
+        historyForAgent
       );
+
+      if (suggestion && suggestion.suggestion) {
+        setAiSuggestion(suggestion.suggestion);
+        setRagEnabled(true);
+        setRagEnhanced(suggestion.rag_enhanced || false);
+        setSimilarContext(suggestion.similar_context || []);
+        setShowAiSuggestion(true);
+        setHasSuggestion(true);
+        setSuggestionDismissed(false);
+      } else {
+        setAiSuggestion("Не удалось сгенерировать ответ. Попробуйте еще раз.");
+        setShowAiSuggestion(true);
+      }
     } catch (error) {
-      console.error("Failed to get manual AI suggestion:", error);
-      setError("Не удалось получить ответ от AI.");
+      console.error("Error regenerating AI suggestion via agent:", error);
+      setAiSuggestion("Ошибка при генерации ответа.");
+      setShowAiSuggestion(true);
     } finally {
       setAiSuggestionLoading(false);
     }
-  }, [sessionId, chatId, userId, ragEnabled, messages, newMessage]);
+  }, [aiSuggestionLoading, messages, sessionId, chatId]);
+
+  // This is now just an alias
+  const getManualAISuggestion = regenerateAISuggestion;
 
   // New function for continuous AI monitoring
   const startContinuousAI = useCallback(() => {
@@ -498,11 +490,6 @@ const MessageArea: React.FC<MessageAreaProps> = ({
       textareaRef.current.style.height =
         Math.min(textareaRef.current.scrollHeight, 150) + "px";
     }
-  };
-
-  const regenerateAISuggestion = async () => {
-    // This is just an alias for getting a new manual suggestion
-    await getManualAISuggestion();
   };
 
   const dismissAISuggestion = () => {

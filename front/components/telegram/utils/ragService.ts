@@ -164,66 +164,16 @@ export class RAGService {
   }
 
   /**
-   * Get AI suggestion enhanced with RAG context (DEPRECATED - use getAgentResponse instead)
-   */
-  async getEnhancedSuggestion(
-    sessionId: string, 
-    chatId: number, 
-    userId: number,
-    currentMessage: string = "",
-    useRAG: boolean = true,
-    recentMessages: Message[] = []
-  ): Promise<EnhancedSuggestion | null> {
-    try {
-      const response = await fetch(`${this.baseURL}/suggest-enhanced`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: sessionId,
-          chat_id: chatId,
-          user_id: userId,
-          current_message: currentMessage,
-          use_rag: useRAG,
-          recent_messages: recentMessages,
-        })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        return {
-          suggestion: data.suggestion,
-          rag_enhanced: data.rag_enhanced,
-          context_sources: data.context_sources,
-          similar_context: data.similar_context
-        };
-      }
-      return null;
-    } catch (error) {
-      console.error('Error getting enhanced suggestion:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get AI response using our new multi-agent system
-   * This is the new, improved method that replaces getEnhancedSuggestion
+   * Get AI suggestion using the full multi-agent system
    */
   async getAgentResponse(
-    sessionId: string, 
-    chatId: number, 
+    sessionId: string,
+    chatId: number,
     query: string,
-    recentMessages: Message[] = []
+    messageHistory: Message[]
   ): Promise<EnhancedSuggestion | null> {
     try {
-      // Format message history for the agents
-      const messageHistory = recentMessages.map(msg => ({
-        sender: msg.is_outgoing ? "user" : "contact",
-        text: msg.text
-      }));
-
-      const response = await fetch(`http://localhost:8000/api/ai/generate-agent-response`, {
+      const response = await fetch('http://localhost:8000/api/ai/generate-agent-response', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -232,23 +182,25 @@ export class RAGService {
           session_id: sessionId,
           chat_id: chatId,
           query: query,
-          message_history: messageHistory
+          message_history: messageHistory.map(m => ({
+            sender: m.is_outgoing ? 'user' : 'contact',
+            text: m.text,
+          })),
         })
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Agent response failed: ${errorData.detail}`);
+      }
+      
       const data = await response.json();
       if (data.success) {
-        // Format the response to match the expected EnhancedSuggestion interface
         return {
           suggestion: data.response,
-          rag_enhanced: true, // Our agent system is always RAG-enhanced
-          context_sources: {
-            rag_recent_messages: messageHistory.length,
-            similar_messages: data.debug_data?.similar_messages?.length || 0,
-            total_context: messageHistory.length + (data.debug_data?.similar_messages?.length || 0),
-            traditional_only: false
-          },
-          similar_context: data.debug_data?.similar_messages || []
+          rag_enhanced: data.debug_data?.context?.includes('RAG'), // Simple check
+          similar_context: data.debug_data?.similar_messages || [],
+          context_sources: {},
         };
       }
       return null;

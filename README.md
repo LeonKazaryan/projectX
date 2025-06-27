@@ -212,3 +212,20 @@
   - **Unique Visual Identity**: Custom color scheme and animations that stand out from template designs
   - **Interactive Features**: Smooth scrolling, animated CTA buttons, and engaging hover states
   - **Modern CSS**: Advanced CSS animations, keyframes, and responsive design patterns
+
+  #0.6.5
+
+  - 🧠 **Smart Context Break Detection** - Fixed AI giving inappropriate suggestions for greetings after long conversations
+  - **Time-Aware AI**: AI now detects when someone sends a greeting after a long pause (2+ hours) and treats it as a fresh conversation start
+  - **Greeting Pattern Recognition**: System recognizes common greeting patterns ("привет", "как дела", "hi", "hey", etc.) to identify conversation restarts
+  - **Context Reset**: When greeting after long pause is detected, AI ignores old conversation topics and responds appropriately to the greeting
+  - **Smart Caching**: Updated suggestion caching to ensure fresh responses for context breaks
+  - **Enhanced Response Logic**: AI system now differentiates between:
+    - **Continuous conversation**: Uses full context for relevant suggestions
+    - **Fresh greeting**: Responds naturally to greeting without referencing old topics
+    - **Context break**: Treats as new conversation start after significant time gap
+  - 🔧 **Technical Improvements**:
+    - Added `_detect_context_break()` method for intelligent conversation flow analysis
+    - Enhanced `_generate_response_suggestion()` with context-aware processing
+    - Updated cache key generation to handle context breaks properly
+    - Improved time gap analysis for more accurate conversation state detection

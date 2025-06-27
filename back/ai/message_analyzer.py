@@ -243,10 +243,53 @@ class MessageAnalyzer:
             logger.error(f"Error generating response suggestion: {e}")
             return self._get_fallback_suggestion()
     
+    def _detect_context_break(self, messages: List[Dict]) -> bool:
+        """Detect if there's a context break (new greeting after long pause)"""
+        if len(messages) < 2:
+            return False
+        
+        last_message = messages[-1]
+        
+        # Check if last message is a greeting/simple question
+        greeting_patterns = [
+            "привет", "приветик", "привки", "хай", "хей", "hey", "hi", "hello",
+            "как дела", "как дела?", "что делаешь", "что делаешь?", 
+            "как поживаешь", "как ты", "что нового", "что нового?"
+        ]
+        
+        last_text = last_message.get("text", "").lower().strip()
+        is_greeting = any(pattern in last_text for pattern in greeting_patterns)
+        
+        if not is_greeting:
+            return False
+        
+        # Check if there was a significant time gap
+        if len(messages) >= 2:
+            try:
+                last_timestamp = datetime.fromisoformat(last_message['timestamp'])
+                prev_message = messages[-2]
+                prev_timestamp = datetime.fromisoformat(prev_message['timestamp'])
+                
+                time_gap_minutes = (last_timestamp - prev_timestamp).total_seconds() / 60
+                
+                # If gap is more than 2 hours and it's a greeting, consider it a context break
+                if time_gap_minutes > 120 and is_greeting:
+                    return True
+                    
+            except (KeyError, ValueError):
+                pass
+        
+        return False
+
     def _determine_suggestion_type(self, messages: List[Dict], force_suggestion: bool) -> str:
         """Determine what type of suggestion to generate"""
         if not messages:
             return "conversation_starter"
+        
+        # Check for context break (greeting after long pause)
+        if self._detect_context_break(messages):
+            # Treat as a fresh greeting, ignore old context
+            return "response_to_message"
         
         if force_suggestion:
             # Even with force, be smart about what to suggest
@@ -310,8 +353,20 @@ class MessageAnalyzer:
     async def _generate_response_suggestion(self, messages: List[Dict], user_style: Dict, memory_limit: int) -> Optional[str]:
         """Generate a response to the last incoming message"""
         last_message = messages[-1]
-        conversation_tone = self._analyze_conversation_tone(messages)
-        conversation_summary = self._build_conversation_summary(messages, memory_limit)
+        
+        # Check if this is a context break (greeting after long pause)
+        is_context_break = self._detect_context_break(messages)
+        
+        if is_context_break:
+            # For context breaks, only use recent messages (ignore old conversation)
+            recent_messages = [last_message]  # Only the greeting message
+            conversation_summary = f"Contact: {last_message.get('text', '')}"
+        else:
+            # Normal conversation flow
+            recent_messages = messages
+            conversation_summary = self._build_conversation_summary(messages, memory_limit)
+        
+        conversation_tone = self._analyze_conversation_tone(recent_messages)
         
         # Select appropriate tone prompt
         tone_prompt = ""
@@ -320,10 +375,22 @@ class MessageAnalyzer:
         elif conversation_tone == "formal":
             tone_prompt = FORMAL_CONVERSATION_PROMPT
         
+        # Special prompt for context breaks (greetings)
+        context_instruction = ""
+        if is_context_break:
+            context_instruction = """
+IMPORTANT: The contact is greeting you after a long pause in conversation. 
+This is a fresh start, so respond naturally to the greeting. 
+Don't reference old topics unless specifically asked.
+Keep your response simple and appropriate for a greeting.
+"""
+        
         system_prompt = f"""
 {MAIN_SYSTEM_PROMPT}
 
 {tone_prompt}
+
+{context_instruction}
 
 User's Writing Style Analysis:
 - Formality: {user_style.get('formality', 'neutral')}
@@ -482,6 +549,14 @@ Return ONLY the suggested message text, no explanations or additional formatting
 
     def _get_suggestion_cache_key(self, session_id: str, chat_id: int, messages: List[Dict]) -> str:
         """Generate a cache key based on conversation state"""
+        # Check for context break to ensure fresh suggestions
+        is_context_break = self._detect_context_break(messages)
+        
+        if is_context_break:
+            # For context breaks, use timestamp to ensure fresh suggestions
+            timestamp = datetime.now().isoformat()[:16]  # minute precision
+            return f"{session_id}:{chat_id}:context_break:{timestamp}"
+        
         # Use last 2 messages to create context-sensitive cache key
         recent_messages = messages[-2:] if len(messages) >= 2 else messages
         message_summary = ""
