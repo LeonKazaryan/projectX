@@ -4,6 +4,7 @@ import { Button } from "../../../src/components/ui/button";
 import { Textarea } from "../../../src/components/ui/textarea";
 import { Avatar, AvatarFallback } from "../../../src/components/ui/avatar";
 import { Separator } from "../../../src/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { ragService } from "../utils/ragService";
 import {
   Send,
@@ -21,6 +22,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { RAGService } from "../utils/ragService";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
   id: number;
@@ -104,8 +106,6 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const [showAiSuggestion, setShowAiSuggestion] = useState(false);
   const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
-  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-  const [isNearBottom, setIsNearBottom] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [suggestionDismissed, setSuggestionDismissed] = useState(false);
   const [hasSuggestion, setHasSuggestion] = useState(false);
@@ -116,11 +116,13 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
 
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const aiSuggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const previousChatIdRef = useRef<number>(0);
+  const isInitialLoadRef = useRef(true);
+  const isChatSwitchRef = useRef(true);
 
   const API_BASE = "http://localhost:8000/api";
 
@@ -278,29 +280,21 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
 
   useEffect(() => {
     if (chatId && sessionId) {
-      // Check if this is a chat switch
-      const isChatSwitch = previousChatIdRef.current !== chatId;
-      previousChatIdRef.current = chatId;
-
-      if (isChatSwitch) {
-        setMessages([]); // Clear messages when switching chats
-        setShouldAutoScroll(true); // Enable auto-scroll for new chat
-        setIsNearBottom(true);
-
-        // Reset AI suggestion state
+      const isSwitch = previousChatIdRef.current !== chatId;
+      if (isSwitch) {
+        isChatSwitchRef.current = true;
+        setMessages([]);
+        setShowScrollButton(false);
         setAiSuggestion("");
-        setShowAiSuggestion(false);
         setHasSuggestion(false);
         setSuggestionDismissed(false);
+        // ... reset other states
       }
-
+      previousChatIdRef.current = chatId;
       fetchMessages();
       connectWebSocket();
     }
-
-    return () => {
-      disconnectWebSocket();
-    };
+    return () => disconnectWebSocket();
   }, [sessionId, chatId, connectWebSocket, disconnectWebSocket]);
 
   // Start continuous AI monitoring when component mounts or settings change
@@ -314,12 +308,16 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
     return cleanup;
   }, [sessionId, chatId, userId, aiSettings, startContinuousAI]);
 
-  // Only auto-scroll if we should and user is near bottom
+  // Only auto-scroll on chat switch, not on new messages
   useEffect(() => {
-    if (shouldAutoScroll && isNearBottom && messages.length > 0) {
-      scrollToBottom(true); // Always use smooth scrolling
+    if (messages.length === 0) return;
+
+    if (isChatSwitchRef.current) {
+      scrollToBottom(false); // INSTANT scroll on chat switch only
+      isChatSwitchRef.current = false;
     }
-  }, [messages, shouldAutoScroll, isNearBottom]);
+    // NO MORE AUTO-SCROLL ON NEW MESSAGES!
+  }, [messages]);
 
   const fetchMessages = async () => {
     if (!chatId || !sessionId) return;
@@ -340,11 +338,6 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
         );
         setMessages(sortedMessages);
         setError("");
-
-        // Force scroll to bottom after fetching messages
-        setTimeout(() => {
-          scrollToBottom(true);
-        }, 100);
       } else {
         setError(data.error || "Ошибка загрузки сообщений");
       }
@@ -359,8 +352,15 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
     if (!chatId || !sessionId || messages.length === 0 || isHistoryLoading)
       return;
 
+    setIsHistoryLoading(true);
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    // Preserve scroll position
+    const oldScrollHeight = scrollContainer.scrollHeight;
+    const oldScrollTop = scrollContainer.scrollTop;
+
     try {
-      setIsHistoryLoading(true);
       const oldestMessageId = messages[0].id;
       const response = await fetch(
         `${API_BASE}/messages/history?session_id=${sessionId}&dialog_id=${chatId}&limit=100&offset_id=${oldestMessageId}`
@@ -373,10 +373,18 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
             !messages.some((existingMsg) => existingMsg.id === newMsg.id)
         );
 
-        const sortedMessages = [...uniqueNewMessages, ...messages].sort(
-          (a: Message, b: Message) => a.id - b.id
+        setMessages((prev) =>
+          [...uniqueNewMessages, ...prev].sort((a, b) => a.id - b.id)
         );
-        setMessages(sortedMessages);
+
+        // Restore scroll position after DOM update
+        setTimeout(() => {
+          if (scrollContainerRef.current) {
+            const newScrollHeight = scrollContainerRef.current.scrollHeight;
+            scrollContainerRef.current.scrollTop =
+              newScrollHeight - oldScrollHeight + oldScrollTop;
+          }
+        }, 0);
       }
     } catch (error) {
       console.error("Failed to fetch more messages:", error);
@@ -390,8 +398,8 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
 
     try {
       setSendingMessage(true);
-      // Store current suggestion state
-      const currentShowSuggestion = showAiSuggestion;
+      setHasSuggestion(false);
+      setSuggestionDismissed(true);
 
       const response = await fetch(`${API_BASE}/messages/send`, {
         method: "POST",
@@ -408,15 +416,11 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
       const data = await response.json();
       if (data.success) {
         setNewMessage("");
-        // Don't change AI suggestion visibility
-        // setShowAiSuggestion(currentShowSuggestion);
-
         if (textareaRef.current) {
           textareaRef.current.style.height = "auto";
         }
         // Force scroll to bottom after sending
-        setShouldAutoScroll(true);
-        scrollToBottom(true);
+        // Message sent, no auto-scroll
       } else {
         setError(data.error || "Ошибка отправки сообщения");
       }
@@ -441,22 +445,15 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
     const { scrollTop, scrollHeight, clientHeight } = target;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
-    // User is near bottom if within 50px
-    const nearBottom = distanceFromBottom < 50;
-    setIsNearBottom(nearBottom);
-
-    // Show scroll button if user is far from bottom
-    setShowScrollButton(distanceFromBottom > 100);
-
-    // Disable auto-scroll if user manually scrolled up
-    if (!nearBottom && shouldAutoScroll) {
-      setShouldAutoScroll(false);
+    // Show button when scrolled up more than 100px from bottom
+    if (distanceFromBottom > 100) {
+      setShowScrollButton(true);
+    } else {
+      setShowScrollButton(false);
     }
   };
 
   const handleScrollToBottom = () => {
-    setShouldAutoScroll(true);
-    setIsNearBottom(true);
     scrollToBottom(true);
   };
 
@@ -660,7 +657,11 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
 
       {/* Messages */}
       <div className="flex-1 overflow-hidden relative">
-        <ScrollArea className="h-full px-4 py-4" onScrollCapture={handleScroll}>
+        <div
+          ref={scrollContainerRef}
+          className="h-full px-4 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
+          onScroll={handleScroll}
+        >
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center space-y-4">
@@ -741,20 +742,53 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
               <div ref={messagesEndRef} />
             </div>
           )}
-        </ScrollArea>
+        </div>
 
-        {/* Scroll to Bottom Button */}
-        {showScrollButton && (
-          <div className="absolute bottom-4 right-6 z-10">
-            <Button
-              onClick={handleScrollToBottom}
-              size="icon"
-              className="rounded-full shadow-lg bg-primary hover:bg-primary/90"
+        <AnimatePresence>
+          {showScrollButton && (
+            <motion.div
+              className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20"
+              initial={{
+                opacity: 0,
+                y: 15,
+                scale: 0.7,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                scale: 1,
+              }}
+              exit={{
+                opacity: 0,
+                y: 15,
+                scale: 0.7,
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 400,
+                damping: 30,
+                duration: 0.3,
+              }}
+              whileHover={{
+                scale: 1.05,
+                y: -2,
+              }}
+              whileTap={{
+                scale: 0.95,
+              }}
             >
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+              <Button
+                onClick={handleScrollToBottom}
+                size="icon"
+                variant="secondary"
+                className="relative rounded-full shadow-lg hover:shadow-xl bg-background/95 backdrop-blur-sm border border-border hover:bg-muted/90 h-10 w-10"
+                title="Прокрутить вниз к новым сообщениям"
+              >
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* AI Suggestion - only show when AI is enabled */}

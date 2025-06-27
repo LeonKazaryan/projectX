@@ -236,3 +236,29 @@
 - Small Bug fixes
 - Searching added to the Telegram Client
 - Settings Page updated
+
+# 0.6.6.1
+
+- Fixed bug with auto-scroll
+- Fixed the bug of loading old messages and auto-scroll to new messages
+- 🔄 **Complete Scroll System Overhaul** - Completely redesigned scroll-to-bottom functionality
+- **Manual Scroll Button Only**: Removed ALL automatic scrolling behavior - messages no longer auto-scroll when received
+- **Simple User-Controlled Scrolling**: Button appears only when user scrolls up 100px+ from bottom
+- **No More Auto-Scroll Chaos**: Chat stays exactly where user positioned it, no forced scrolling
+- **Clean Button Design**: Simple round button with down arrow, no counters or extra UI clutter
+- **User-First Experience**: Chat behavior now respects user intent completely
+- 🎭 **Epic Scroll Button Animation** - Added spectacular spring-powered animations for scroll-to-bottom button
+- **Perfect Positioning**: Button now appears centered above the text input area for optimal UX
+- **Gradient Design**: Beautiful blue-to-purple gradient button with enhanced shadows and borders
+- **Interactive Animations**: Button rotates and scales on hover/tap with smooth spring physics
+- **Smooth Transitions**: Enhanced entrance/exit animations with rotation, scaling, and fade effects
+- **No Debug Clutter**: Removed all debug elements for clean production-ready UI
+
+# 0.6.6.4
+
+- 🎨 **Refined Scroll Button Design** - Redesigned scroll button with neutral, elegant styling
+- **ShadCN Integration**: Button now uses proper ShadCN variant="secondary" for consistent theming
+- **Minimalist Aesthetics**: Smaller, more subtle button (40x40px) with backdrop blur and muted colors
+- **Better Positioning**: Moved closer to text input (bottom-6) for improved accessibility
+- **Smooth Hover Effects**: Subtle scale and lift animations that complement the overall design
+- **Theme Consistency**: Colors now match the app's neutral palette with proper contrast
