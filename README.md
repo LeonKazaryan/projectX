@@ -229,3 +229,10 @@
     - Enhanced `_generate_response_suggestion()` with context-aware processing
     - Updated cache key generation to handle context breaks properly
     - Improved time gap analysis for more accurate conversation state detection
+
+# 0.6.6
+
+- Completely new Landing Page
+- Small Bug fixes
+- Searching added to the Telegram Client
+- Settings Page updated

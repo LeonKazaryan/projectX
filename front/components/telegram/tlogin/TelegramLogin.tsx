@@ -1,70 +1,87 @@
-import React, { useEffect, useRef } from "react";
-
-interface TelegramUser {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  photo_url?: string;
-  auth_date: number;
-  hash: string;
-}
+import React, { useState, useCallback } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Loader2, ShieldCheck } from "lucide-react";
 
 interface TelegramLoginProps {
-  botName: string;
-  buttonSize?: "large" | "medium" | "small";
-  cornerRadius?: number;
-  requestAccess?: boolean;
-  usePic?: boolean;
-  onAuth: (user: TelegramUser) => void;
-  className?: string;
+  onAuth: (user: any) => void;
 }
 
-const TelegramLogin: React.FC<TelegramLoginProps> = ({
-  botName,
-  buttonSize = "large",
-  cornerRadius,
-  requestAccess = false,
-  usePic = true,
-  onAuth,
-  className = "",
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
+const TelegramLogin: React.FC<TelegramLoginProps> = ({ onAuth }) => {
+  const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (ref.current) {
-      ref.current.innerHTML = "";
-
-      const script = document.createElement("script");
-      script.src = "https://telegram.org/js/telegram-widget.js?22";
-      script.setAttribute("data-telegram-login", botName);
-      script.setAttribute("data-size", buttonSize);
-
-      if (cornerRadius !== undefined) {
-        script.setAttribute("data-radius", cornerRadius.toString());
-      }
-
-      if (requestAccess) {
-        script.setAttribute("data-request-access", "write");
-      }
-
-      if (!usePic) {
-        script.setAttribute("data-userpic", "false");
-      }
-
-      const callbackName = `telegramLoginCallback_${Math.random()
-        .toString(36)
-        .substr(2, 9)}`;
-      (window as any)[callbackName] = (user: TelegramUser) => {
-        onAuth(user);
-      };
-      script.setAttribute("data-onauth", callbackName);
-
-      ref.current.appendChild(script);
+  const handleLogin = useCallback(async () => {
+    if (!phone) {
+      setError("Пожалуйста, введите номер телефона.");
+      return;
     }
-  }, [botName, buttonSize, cornerRadius, requestAccess, usePic, onAuth]);
+    setLoading(true);
+    setError("");
 
-  return <div ref={ref} className={className} />;
+    // This is a mock login flow.
+    // In a real application, you would make a request to your backend here
+    // to send a confirmation code to the user's Telegram account.
+    console.log(`Initiating login for phone: ${phone}`);
+
+    setTimeout(() => {
+      const mockUser = {
+        id: 12345,
+        first_name: "Demo",
+        last_name: "User",
+        username: "demouser",
+      };
+      onAuth(mockUser);
+      setLoading(false);
+    }, 2000);
+  }, [phone, onAuth]);
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Вход в Telegram</CardTitle>
+          <CardDescription>
+            Введите ваш номер телефона для авторизации
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Input
+              type="tel"
+              placeholder="+7 (999) 999-99-99"
+              value={phone}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setPhone(e.target.value)
+              }
+              disabled={loading}
+            />
+            {error && (
+              <p className="text-sm text-destructive-foreground bg-destructive p-2 rounded-md">
+                {error}
+              </p>
+            )}
+            <Button onClick={handleLogin} className="w-full" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading ? "Отправка..." : "Получить код"}
+            </Button>
+          </div>
+          <div className="mt-4 text-center text-xs text-muted-foreground flex items-center justify-center">
+            <ShieldCheck className="w-4 h-4 mr-1.5" />
+            <span>Ваши данные надежно защищены</span>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 };
 
 export default TelegramLogin;

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ScrollArea } from "../../../src/components/ui/scroll-area";
-import { Button } from "../../../src/components/ui/button";
-import { Badge } from "../../../src/components/ui/badge";
-import { Avatar, AvatarFallback } from "../../../src/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 import {
   MessageCircle,
   Users,
@@ -11,9 +12,10 @@ import {
   Loader2,
   AlertCircle,
   RotateCcw,
-  Hash,
-  Archive,
+  Settings2,
+  Search,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Dialog {
   id: number;
@@ -28,6 +30,7 @@ interface Dialog {
     text: string;
     date: string | null;
   };
+  photo?: string; // Optional photo property
 }
 
 interface ChatListProps {
@@ -50,8 +53,10 @@ const ChatList: React.FC<ChatListProps> = ({
   syncTrigger = 0,
 }) => {
   const [dialogs, setDialogs] = useState<Dialog[]>([]);
+  const [filteredDialogs, setFilteredDialogs] = useState<Dialog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "connected" | "disconnected"
   >("disconnected");
@@ -180,6 +185,13 @@ const ChatList: React.FC<ChatListProps> = ({
     }
   }, [selectedChatId]);
 
+  useEffect(() => {
+    const results = dialogs.filter((dialog) =>
+      dialog.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredDialogs(results);
+  }, [searchTerm, dialogs]);
+
   const fetchDialogs = async () => {
     try {
       setLoading(true);
@@ -196,6 +208,7 @@ const ChatList: React.FC<ChatListProps> = ({
 
       if (data.success) {
         setDialogs(data.dialogs);
+        setFilteredDialogs(data.dialogs);
         setError("");
       } else {
         setError(data.error || "Ошибка загрузки чатов");
@@ -254,15 +267,17 @@ const ChatList: React.FC<ChatListProps> = ({
 
   if (loading) {
     return (
-      <div className="w-80 bg-card border-r border-border flex flex-col h-full">
-        <div className="flex-shrink-0 p-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">Telegram</h2>
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-2 h-2 rounded-full ${getConnectionStatusColor()}`}
-              />
-            </div>
+      <div className="flex flex-col h-full bg-card border-r">
+        <div className="p-4 border-b">
+          <h2 className="text-xl font-semibold tracking-tight">Чаты</h2>
+          <div className="relative mt-2">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Поиск..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
         <div className="flex-1 flex items-center justify-center">
@@ -277,15 +292,17 @@ const ChatList: React.FC<ChatListProps> = ({
 
   if (error) {
     return (
-      <div className="w-80 bg-card border-r border-border flex flex-col h-full">
-        <div className="flex-shrink-0 p-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">Telegram</h2>
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-2 h-2 rounded-full ${getConnectionStatusColor()}`}
-              />
-            </div>
+      <div className="flex flex-col h-full bg-card border-r">
+        <div className="p-4 border-b">
+          <h2 className="text-xl font-semibold tracking-tight">Чаты</h2>
+          <div className="relative mt-2">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Поиск..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
         <div className="flex-1 flex items-center justify-center p-4">
@@ -303,80 +320,108 @@ const ChatList: React.FC<ChatListProps> = ({
   }
 
   return (
-    <div className="w-80 bg-card border-r border-border flex flex-col h-full">
-      <div className="flex-shrink-0 p-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" />
-            Telegram
-          </h2>
-          <div className="flex items-center gap-2">
-            <div
-              className={`w-2 h-2 rounded-full ${getConnectionStatusColor()}`}
-              title={`Real-time: ${connectionStatus}`}
-            />
-            <Badge variant="secondary" className="text-xs">
-              {dialogs.length}
-            </Badge>
-          </div>
+    <div className="flex flex-col h-full bg-card border-r">
+      <div className="p-4 border-b">
+        <h2 className="text-xl font-semibold tracking-tight">Чаты</h2>
+        <div className="relative mt-2">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Поиск..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
       </div>
-
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-y-auto">
         <ScrollArea className="h-full">
-          <div className="p-2">
-            {dialogs.map((dialog) => (
-              <div
-                key={dialog.id}
-                className={`p-3 rounded-lg cursor-pointer transition-colors hover:bg-accent/50 mb-1 ${
-                  selectedChatId === dialog.id
-                    ? "bg-accent text-accent-foreground"
-                    : "hover:bg-muted/50"
-                }`}
-                onClick={() => onChatSelect(dialog.id, dialog.name)}
-              >
-                <div className="flex items-start gap-3">
-                  <Avatar className="h-10 w-10 flex-shrink-0">
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {getChatIcon(dialog)}
+          <div className="p-2 space-y-1">
+            {loading ? (
+              <div className="flex justify-center items-center h-full p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : error ? (
+              <div className="p-4 text-center text-sm text-destructive">
+                <AlertCircle className="mx-auto h-6 w-6 mb-2" />
+                <p>{error}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchDialogs}
+                  className="mt-2"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Повторить
+                </Button>
+              </div>
+            ) : (
+              filteredDialogs.map((dialog) => (
+                <button
+                  key={dialog.id}
+                  onClick={() => onChatSelect(dialog.id, dialog.name)}
+                  className={cn(
+                    "flex items-start w-full text-left p-2 rounded-lg transition-colors",
+                    selectedChatId === dialog.id
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  )}
+                >
+                  <Avatar className="h-10 w-10 mr-3">
+                    <AvatarImage src={dialog.photo} alt={dialog.name} />
+                    <AvatarFallback
+                      className={cn(
+                        "text-sm",
+                        selectedChatId === dialog.id &&
+                          "bg-primary-foreground text-primary"
+                      )}
+                    >
+                      {dialog.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-medium text-sm truncate flex items-center gap-1">
+                  <div className="flex-1 overflow-hidden">
+                    <div className="flex justify-between items-center">
+                      <p className="font-semibold truncate pr-2">
                         {dialog.name}
-                        {dialog.is_archived && (
-                          <Archive className="h-3 w-3 text-muted-foreground" />
+                      </p>
+                      <time
+                        className={cn(
+                          "text-xs",
+                          selectedChatId === dialog.id
+                            ? "text-primary-foreground/80"
+                            : "text-muted-foreground"
                         )}
-                        {!dialog.can_send_messages && (
-                          <Hash className="h-3 w-3 text-muted-foreground" />
-                        )}
-                      </h3>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        {dialog.unread_count > 0 && (
-                          <Badge
-                            variant="default"
-                            className="h-5 min-w-5 text-xs px-1.5 bg-primary text-primary-foreground"
-                          >
-                            {dialog.unread_count > 99
-                              ? "99+"
-                              : dialog.unread_count}
-                          </Badge>
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          {formatTime(dialog.last_message.date)}
-                        </span>
-                      </div>
+                      >
+                        {formatTime(dialog.last_message?.date)}
+                      </time>
                     </div>
-
-                    <p className="text-xs text-muted-foreground truncate">
-                      {dialog.last_message.text || "Нет сообщений"}
-                    </p>
+                    <div className="flex justify-between items-end">
+                      <p
+                        className={cn(
+                          "text-sm truncate pr-2",
+                          selectedChatId === dialog.id
+                            ? "text-primary-foreground/90"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {dialog.last_message?.text}
+                      </p>
+                      {dialog.unread_count > 0 && (
+                        <Badge
+                          variant={
+                            selectedChatId === dialog.id
+                              ? "secondary"
+                              : "default"
+                          }
+                          className="h-5 px-1.5 text-xs"
+                        >
+                          {dialog.unread_count}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                </button>
+              ))
+            )}
           </div>
         </ScrollArea>
       </div>

@@ -45,16 +45,53 @@ interface MessageAreaProps {
   chatId: number;
   chatName: string;
   userId?: number;
-  aiSettings: AISettings;
 }
 
-const MessageArea: React.FC<MessageAreaProps> = ({
+const useAISettings = (sessionId: string) => {
+  const [aiSettings, setAiSettings] = useState<AISettings>({
+    enabled: true,
+    memory_limit: 20,
+    suggestion_delay: 1.0,
+    continuous_suggestions: false,
+    proactive_suggestions: false,
+    auto_suggest_on_incoming: false,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const loadSettings = async () => {
+      setLoading(true);
+      try {
+        // This would be your actual API call
+        const response = await fetch(
+          `http://localhost:8000/api/ai/settings?session_id=${sessionId}`
+        );
+        const data = await response.json();
+        if (data.success && data.settings) {
+          setAiSettings(data.settings);
+        }
+      } catch (error) {
+        console.error("Failed to load AI settings:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, [sessionId]);
+
+  return { aiSettings, loading };
+};
+
+const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   sessionId,
   chatId,
   chatName,
   userId,
-  aiSettings,
 }) => {
+  const { aiSettings, loading: aiSettingsLoading } = useAISettings(sessionId);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -79,8 +116,8 @@ const MessageArea: React.FC<MessageAreaProps> = ({
 
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const reconnectTimeoutRef = useRef<number | null>(null);
-  const aiSuggestionTimeoutRef = useRef<number | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const aiSuggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const previousChatIdRef = useRef<number>(0);

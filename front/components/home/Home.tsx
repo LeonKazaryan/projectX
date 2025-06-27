@@ -1,288 +1,311 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
-import "./Home.css";
+import { motion } from "framer-motion";
 import { Button } from "../../src/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "../../src/components/ui/card";
 import {
-  MessageCircle,
-  Zap,
   Bot,
-  ArrowRight,
-  Brain,
-  Shield,
-  Sparkles,
   MessageSquare,
+  ShieldCheck,
+  Zap,
+  BarChart,
+  Settings,
   Users,
-  Lightbulb,
-  ChevronDown,
 } from "lucide-react";
 
-export default function Home() {
+const LandingPage = () => {
   const navigate = useNavigate();
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [isVisible, setIsVisible] = useState(false);
 
-  useEffect(() => {
-    setIsVisible(true);
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  const handleTelegramClick = () => {
+  const handleNavigateToApp = () => {
     navigate("/telegram");
   };
 
-  const scrollToFeatures = () => {
-    document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+      },
+    },
   };
 
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+      },
+    },
+  };
+
+  const features = [
+    {
+      icon: <Bot className="w-8 h-8 text-blue-500" />,
+      title: "Реалистичность",
+      description:
+        "ИИ подстраивается под твой стиль — короткие, саркастичные или формальные ответы.",
+    },
+    {
+      icon: <MessageSquare className="w-8 h-8 text-blue-500" />,
+      title: "Мультимессенджер",
+      description:
+        "Работает с Telegram, WhatsApp, Discord и другими популярными платформами.",
+    },
+    {
+      icon: <Zap className="w-8 h-8 text-blue-500" />,
+      title: "Контекстный анализ",
+      description:
+        "Учитывает историю чатов для точных и релевантных предложений.",
+    },
+    {
+      icon: <ShieldCheck className="w-8 h-8 text-blue-500" />,
+      title: "Конфиденциальность",
+      description:
+        "Твои данные защищены. Мы работаем только с твоего согласия.",
+    },
+  ];
+
+  const howItWorksSteps = [
+    {
+      icon: <Users className="w-10 h-10 text-blue-500" />,
+      title: "Подключи мессенджер",
+      description: "Быстрая и безопасная авторизация в один клик.",
+    },
+    {
+      icon: <BarChart className="w-10 h-10 text-blue-500" />,
+      title: "ИИ изучает твой стиль",
+      description: "Анализ происходит локально, уважая твою приватность.",
+    },
+    {
+      icon: <Settings className="w-10 h-10 text-blue-500" />,
+      title: "Получай предложения",
+      description: "Принимай, редактируй или игнорируй предложенные ответы.",
+    },
+  ];
+
+  const testimonials = [
+    {
+      quote: "Это как мой клон в чате! Экономит мне кучу времени. 😎",
+      name: "Дима, 25",
+      handle: "Продакт-менеджер",
+    },
+    {
+      quote:
+        "Наконец-то AI, который не звучит как робот. Маст-хэв для интровертов.",
+      name: "Анна, 29",
+      handle: "Разработчик",
+    },
+    {
+      quote:
+        "Я использую его для рабочих чатов. Мои ответы стали более четкими и профессиональными.",
+      name: "Сергей, 34",
+      handle: "Тимлид",
+    },
+  ];
+
   return (
-    <div className="min-h-screen overflow-hidden relative">
-      {/* Animated Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM5QzkyQUMiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iNCIvPjwvZz48L2c+PC9zdmc+')] opacity-40"></div>
-
-        {/* Dynamic gradient overlay that follows mouse */}
-        <div
-          className="absolute w-96 h-96 rounded-full opacity-20 blur-3xl transition-all duration-1000 ease-out"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(147, 51, 234, 0.4) 0%, rgba(79, 70, 229, 0.3) 50%, transparent 70%)",
-            left: mousePosition.x - 192,
-            top: mousePosition.y - 192,
-          }}
-        />
-      </div>
-
+    <div className="bg-zinc-100 text-zinc-800 font-sans">
       {/* Hero Section */}
-      <div className="relative z-10">
-        <div className="container mx-auto px-4 py-20">
-          {/* Navigation hint */}
-          <div
-            className={`text-center mb-8 transform transition-all duration-1000 ${
-              isVisible
-                ? "translate-y-0 opacity-100"
-                : "translate-y-10 opacity-0"
-            }`}
+      <motion.section
+        className="min-h-screen flex items-center justify-center text-center px-4"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <div className="max-w-3xl">
+          <motion.h1
+            className="text-5xl md:text-7xl font-bold tracking-tight text-zinc-900"
+            variants={itemVariants}
           >
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white/80 text-sm">
-              <Sparkles className="w-4 h-4 mr-2 text-yellow-400" />
-              Революционный AI-мессенджер готов к запуску
-            </div>
-          </div>
-
-          {/* Main Hero Content */}
-          <div
-            className={`text-center mb-16 transform transition-all duration-1000 delay-300 ${
-              isVisible
-                ? "translate-y-0 opacity-100"
-                : "translate-y-10 opacity-0"
-            }`}
+            Чат, как ты. <br />
+            <span className="text-blue-600">
+              ИИ, который звучит по-человечески.
+            </span>
+          </motion.h1>
+          <motion.p
+            className="mt-6 text-lg md:text-xl text-zinc-600 max-w-2xl mx-auto"
+            variants={itemVariants}
           >
-            {/* Logo with glowing effect */}
-            <div className="flex justify-center mb-8">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full blur-xl opacity-60 animate-pulse"></div>
-                <div className="relative w-24 h-24 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center shadow-2xl">
-                  <Bot className="w-12 h-12 text-white" />
-                </div>
-              </div>
-            </div>
-
-            {/* Dynamic title with gradient text */}
-            <h1 className="text-6xl md:text-7xl font-black mb-6 leading-tight">
-              <span className="bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent">
-                AI Smart
-              </span>
-              <br />
-              <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-                Messenger
-              </span>
-            </h1>
-
-            {/* Subtitle with typewriter effect */}
-            <p className="text-xl md:text-2xl text-white/80 max-w-4xl mx-auto leading-relaxed font-light">
-              Революционная платформа для{" "}
-              <span className="text-purple-300 font-semibold">
-                интеллектуального общения
-              </span>{" "}
-              с
-              <span className="text-blue-300 font-semibold">
-                {" "}
-                AI-поддержкой
-              </span>{" "}
-              и продвинутой аналитикой переписки
-            </p>
-          </div>
-
-          {/* CTA Button */}
-          <div
-            className={`text-center mb-12 transform transition-all duration-1000 delay-500 ${
-              isVisible
-                ? "translate-y-0 opacity-100"
-                : "translate-y-10 opacity-0"
-            }`}
-          >
+            Наш ИИ-ассистент анализирует твои чаты и предлагает ответы в твоем
+            стиле — для Telegram, WhatsApp и не только.
+          </motion.p>
+          <motion.div variants={itemVariants} className="mt-10">
             <Button
-              onClick={handleTelegramClick}
-              className="group relative px-8 py-4 text-lg font-semibold bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-2xl shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 transform hover:scale-105 border-0"
+              size="lg"
+              className="bg-blue-600 hover:bg-blue-700 text-zinc-50 text-lg px-8 py-6 rounded-full"
+              onClick={handleNavigateToApp}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl blur-lg opacity-50 group-hover:opacity-70 transition-opacity"></div>
-              <div className="relative flex items-center">
-                <MessageCircle className="mr-3 h-6 w-6" />
-                Начать с Telegram
-                <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
-              </div>
+              Попробовать бесплатно
             </Button>
-            <p className="text-white/60 text-sm mt-4">
-              <Shield className="inline w-4 h-4 mr-1" />
-              Безопасная авторизация через официальный API
-            </p>
-          </div>
-
-          {/* Scroll indicator */}
-          <div className="text-center">
-            <button
-              onClick={scrollToFeatures}
-              className="text-white/60 hover:text-white/80 transition-colors animate-bounce"
-            >
-              <ChevronDown className="w-8 h-8 mx-auto" />
-            </button>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.section>
 
       {/* Features Section */}
-      <div id="features" className="relative z-10 py-20">
-        <div className="container mx-auto px-4">
-          {/* Section Header */}
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Возможности будущего
-            </h2>
-            <p className="text-xl text-white/70 max-w-2xl mx-auto">
-              Каждая функция создана для максимального удобства и эффективности
-            </p>
+      <motion.section
+        className="py-20 sm:py-32 px-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.3 }}
+        variants={containerVariants}
+      >
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, index) => (
+              <motion.div key={index} variants={itemVariants}>
+                <Card className="bg-zinc-50 border-zinc-300 hover:bg-white hover:shadow-xl transition-all duration-300 h-full">
+                  <CardHeader>
+                    {feature.icon}
+                    <CardTitle className="mt-4 text-xl font-semibold text-zinc-900">
+                      {feature.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-zinc-600">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
           </div>
-
-          {/* Features Grid */}
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
-            {/* Feature 1 */}
-            <div className="group cursor-pointer">
-              <div className="relative p-8 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-purple-400/30 transition-all duration-500 hover:transform hover:scale-105">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-12 transition-transform duration-300">
-                    <Brain className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">
-                    Умные предложения
-                  </h3>
-                  <p className="text-white/70 leading-relaxed">
-                    AI анализирует контекст беседы и предлагает
-                    персонализированные ответы, адаптируясь под ваш стиль
-                    общения
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="group cursor-pointer">
-              <div className="relative p-8 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-blue-400/30 transition-all duration-500 hover:transform hover:scale-105">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-12 transition-transform duration-300">
-                    <Zap className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">
-                    Мгновенный доступ
-                  </h3>
-                  <p className="text-white/70 leading-relaxed">
-                    Прямое подключение через MTProto API обеспечивает
-                    максимальную скорость и полный доступ ко всем функциям
-                    Telegram
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="group cursor-pointer">
-              <div className="relative p-8 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-green-400/30 transition-all duration-500 hover:transform hover:scale-105">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-600/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative">
-                  <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-700 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-12 transition-transform duration-300">
-                    <Lightbulb className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">
-                    Аналитика чатов
-                  </h3>
-                  <p className="text-white/70 leading-relaxed">
-                    Глубокий анализ переписки, определение тональности и
-                    интеллектуальные инсайты для лучшего понимания общения
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom CTA */}
-          <Card className="max-w-4xl mx-auto bg-white/5 backdrop-blur-sm border border-white/10 shadow-2xl">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Готовы к революции в общении?
-              </CardTitle>
-              <CardDescription className="text-xl text-white/70">
-                Присоединяйтесь к новой эре интеллектуальных мессенджеров
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
-                <Button
-                  onClick={handleTelegramClick}
-                  size="lg"
-                  className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-lg py-6 px-8 rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                >
-                  <MessageSquare className="mr-3 h-6 w-6" />
-                  Войти в Telegram
-                  <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
-                </Button>
-                <div className="flex items-center text-white/60 text-sm">
-                  <Users className="w-4 h-4 mr-2" />
-                  Уже используют 10,000+ пользователей
-                </div>
-              </div>
-
-              {/* Feature badges */}
-              <div className="flex flex-wrap justify-center gap-2 pt-4">
-                {[
-                  "🔒 Полная безопасность",
-                  "⚡ Мгновенные ответы",
-                  "🤖 AI-ассистент",
-                  "📊 Аналитика",
-                ].map((badge, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-white/80 text-sm border border-white/20"
-                  >
-                    {badge}
-                  </span>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
-      </div>
+      </motion.section>
+
+      {/* How It Works Section */}
+      <motion.section
+        className="py-20 sm:py-32 px-4 bg-zinc-200"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.3 }}
+        variants={containerVariants}
+      >
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.h2
+            variants={itemVariants}
+            className="text-4xl md:text-5xl font-bold text-zinc-900"
+          >
+            Как это работает?
+          </motion.h2>
+          <motion.p
+            variants={itemVariants}
+            className="mt-4 text-lg text-zinc-600"
+          >
+            Всего три простых шага, чтобы начать.
+          </motion.p>
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-12">
+            {howItWorksSteps.map((step, index) => (
+              <motion.div
+                key={index}
+                variants={itemVariants}
+                className="flex flex-col items-center"
+              >
+                <div className="bg-white p-6 rounded-full shadow-lg">
+                  {step.icon}
+                </div>
+                <h3 className="mt-6 text-2xl font-semibold text-zinc-900">
+                  {step.title}
+                </h3>
+                <p className="mt-2 text-zinc-600">{step.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Testimonials Section */}
+      <motion.section
+        className="py-20 sm:py-32 px-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.3 }}
+        variants={containerVariants}
+      >
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.h2
+            variants={itemVariants}
+            className="text-4xl md:text-5xl font-bold text-zinc-900"
+          >
+            Что говорят наши пользователи
+          </motion.h2>
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
+              <motion.div key={index} variants={itemVariants}>
+                <Card className="bg-zinc-50 border-zinc-300 h-full flex flex-col justify-between p-6">
+                  <CardContent className="p-0">
+                    <p className="text-lg text-zinc-800 italic">
+                      "{testimonial.quote}"
+                    </p>
+                  </CardContent>
+                  <div className="mt-4 text-right">
+                    <p className="font-bold text-zinc-900">
+                      {testimonial.name}
+                    </p>
+                    <p className="text-sm text-zinc-500">
+                      {testimonial.handle}
+                    </p>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* CTA Section */}
+      <motion.section
+        className="py-20 sm:py-32 px-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.5 }}
+      >
+        <div className="max-w-4xl mx-auto text-center bg-gradient-to-r from-blue-50 to-indigo-50 p-10 rounded-2xl shadow-lg">
+          <motion.h2
+            variants={itemVariants}
+            className="text-4xl md:text-5xl font-bold text-zinc-900"
+          >
+            Готов общаться как профи?
+          </motion.h2>
+          <motion.div variants={itemVariants} className="mt-8">
+            <Button
+              size="lg"
+              className="bg-blue-600 hover:bg-blue-700 text-zinc-50 text-lg px-8 py-6 rounded-full shadow-lg"
+              onClick={handleNavigateToApp}
+            >
+              Начать сейчас
+            </Button>
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* Footer */}
+      <footer className="bg-zinc-900 text-zinc-100 py-12 px-4">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center text-center md:text-left">
+          <p>
+            &copy; {new Date().getFullYear()} AI Messenger. Все права защищены.
+          </p>
+          <div className="flex gap-6 mt-4 md:mt-0">
+            <a href="#" className="hover:text-blue-500 transition-colors">
+              О нас
+            </a>
+            <a href="#" className="hover:text-blue-500 transition-colors">
+              Политика конфиденциальности
+            </a>
+            <a href="#" className="hover:text-blue-500 transition-colors">
+              Контакты
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
-}
+};
+
+export default LandingPage;
