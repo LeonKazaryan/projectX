@@ -1,2 +1,4 @@
 .env
 __pycache__
+env_example.txt
+env_copy.txt
