@@ -349,26 +349,31 @@ class TelegramClientManager:
             print(f"Removed all WebSocket connections for session {session_id}")
     
     async def get_user_info(self, session_id: str) -> dict:
-        """Получить информацию о текущем пользователе"""
+        """Получить информацию о пользователе Telegram"""
         try:
             client = self.active_clients.get(session_id)
             if not client:
                 return {"success": False, "error": "Клиент не найден"}
-            
+
             me = await client.get_me()
+            if not me:
+                return {"success": False, "error": "Не удалось получить информацию о пользователе"}
             
+            print("--- TELEGRAM USER OBJECT ---")
+            print(me.to_json(indent=4))
+            print("--------------------------")
+
             return {
                 "success": True,
-                "user_info": {
-                    "id": me.id,
-                    "username": me.username,
-                    "first_name": me.first_name,
-                    "last_name": me.last_name,
-                    "phone": me.phone
-                }
+                "id": me.id,
+                "first_name": me.first_name,
+                "last_name": me.last_name,
+                "username": me.username,
+                "phone": me.phone
             }
-            
+
         except Exception as e:
+            print(f"Error in get_user_info: {e}")
             return {"success": False, "error": str(e)}
 
     async def disconnect_client(self, session_id: str):

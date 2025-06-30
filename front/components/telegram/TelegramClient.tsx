@@ -8,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import ChatList from "./chats/ChatList";
 import MessageArea from "./messages/MessageArea";
 import MTProtoAuth from "./auth/MTProtoAuth";
-import { Nav } from "../nav/Nav";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -53,12 +52,27 @@ const useTelegramSession = () => {
     restoreSession();
   }, []);
 
-  const handleLoginSuccess = (sid: string, sessionString: string) => {
+  const handleLoginSuccess = async (sid: string, sessionString: string) => {
     setSessionId(sid);
     setIsAuthenticated(true);
     setError(null);
     localStorage.setItem("telegram_session_id", sid);
     localStorage.setItem("telegram_session_string", sessionString);
+
+    try {
+      const token = localStorage.getItem("chathut_access_token");
+      await fetch("http://localhost:8000/api/telegram/connect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ session_string: sessionString }),
+      });
+    } catch (error) {
+      console.error("Failed to sync telegram session with backend", error);
+      // Handle error? Maybe show a message to the user.
+    }
   };
 
   const handleLogout = () => {
@@ -134,11 +148,7 @@ const TelegramClient: React.FC = () => {
 
   return (
     <>
-      <div className="h-screen w-screen flex flex-col bg-background text-foreground">
-        <Nav
-          onLogout={handleLogout}
-          onSettingsClick={() => setIsSettingsOpen(true)}
-        />
+      <div className="h-full w-full flex flex-col bg-background text-foreground">
         <Separator />
         <ResizablePanelGroup direction="horizontal" className="flex-grow">
           <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>

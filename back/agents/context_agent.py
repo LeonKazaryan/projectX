@@ -1,8 +1,8 @@
 import logging
 from typing import Dict, Any
 from .base import Agent
-from ai.secure_rag_engine import secure_rag_engine
-from telegram.telegram_client import TelegramClientManager
+from back.ai.secure_rag_engine import secure_rag_engine
+from back.telegram.telegram_client import TelegramClientManager
 
 logger = logging.getLogger(__name__)
 

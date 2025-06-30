@@ -9,6 +9,48 @@ Do not hesitate to import any components from the external library ShadCN,
 if you need so, you can write CSS code as well, but mainly keep project beautiful
 and organized
 
+## Cyberpunk Theme Standards
+
+Our project follows a **CYBERPUNK/SCI-FI aesthetic** with the following design principles:
+
+### 🎨 **Visual Design Requirements:**
+
+- **Color Palette**: Neon cyan (#00ffff), magenta (#ff00ff), yellow (#ffff00), green (#00ff00), purple gradients
+- **Typography**: Use `Orbitron` for headings/logos, `Rajdhani` for body text, both from Google Fonts
+- **Background**: Black base with particle systems, cyberpunk grid overlays, and neon gradients
+- **Brand Name**: Always use "chathut" in lowercase with cyberpunk styling
+
+### 🔧 **Required Libraries & Effects:**
+
+- **GSAP**: For 3D transforms, holographic card effects, and smooth animations
+- **Framer Motion**: For page transitions, staggered animations, and interactive elements
+- **TypeAnimation (react-type-animation)**: For typewriter effects in hero sections
+- **Custom Canvas**: Particle systems with interconnected neon nodes
+- **CSS Animations**: Glitch effects, neon pulse, holographic scanning, matrix rain
+
+### 🎯 **UI Component Standards:**
+
+- **Buttons**: Cyberpunk-btn class with sliding neon effects and gradient backgrounds
+- **Cards**: HolographicCard components with 3D transforms and neon borders
+- **Text**: GlitchText components with periodic glitch animations
+- **Icons**: Hexagonal containers for logos, Terminal icons for branding
+- **Borders**: Animated neon borders with color-cycling effects
+
+### 💫 **Animation Guidelines:**
+
+- **Performance**: Always use transform-gpu class for hardware acceleration
+- **Interactions**: Hover effects with scale transforms and neon glow increases
+- **Loading**: Cyber-themed loading animations with rotating elements
+- **Transitions**: Smooth 60fps animations using GSAP and Framer Motion
+
+### 🛡️ **Code Standards for Cyberpunk UI:**
+
+- Import custom CSS with cyberpunk animations: `import "./ComponentName.css"`
+- Use `font-orbitron` and `font-rajdhani` classes for typography
+- Apply `cyberpunk-btn`, `neon-border`, `glitch-text` classes when appropriate
+- Always include particle backgrounds and grid overlays for immersive experience
+- Maintain dark theme with neon accents throughout the entire application
+
 # Project Rules
 
 Yo, listen up. Here are the rules for this project. Stick to 'em and we'll be golden.

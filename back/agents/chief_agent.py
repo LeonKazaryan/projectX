@@ -6,7 +6,7 @@ from .context_agent import ContextAgent
 from .relevance_agent import RelevanceAgent
 from .writer_agent import WriterAgent
 from .critic_agent import CriticAgent
-from telegram.telegram_client import TelegramClientManager
+from back.telegram.telegram_client import TelegramClientManager
 
 logger = logging.getLogger(__name__)
 

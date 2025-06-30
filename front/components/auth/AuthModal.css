@@ -1,0 +1,279 @@
+/* AuthModal Cyberpunk Styles 🤖 */
+
+.neon-border-active {
+  position: relative;
+  animation: neon-border-pulse 2s infinite;
+}
+
+.neon-border-active::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00, #00ff00);
+  border-radius: 10px;
+  z-index: -1;
+  animation: cyberpunk-border-rotate 3s linear infinite;
+  opacity: 0.7;
+}
+
+@keyframes neon-border-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.6), 0 0 30px rgba(0, 255, 255, 0.4);
+  }
+}
+
+@keyframes cyberpunk-border-rotate {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Cyberpunk Checkbox */
+.cyberpunk-checkbox {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #00ffff;
+  border-radius: 3px;
+  background: transparent;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cyberpunk-checkbox:checked {
+  background: linear-gradient(45deg, #00ffff, #ff00ff);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  animation: checkbox-glow 0.3s ease;
+}
+
+.cyberpunk-checkbox:checked::before {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: black;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.cyberpunk-checkbox:hover {
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+  border-color: #00ffff;
+}
+
+@keyframes checkbox-glow {
+  0% { box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.8); }
+  100% { box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
+}
+
+/* Input Focus Effects */
+.cyberpunk-input:focus-within {
+  transform: translateZ(0);
+  animation: input-glow 0.3s ease;
+}
+
+@keyframes input-glow {
+  0% { 
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+    transform: scale(1.02);
+  }
+  100% { 
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+    transform: scale(1);
+  }
+}
+
+/* Button Hover Effects */
+.cyberpunk-btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  background-size: 200% 200%;
+}
+
+.cyberpunk-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.cyberpunk-btn:hover::before {
+  left: 100%;
+}
+
+.cyberpunk-btn:hover {
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.4),
+    0 0 40px rgba(255, 0, 255, 0.2),
+    inset 0 0 20px rgba(0, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.cyberpunk-btn:active {
+  transform: translateY(0);
+  box-shadow: 
+    0 0 10px rgba(0, 255, 255, 0.6),
+    inset 0 0 10px rgba(255, 0, 255, 0.2);
+}
+
+/* Loading Animation */
+.cyber-loading {
+  display: inline-block;
+  animation: cyber-spin 1s linear infinite;
+}
+
+@keyframes cyber-spin {
+  0% { 
+    transform: rotate(0deg);
+    filter: hue-rotate(0deg);
+  }
+  100% { 
+    transform: rotate(360deg);
+    filter: hue-rotate(360deg);
+  }
+}
+
+/* Modal Background Pattern */
+.auth-modal-bg {
+  background: 
+    radial-gradient(ellipse at center, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 80%, rgba(255, 255, 0, 0.1) 0%, transparent 50%),
+    linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
+}
+
+/* Holographic Scan Line */
+.hologram-scan {
+  position: relative;
+  overflow: hidden;
+}
+
+.hologram-scan::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00ffff, transparent);
+  animation: scan-line 3s linear infinite;
+  opacity: 0.7;
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-2px); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(400px); opacity: 0; }
+}
+
+/* Error State Animations */
+.error-shake {
+  animation: error-shake 0.5s ease-in-out;
+}
+
+@keyframes error-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* Success State */
+.success-glow {
+  animation: success-glow 0.6s ease-in-out;
+}
+
+@keyframes success-glow {
+  0% { 
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+    border-color: rgba(0, 255, 0, 0.5);
+  }
+  50% { 
+    box-shadow: 0 0 25px rgba(0, 255, 0, 0.8);
+    border-color: rgba(0, 255, 0, 1);
+  }
+  100% { 
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.4);
+    border-color: rgba(0, 255, 0, 0.6);
+  }
+}
+
+/* Text Selection */
+.auth-modal-bg ::selection {
+  background: rgba(0, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.auth-modal-bg ::-moz-selection {
+  background: rgba(0, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .cyberpunk-btn {
+    padding: 12px 24px;
+    font-size: 16px;
+  }
+  
+  .neon-border-active::before {
+    border-radius: 8px;
+  }
+  
+  .hologram-scan::after {
+    height: 1px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .cyberpunk-checkbox {
+    border-width: 3px;
+  }
+  
+  .cyberpunk-btn {
+    border: 2px solid #00ffff;
+  }
+  
+  .neon-border-active {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .cyberpunk-btn::before,
+  .neon-border-pulse,
+  .cyberpunk-border-rotate,
+  .scan-line,
+  .cyber-spin {
+    animation: none;
+  }
+  
+  .cyberpunk-btn:hover {
+    transform: none;
+  }
+} 

@@ -2,9 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 import asyncio
 from pydantic import BaseModel
 from typing import List, Optional
-from api.auth import get_telegram_manager
-from ai.message_analyzer import message_analyzer
-from ai.secure_rag_engine import secure_rag_engine
+from back.globals import get_telegram_manager
+from back.telegram.telegram_client import TelegramClientManager
+from back.ai.message_analyzer import message_analyzer
+from back.ai.secure_rag_engine import secure_rag_engine
 
 messages_router = APIRouter()
 

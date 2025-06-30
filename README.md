@@ -195,8 +195,8 @@
 
   #0.6.3
 
-  - MultiAgent System Release
-  - Significant AI upgrade
+- MultiAgent System Release
+- Significant AI upgrade
 
   #0.6.4
 
@@ -247,3 +247,13 @@
 
 - Landing redesign
 - Small Bug fixes with navigation
+
+# 0.6.8
+
+- 🎨 **Complete Cyberpunk UI Redesign** - Transformed the entire landing page with futuristic aesthetics
+- **Project Rebranding**: Official name change to "chathut" with cyberpunk styling
+- Account System added
+  -- Registration
+  -- Log In
+  -- Connected Messangers (for now only Telegram)
+- Thousands of small bugs fixed

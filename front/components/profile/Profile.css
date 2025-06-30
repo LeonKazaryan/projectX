@@ -1,0 +1,135 @@
+.profile-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 2rem;
+    background-color: #0a0a0a;
+    background-image: 
+        radial-gradient(circle at 25% 30%, hsla(240, 50%, 80%, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 75% 70%, hsla(300, 50%, 80%, 0.1) 0%, transparent 40%);
+    overflow: hidden;
+}
+
+.profile-card {
+    width: 100%;
+    max-width: 800px;
+    background: rgba(10, 20, 30, 0.8);
+    border: 1px solid var(--neon-cyan);
+    border-radius: 10px;
+    padding: 2rem;
+    box-shadow: 0 0 15px var(--neon-cyan), 0 0 30px var(--neon-cyan) inset;
+    backdrop-filter: blur(10px);
+    color: #fff;
+}
+
+.profile-header .glitch-text {
+    font-size: 2.5rem;
+    color: var(--neon-cyan);
+    margin-bottom: 1rem;
+}
+
+.neon-divider {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon-magenta), transparent);
+    margin-bottom: 2rem;
+    box-shadow: 0 0 10px var(--neon-magenta);
+}
+
+.profile-details p {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-details .font-orbitron {
+    color: var(--neon-yellow);
+}
+
+.connected-accounts-section {
+    margin-top: 2rem;
+}
+
+.connected-accounts-section h2 {
+    font-size: 1.8rem;
+    color: var(--neon-magenta);
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.accounts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+}
+
+.account-card {
+    background: rgba(20, 30, 40, 0.7);
+    border: 1px solid;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.account-card.connected {
+    border-color: var(--neon-green);
+    box-shadow: 0 0 10px var(--neon-green);
+}
+
+.account-card.disconnected {
+    border-color: var(--neon-magenta);
+    box-shadow: 0 0 10px var(--neon-magenta);
+}
+
+.account-card-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+}
+
+.account-icon {
+    font-size: 3rem;
+}
+
+.account-card-header h3 {
+    font-size: 1.5rem;
+}
+
+.account-card-body p {
+    margin-bottom: 0.5rem;
+}
+
+.account-card-footer {
+    margin-top: 1.5rem;
+}
+
+.profile-actions {
+    margin-top: 3rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.cyberpunk-btn.disconnect-btn {
+    --aug-border-bg: var(--neon-red);
+    --aug-border-color: var(--neon-red);
+    color: var(--neon-red);
+}
+
+.cyberpunk-btn.disconnect-btn:hover {
+    color: #fff;
+}
+
+.account-card.connected:hover {
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.6);
+}
+
+.account-card-wrapper.clickable {
+    cursor: pointer;
+} 

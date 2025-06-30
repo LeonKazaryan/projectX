@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
 from typing import List, Optional
-from api.auth import get_telegram_manager
+from back.globals import get_telegram_manager
+from back.telegram.telegram_client import TelegramClientManager
 
 chats_router = APIRouter()
 

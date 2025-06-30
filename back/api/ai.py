@@ -4,9 +4,9 @@ from typing import Optional, List, Dict
 import os
 import logging
 
-from api.auth import get_telegram_manager
-from telegram.telegram_client import TelegramClientManager
-from agents.chief_agent import ChiefAgent
+from back.globals import get_telegram_manager
+from back.telegram.telegram_client import TelegramClientManager
+from back.agents.chief_agent import ChiefAgent
 import openai
 
 logger = logging.getLogger(__name__)

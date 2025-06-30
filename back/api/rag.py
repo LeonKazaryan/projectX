@@ -5,9 +5,9 @@ import asyncio
 import logging
 from datetime import datetime
 
-from ai.secure_rag_engine import secure_rag_engine
-from ai.message_analyzer import message_analyzer
-from api.auth import get_telegram_manager
+from back.globals import get_telegram_manager
+from back.ai.secure_rag_engine import secure_rag_engine
+from back.ai.message_analyzer import message_analyzer
 
 logger = logging.getLogger(__name__)
 
