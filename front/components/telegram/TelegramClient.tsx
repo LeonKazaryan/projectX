@@ -18,9 +18,15 @@ const useTelegramSession = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
+  const [hasAttemptedRestore, setHasAttemptedRestore] = useState(false);
 
   useEffect(() => {
+    if (hasAttemptedRestore) return; // Prevent multiple restore attempts
+
     const restoreSession = async () => {
+      setHasAttemptedRestore(true);
+
+      // First try to restore from localStorage
       const sessionString = localStorage.getItem("telegram_session_string");
       if (sessionString) {
         try {
@@ -36,21 +42,69 @@ const useTelegramSession = () => {
           if (data.success) {
             setSessionId(data.session_id);
             setIsAuthenticated(true);
-          } else {
-            localStorage.removeItem("telegram_session_id");
-            localStorage.removeItem("telegram_session_string");
+            setIsRestoring(false);
+            return;
           }
         } catch (e) {
-          console.error("Failed to restore session", e);
-          localStorage.removeItem("telegram_session_id");
-          localStorage.removeItem("telegram_session_string");
+          console.error("Failed to restore session from localStorage", e);
         }
       }
+
+      // If no localStorage session, try to restore from database
+      try {
+        const token = localStorage.getItem("chathut_access_token");
+        if (token) {
+          const response = await fetch(
+            "http://localhost:8000/api/telegram/restore-session",
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            // Restore the session using the existing endpoint
+            const restoreResponse = await fetch(
+              "http://localhost:8000/api/auth/restore-session",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ session_string: data.session_string }),
+              }
+            );
+            const restoreData = await restoreResponse.json();
+            if (restoreData.success) {
+              setSessionId(restoreData.session_id);
+              setIsAuthenticated(true);
+              // Update localStorage with the restored session
+              localStorage.setItem(
+                "telegram_session_id",
+                restoreData.session_id
+              );
+              localStorage.setItem(
+                "telegram_session_string",
+                data.session_string
+              );
+              setIsRestoring(false);
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to restore session from database", e);
+      }
+
+      // Clear any invalid session data and finish
+      localStorage.removeItem("telegram_session_id");
+      localStorage.removeItem("telegram_session_string");
       setIsRestoring(false);
     };
 
     restoreSession();
-  }, []);
+  }, [hasAttemptedRestore]);
 
   const handleLoginSuccess = async (sid: string, sessionString: string) => {
     setSessionId(sid);

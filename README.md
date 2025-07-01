@@ -257,3 +257,7 @@
   -- Log In
   -- Connected Messangers (for now only Telegram)
 - Thousands of small bugs fixed
+
+# 0.6.9
+
+- Now Telegram session is storing within the account

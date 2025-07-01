@@ -4,11 +4,13 @@ from back.database.config import get_async_db
 from back.models.database import (
     User, 
     create_or_update_telegram_connection_async,
-    deactivate_telegram_connection_async
+    deactivate_telegram_connection_async,
+    TelegramConnection
 )
 from back.api.auth import get_current_user
 from pydantic import BaseModel
 from back.globals import get_telegram_manager
+from sqlalchemy import select
 
 router = APIRouter(prefix="/telegram", tags=["Telegram"])
 
@@ -40,7 +42,7 @@ async def connect_telegram(
         "telegram_username": user_info["username"],
         "telegram_display_name": f"{user_info['first_name'] or ''} {user_info['last_name'] or ''}".strip(),
         "phone_number": user_info["phone"],
-        "session_data": request.session_string, # Should be encrypted
+        "session_data": request.session_string,  # Save session to DB
         "is_active": True
     }
 
@@ -74,4 +76,28 @@ async def logout_telegram(
         user_to_update.is_telegram_connected = False
         await db.commit()
 
-    return {"message": "Telegram disconnected successfully"} 
+    return {"message": "Telegram disconnected successfully"}
+
+
+@router.get("/restore-session", status_code=status.HTTP_200_OK)
+async def restore_telegram_session(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """Restore Telegram session from database"""
+    # Get the active telegram connection
+    result = await db.execute(
+        select(TelegramConnection).filter(
+            TelegramConnection.user_id == current_user.id,
+            TelegramConnection.is_active == True
+        )
+    )
+    connection = result.scalars().first()
+    
+    if not connection or not connection.session_data:
+        raise HTTPException(status_code=404, detail="No active Telegram session found")
+    
+    return {
+        "session_string": connection.session_data,
+        "telegram_username": connection.telegram_username
+    } 
