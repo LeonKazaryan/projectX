@@ -11,4 +11,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  preview: {
+    host: true, // This is equivalent to --host
+    port: 8080,
+    allowedHosts: ["chathut.net", "www.chathut.net"],
+  },
 })
