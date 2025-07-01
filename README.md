@@ -200,18 +200,8 @@
 
   #0.6.4
 
-  - 🎨 **Revolutionary Landing Page Redesign** - Completely overhauled landing page with stunning modern design
-  - **Dark Theme Excellence**: Beautiful dark gradient background with purple-to-slate color scheme
-  - **Interactive Animations**: Mouse-following gradient effects, hover animations, and smooth transitions
-  - **Glassmorphism UI**: Modern glass-like components with backdrop blur and transparency effects
-  - **Advanced Typography**: Gradient text effects, large modern fonts, and perfect spacing
-  - **Floating Elements**: Subtle floating animations and rotating hover effects on feature cards
-  - **Professional Presentation**: Premium visual design with glow effects, shadows, and modern aesthetics
-  - **Mobile Responsive**: Fully optimized for all device sizes with adaptive layouts
-  - **Accessibility First**: Respects user motion preferences and provides excellent contrast
-  - **Unique Visual Identity**: Custom color scheme and animations that stand out from template designs
-  - **Interactive Features**: Smooth scrolling, animated CTA buttons, and engaging hover states
-  - **Modern CSS**: Advanced CSS animations, keyframes, and responsive design patterns
+- Landing Redesign
+- Enhaced animations
 
   #0.6.5
 
@@ -261,3 +251,14 @@
 # 0.6.9
 
 - Now Telegram session is storing within the account
+
+# 0.7.0
+
+- Nav Redesign in telegram Client
+  -- Cyberpunk Nav design
+  -- Added Brand logo "chathut"
+  -- Changed buttons
+  --- Added "profile" button
+  --- Deleted button "Logout"
+- Domain chathut.net bought!
+- Deployed to Digital Ocean
