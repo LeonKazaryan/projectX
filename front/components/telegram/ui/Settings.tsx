@@ -19,22 +19,16 @@ import {
   FolderArchive,
   Database,
   Loader2,
-  RotateCcw,
   AlertCircle,
 } from "lucide-react";
 
 interface SettingsProps {
   isOpen: boolean;
   onClose: () => void;
-  sessionId: string | null;
 }
 
 // A simple hook to manage a specific setting
-const useSetting = (
-  key: string,
-  defaultValue: boolean,
-  sessionId: string | null
-) => {
+const useSetting = (key: string, defaultValue: boolean) => {
   const [value, setValue] = useState(() => {
     const stored = localStorage.getItem(key);
     return stored ? JSON.parse(stored) : defaultValue;
@@ -47,26 +41,19 @@ const useSetting = (
   return [value, setValue] as const;
 };
 
-export const Settings: React.FC<SettingsProps> = ({
-  isOpen,
-  onClose,
-  sessionId,
-}) => {
+export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
   // We can fetch these from backend if they become more complex
   const [includeArchived, setIncludeArchived] = useSetting(
     "telegram_include_archived",
-    false,
-    sessionId
+    false
   );
   const [includeReadonly, setIncludeReadonly] = useSetting(
     "telegram_include_readonly",
-    false,
-    sessionId
+    false
   );
   const [includeGroups, setIncludeGroups] = useSetting(
     "telegram_include_groups",
-    true,
-    sessionId
+    true
   );
 
   // AI Settings would be fetched from the backend
@@ -98,7 +85,6 @@ export const Settings: React.FC<SettingsProps> = ({
   }, [isOpen]);
 
   const handleSync = async () => {
-    if (!sessionId) return;
     setRagSyncLoading(true);
     setRagError(null);
     try {
@@ -232,7 +218,7 @@ export const Settings: React.FC<SettingsProps> = ({
               )}
               <Button
                 onClick={handleSync}
-                disabled={ragSyncLoading || !sessionId}
+                disabled={ragSyncLoading}
                 className="w-full"
               >
                 {ragSyncLoading && (

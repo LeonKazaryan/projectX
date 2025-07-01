@@ -7,7 +7,7 @@ import {
 import { Button } from "../../src/components/ui/button";
 import { Settings, Home, User, Terminal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { authService, User as UserType } from "../services/authService";
+import { authService, type User as UserType } from "../services/authService";
 import "./Nav.css";
 
 interface NavProps {

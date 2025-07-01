@@ -12,7 +12,6 @@ import {
   Loader2,
   AlertCircle,
   RotateCcw,
-  Settings2,
   Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -242,26 +241,6 @@ const ChatList: React.FC<ChatListProps> = ({
         day: "2-digit",
         month: "2-digit",
       });
-    }
-  };
-
-  const getChatIcon = (dialog: Dialog) => {
-    if (dialog.is_user) return <User className="h-4 w-4" />;
-    if (dialog.is_group) return <Users className="h-4 w-4" />;
-    if (dialog.is_channel) return <Megaphone className="h-4 w-4" />;
-    return <MessageCircle className="h-4 w-4" />;
-  };
-
-  const getConnectionStatusColor = () => {
-    switch (connectionStatus) {
-      case "connected":
-        return "bg-green-500";
-      case "connecting":
-        return "bg-yellow-500";
-      case "disconnected":
-        return "bg-red-500";
-      default:
-        return "bg-gray-300";
     }
   };
 

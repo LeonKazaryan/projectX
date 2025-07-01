@@ -4,7 +4,6 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Separator } from "@/components/ui/separator";
 import ChatList from "./chats/ChatList";
 import MessageArea from "./messages/MessageArea";
 import MTProtoAuth from "./auth/MTProtoAuth";
@@ -129,13 +128,6 @@ const useTelegramSession = () => {
     }
   };
 
-  const handleLogout = () => {
-    setSessionId(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem("telegram_session_id");
-    localStorage.removeItem("telegram_session_string");
-  };
-
   const handleAuthError = (err: string) => {
     setError(err);
   };
@@ -146,7 +138,6 @@ const useTelegramSession = () => {
     error,
     isRestoring,
     handleLoginSuccess,
-    handleLogout,
     handleAuthError,
   };
 };
@@ -158,7 +149,6 @@ const TelegramClient: React.FC = () => {
     error,
     isRestoring,
     handleLoginSuccess,
-    handleLogout,
     handleAuthError,
   } = useTelegramSession();
   const [selectedChat, setSelectedChat] = useState<{

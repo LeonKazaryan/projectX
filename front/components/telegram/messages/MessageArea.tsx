@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ScrollArea } from "../../../src/components/ui/scroll-area";
 import { Button } from "../../../src/components/ui/button";
 import { Textarea } from "../../../src/components/ui/textarea";
 import { Avatar, AvatarFallback } from "../../../src/components/ui/avatar";
 import { Separator } from "../../../src/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { ragService } from "../utils/ragService";
 import {
   Send,
@@ -19,7 +17,6 @@ import {
   ChevronDown,
   RotateCcw,
   Trash2,
-  RefreshCw,
 } from "lucide-react";
 import { RAGService } from "../utils/ragService";
 import { motion, AnimatePresence } from "framer-motion";
@@ -121,7 +118,6 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const aiSuggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previousChatIdRef = useRef<number>(0);
-  const isInitialLoadRef = useRef(true);
   const isChatSwitchRef = useRef(true);
 
   const API_BASE = "http://localhost:8000/api";
