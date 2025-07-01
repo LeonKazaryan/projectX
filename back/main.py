@@ -1,10 +1,15 @@
+import sys
+import os
+
+# Add the project root to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 import asyncio
 from datetime import datetime
-import os
 from dotenv import load_dotenv
 
 from back.telegram.telegram_client import TelegramClientManager
