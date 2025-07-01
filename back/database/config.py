@@ -12,31 +12,28 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Database configuration
-DATABASE_USER = os.getenv("POSTGRES_USER", "chathut_user")
-DATABASE_PASSWORD = os.getenv("POSTGRES_PASSWORD", "chathut_pass_dev_2024")
-DATABASE_HOST = os.getenv("POSTGRES_HOST", "localhost")
-DATABASE_PORT = os.getenv("POSTGRES_PORT", "5432")
-DATABASE_NAME = os.getenv("POSTGRES_DB", "chathut")
+# Get the database URL from environment variables, provided by DigitalOcean
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Async database URL (using asyncpg)
-ASYNC_DATABASE_URL = f"postgresql+asyncpg://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# For databases library (using asyncpg)
-DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+# Ensure SSL is required for production database connections
+if "ondigitalocean.com" in DATABASE_URL:
+    ASYNC_DATABASE_URL = f"{DATABASE_URL}?ssl=require"
+else:
+    ASYNC_DATABASE_URL = DATABASE_URL
 
-# SQLAlchemy engines (only async since we don't have psycopg2)
-async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=False)
-
-# Keep sync_engine as None for now - we'll use async only
+# SQLAlchemy engines
+async_engine = create_async_engine(ASYNC_DATABASE_URL.replace("postgresql", "postgresql+asyncpg"), echo=False)
 sync_engine = None
 
 # Session makers
-SessionLocal = None  # Disabled since we don't have sync_engine
+SessionLocal = None
 AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
 # Database instance for direct queries
-database = Database(DATABASE_URL)
+database = Database(ASYNC_DATABASE_URL)
 
 
 def get_db() -> Session:
