@@ -202,8 +202,7 @@ const TelegramClient: React.FC = () => {
 
   return (
     <>
-      <div className="h-full w-full flex flex-col bg-background text-foreground">
-        <Separator />
+      <div className="w-full flex flex-col bg-background text-foreground h-full">
         <ResizablePanelGroup direction="horizontal" className="flex-grow">
           <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
             <ChatList

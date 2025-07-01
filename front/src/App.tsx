@@ -18,22 +18,16 @@ const AppLayout = () => {
       ? "flex-grow"
       : "flex-grow overflow-y-auto";
 
-  const handleLogout = () => {
-    console.log("Logout clicked");
-    localStorage.clear();
-    window.location.href = "/home";
-  };
-
   const handleSettingsClick = () => {
     console.log("Settings clicked");
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
+    <div className="flex flex-col h-screen bg-background text-foreground relative">
       {!noNavRoutes.includes(location.pathname) && (
-        <Nav onLogout={handleLogout} onSettingsClick={handleSettingsClick} />
+        <Nav onSettingsClick={handleSettingsClick} />
       )}
-      <main className={mainClass}>
+      <main className={`${mainClass} relative`}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/home" element={<Home />} />
