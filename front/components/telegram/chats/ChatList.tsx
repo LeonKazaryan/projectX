@@ -56,9 +56,6 @@ const ChatList: React.FC<ChatListProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [connectionStatus, setConnectionStatus] = useState<
-    "connecting" | "connected" | "disconnected"
-  >("disconnected");
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -71,14 +68,12 @@ const ChatList: React.FC<ChatListProps> = ({
     }
 
     try {
-      setConnectionStatus("connecting");
       console.log("Connecting ChatList WebSocket...");
 
       const ws = new WebSocket(`ws://localhost:8000/ws/${sessionId}`);
 
       ws.onopen = () => {
         console.log("ChatList WebSocket connected");
-        setConnectionStatus("connected");
       };
 
       ws.onmessage = (event) => {
@@ -118,7 +113,6 @@ const ChatList: React.FC<ChatListProps> = ({
 
       ws.onclose = (event) => {
         console.log("ChatList WebSocket closed:", event.code, event.reason);
-        setConnectionStatus("disconnected");
 
         if (event.code !== 1000) {
           reconnectTimeoutRef.current = setTimeout(() => {
@@ -130,13 +124,11 @@ const ChatList: React.FC<ChatListProps> = ({
 
       ws.onerror = (error) => {
         console.error("ChatList WebSocket error:", error);
-        setConnectionStatus("disconnected");
       };
 
       wsRef.current = ws;
     } catch (error) {
       console.error("Failed to create ChatList WebSocket connection:", error);
-      setConnectionStatus("disconnected");
     }
   }, [sessionId, selectedChatId]);
 
@@ -150,8 +142,6 @@ const ChatList: React.FC<ChatListProps> = ({
       wsRef.current.close(1000, "Component unmounting");
       wsRef.current = null;
     }
-
-    setConnectionStatus("disconnected");
   }, []);
 
   useEffect(() => {
