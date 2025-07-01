@@ -195,11 +195,13 @@ const TelegramClient: React.FC = () => {
       <div className="w-full flex flex-col bg-background text-foreground h-full">
         <ResizablePanelGroup direction="horizontal" className="flex-grow">
           <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
-            <ChatList
-              sessionId={sessionId!}
-              onChatSelect={(id, name) => setSelectedChat({ id, name })}
-              selectedChatId={selectedChat?.id}
-            />
+            {sessionId && (
+              <ChatList
+                sessionId={sessionId}
+                onChatSelect={(id, name) => setSelectedChat({ id, name })}
+                selectedChatId={selectedChat?.id}
+              />
+            )}
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel defaultSize={75}>
@@ -226,7 +228,6 @@ const TelegramClient: React.FC = () => {
       <Settings
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        sessionId={sessionId}
       />
     </>
   );

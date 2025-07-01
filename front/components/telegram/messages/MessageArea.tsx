@@ -90,7 +90,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   chatName,
   userId,
 }) => {
-  const { aiSettings, loading: aiSettingsLoading } = useAISettings(sessionId);
+  const { aiSettings } = useAISettings(sessionId);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);

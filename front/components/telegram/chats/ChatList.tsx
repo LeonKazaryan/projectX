@@ -4,16 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import {
-  MessageCircle,
-  Users,
-  Megaphone,
-  User,
-  Loader2,
-  AlertCircle,
-  RotateCcw,
-  Search,
-} from "lucide-react";
+import { Loader2, RotateCcw, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Dialog {
@@ -276,7 +267,7 @@ const ChatList: React.FC<ChatListProps> = ({
         </div>
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center space-y-4">
-            <AlertCircle className="h-8 w-8 text-destructive mx-auto" />
+            <Loader2 className="h-8 w-8 text-destructive mx-auto" />
             <p className="text-sm text-muted-foreground">{error}</p>
             <Button onClick={fetchDialogs} variant="outline" size="sm">
               <RotateCcw className="h-4 w-4 mr-2" />
@@ -311,7 +302,7 @@ const ChatList: React.FC<ChatListProps> = ({
               </div>
             ) : error ? (
               <div className="p-4 text-center text-sm text-destructive">
-                <AlertCircle className="mx-auto h-6 w-6 mb-2" />
+                <Loader2 className="mx-auto h-6 w-6 mb-2" />
                 <p>{error}</p>
                 <Button
                   variant="outline"
