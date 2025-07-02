@@ -26,7 +26,7 @@ from back.auth.jwt_handler import (
     extract_device_info, generate_secure_token,
 )
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter(tags=["Authentication"])
 security = HTTPBearer()
 
 

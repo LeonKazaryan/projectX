@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from back.globals import get_telegram_manager
 from sqlalchemy import select
 
-router = APIRouter(prefix="/telegram", tags=["Telegram"])
+router = APIRouter(tags=["Telegram"])
 
 class ConnectRequest(BaseModel):
     session_string: str
