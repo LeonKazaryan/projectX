@@ -6,7 +6,12 @@ export default {
     "./components/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        'orbitron': ['Orbitron', 'Arial', 'sans-serif'],
+        'rajdhani': ['Rajdhani', 'Arial', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 } 

@@ -111,6 +111,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const [ragEnhanced, setRagEnhanced] = useState(false);
   const [similarContext, setSimilarContext] = useState<string[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [isNearBottom, setIsNearBottom] = useState(true);
 
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -120,6 +121,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previousChatIdRef = useRef<number>(0);
   const isChatSwitchRef = useRef(true);
+  const justSentMessageRef = useRef(false);
 
   const connectWebSocket = useCallback(() => {
     if (!sessionId || !chatId) {
@@ -307,15 +309,30 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
     return cleanup;
   }, [sessionId, chatId, userId, aiSettings, startContinuousAI]);
 
-  // Only auto-scroll on chat switch, not on new messages
+  // Auto-scroll logic for new messages
   useEffect(() => {
     if (messages.length === 0) return;
 
     if (isChatSwitchRef.current) {
       scrollToBottom(false); // INSTANT scroll on chat switch only
       isChatSwitchRef.current = false;
+      setIsNearBottom(true);
+    } else if (isNearBottom) {
+      // Auto-scroll if user is near bottom when new message arrives
+      setTimeout(() => scrollToBottom(true), 100);
     }
-    // NO MORE AUTO-SCROLL ON NEW MESSAGES!
+  }, [messages, isNearBottom]);
+
+  // Maintain focus after sending message, even if re-renders happen
+  useEffect(() => {
+    if (justSentMessageRef.current && textareaRef.current) {
+      const focusTimer = setTimeout(() => {
+        if (textareaRef.current && justSentMessageRef.current) {
+          textareaRef.current.focus();
+        }
+      }, 50);
+      return () => clearTimeout(focusTimer);
+    }
   }, [messages]);
 
   const fetchMessages = async () => {
@@ -415,11 +432,20 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
       const data = await response.json();
       if (data.success) {
         setNewMessage("");
+        justSentMessageRef.current = true;
         if (textareaRef.current) {
           textareaRef.current.style.height = "auto";
         }
-        // Force scroll to bottom after sending
-        // Message sent, no auto-scroll
+        // Keep focus on the input after sending message - use setTimeout to ensure it happens after re-renders
+        setTimeout(() => {
+          if (textareaRef.current && justSentMessageRef.current) {
+            textareaRef.current.focus();
+            justSentMessageRef.current = false;
+          }
+        }, 100);
+        // Force scroll to bottom after sending your own message
+        setIsNearBottom(true);
+        setTimeout(() => scrollToBottom(true), 150);
       } else {
         setError(data.error || "Ошибка отправки сообщения");
       }
@@ -444,16 +470,17 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
     const { scrollTop, scrollHeight, clientHeight } = target;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
+    // Track if user is near bottom (within 100px)
+    const nearBottom = distanceFromBottom <= 100;
+    setIsNearBottom(nearBottom);
+
     // Show button when scrolled up more than 100px from bottom
-    if (distanceFromBottom > 100) {
-      setShowScrollButton(true);
-    } else {
-      setShowScrollButton(false);
-    }
+    setShowScrollButton(!nearBottom);
   };
 
   const handleScrollToBottom = () => {
     scrollToBottom(true);
+    setIsNearBottom(true);
   };
 
   const formatTime = (dateString: string) => {

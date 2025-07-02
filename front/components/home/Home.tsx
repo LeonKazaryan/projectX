@@ -196,18 +196,37 @@ const Home = () => {
               </GlitchText>
             </motion.div>
 
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                onClick={handleNavigateToApp}
-                className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-black font-bold px-6 py-2 border-0"
-                style={{
-                  boxShadow: "0 0 20px rgba(0,255,255,0.5)",
-                }}
+            <div className="flex items-center space-x-4">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <Play className="w-4 h-4 mr-2" />
-                Launch App
-              </Button>
-            </motion.div>
+                <Button
+                  onClick={() => navigate("/security")}
+                  variant="ghost"
+                  className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 px-4 py-2 font-rajdhani"
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  How It Works
+                </Button>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button
+                  onClick={handleNavigateToApp}
+                  className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-black font-bold px-6 py-2 border-0"
+                  style={{
+                    boxShadow: "0 0 20px rgba(0,255,255,0.5)",
+                  }}
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  Launch App
+                </Button>
+              </motion.div>
+            </div>
           </div>
         </motion.nav>
 
@@ -252,7 +271,7 @@ const Home = () => {
 
               <motion.div
                 variants={itemVariants}
-                className="flex justify-center space-x-6"
+                className="flex justify-center space-x-6 flex-wrap gap-y-4"
               >
                 <motion.div
                   whileHover={{
@@ -288,6 +307,24 @@ const Home = () => {
                   >
                     <Eye className="w-5 h-5 mr-2" />
                     {isAuthenticated ? "Neural Settings" : "Register"}
+                  </Button>
+                </motion.div>
+
+                <motion.div
+                  whileHover={{
+                    scale: 1.05,
+                    boxShadow: "0 0 30px rgba(255,255,0,0.8)",
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    onClick={() => navigate("/security")}
+                    variant="outline"
+                    size="lg"
+                    className="border-2 border-yellow-500 text-yellow-400 hover:bg-yellow-500/10 px-8 py-4 text-lg cyberpunk-btn font-rajdhani neon-border"
+                  >
+                    <Shield className="w-5 h-5 mr-2" />
+                    Security & Transparency
                   </Button>
                 </motion.div>
               </motion.div>

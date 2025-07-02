@@ -13,7 +13,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Get the database URL from environment variables, provided by DigitalOcean
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL_PROD = os.getenv("DATABASE_URL")
+LOCAL_DEV_DATABASE_URL = "postgresql://chathut_user:chathut_pass_dev_2024@localhost:5432/chathut"
+IS_LOCAL = os.getenv("ENV") == "development"
+
+DATABASE_URL = LOCAL_DEV_DATABASE_URL if IS_LOCAL else DATABASE_URL_PROD
 
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)

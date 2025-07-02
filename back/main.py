@@ -86,10 +86,6 @@ app.include_router(ai_router, prefix="/api/ai", tags=["ai"])
 app.include_router(rag_router, prefix="/api/rag", tags=["rag"])
 app.include_router(telegram_router, prefix="/api/telegram", tags=["Telegram"])
 
-@app.get("/test-route")
-async def test_route():
-    return {"message": "Deployment is working!"}
-
 @app.get("/")
 async def root():
     return {

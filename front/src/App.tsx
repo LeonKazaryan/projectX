@@ -8,6 +8,7 @@ import Home from "../components/home/Home";
 import { Nav } from "../components/nav/Nav";
 import Profile from "../components/profile/Profile";
 import TelegramClient from "../components/telegram/TelegramClient";
+import Security from "../components/security/Security";
 
 const AppLayout = () => {
   const location = useLocation();
@@ -32,6 +33,7 @@ const AppLayout = () => {
           <Route path="/home" element={<Home />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/telegram" element={<TelegramClient />} />
+          <Route path="/security" element={<Security />} />
         </Routes>
       </main>
     </div>

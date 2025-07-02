@@ -5,7 +5,7 @@ from back.globals import get_telegram_manager
 from back.telegram.telegram_client import TelegramClientManager
 
 # New router for Telegram authentication
-telegram_auth_router = APIRouter(prefix="/auth", tags=["Telegram Authentication"])
+telegram_auth_router = APIRouter(tags=["Telegram Authentication"])
 
 class PhoneRequest(BaseModel):
     phone: str

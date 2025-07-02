@@ -198,7 +198,7 @@
 - MultiAgent System Release
 - Significant AI upgrade
 
-  #0.6.4
+#0.6.4
 
 - Landing Redesign
 - Enhaced animations
@@ -267,3 +267,9 @@
 
 - Hardcoding deleted
 - Preparations for professional development
+
+# 0.7.2
+
+- Fixed bugs with input focus
+- Fixed bugs with scroll
+- 🛡️ **Security & Transparency Page** - Added comprehensive "How It Works" page accessible from the landing page
