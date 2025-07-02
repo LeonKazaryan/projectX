@@ -32,7 +32,12 @@ app = FastAPI(title="ChartHut Cyberpunk API 🤖", version="0.7.0")
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # React dev server
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://chathut.net",
+        "https://www.chathut.net",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,13 +78,13 @@ telegram_manager = TelegramClientManager()
 globals.set_telegram_manager(telegram_manager)
 
 # Include routers
-app.include_router(auth_router, prefix="/api", tags=["Authentication"])
-app.include_router(telegram_auth_router, prefix="/api", tags=["Telegram Authentication"])
+app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(telegram_auth_router, prefix="/api/auth", tags=["Telegram Authentication"])
 app.include_router(messages_router, prefix="/api/messages", tags=["messages"])
 app.include_router(chats_router, prefix="/api/chats", tags=["chats"])
 app.include_router(ai_router, prefix="/api/ai", tags=["ai"])
 app.include_router(rag_router, prefix="/api/rag", tags=["rag"])
-app.include_router(telegram_router, prefix="/api")
+app.include_router(telegram_router, prefix="/api/telegram", tags=["Telegram"])
 
 @app.get("/")
 async def root():
