@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../services/authService";
 // RAG Service for Telegram Client
 // Handles communication with backend RAG API
 
@@ -38,7 +39,7 @@ interface EnhancedSuggestion {
 export class RAGService {
   private baseURL: string;
 
-  constructor(baseURL: string = 'http://localhost:8000/api/rag') {
+  constructor(baseURL: string = `${API_BASE_URL}/rag`) {
     this.baseURL = baseURL;
   }
 
@@ -173,7 +174,7 @@ export class RAGService {
     messageHistory: Message[]
   ): Promise<EnhancedSuggestion | null> {
     try {
-      const response = await fetch('http://localhost:8000/api/ai/generate-agent-response', {
+      const response = await fetch(`${API_BASE_URL}/ai/generate-agent-response`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

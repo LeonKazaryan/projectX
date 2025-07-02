@@ -6,13 +6,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
+} from "../../../src/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../../src/components/ui/tabs";
+import { Button } from "../../../src/components/ui/button";
+import { Switch } from "../../../src/components/ui/switch";
+import { Label } from "../../../src/components/ui/label";
+import { Separator } from "../../../src/components/ui/separator";
+import { Slider } from "../../../src/components/ui/slider";
 import {
   Settings as SettingsIcon,
   Bot,
@@ -21,6 +26,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
+import { API_BASE_URL } from "../../services/authService";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -65,11 +71,9 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
   const [ragSyncLoading, setRagSyncLoading] = useState(false);
   const [ragError, setRagError] = useState<string | null>(null);
 
-  const API_BASE = "http://localhost:8000/api";
-
   const loadRagStats = async () => {
     try {
-      const response = await fetch(`${API_BASE}/rag/stats`);
+      const response = await fetch(`${API_BASE_URL}/rag/stats`);
       const data = await response.json();
       if (data.success) setRagStats(data);
       else setRagError(data.error || "Failed to load RAG stats.");

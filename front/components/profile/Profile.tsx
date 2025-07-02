@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import authService from "../services/authService";
+import { API_BASE_URL } from "../services/authService";
 import type { ProfileData, ConnectedAccount } from "../services/authService";
 import "./Profile.css";
 import { useNavigate } from "react-router-dom";
@@ -61,16 +62,13 @@ const Profile: React.FC = () => {
   const handleTelegramLogout = async () => {
     try {
       const token = authService.getAccessToken();
-      const response = await fetch(
-        "http://localhost:8000/api/telegram/logout",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/telegram/logout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (response.ok) {
         localStorage.removeItem("telegram_session_id");
         localStorage.removeItem("telegram_session_string");

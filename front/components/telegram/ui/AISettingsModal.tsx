@@ -27,6 +27,7 @@ import {
 import { Badge } from "../../../src/components/ui/badge";
 import { Separator } from "../../../src/components/ui/separator";
 import { Loader2, Bot, Brain, Clock, Shield, Info, Save } from "lucide-react";
+import { API_BASE_URL } from "../../services/authService";
 
 interface AISettings {
   enabled: boolean;
@@ -67,8 +68,6 @@ const AISettingsModal: React.FC<AISettingsModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const API_BASE = "http://localhost:8000/api";
-
   useEffect(() => {
     if (isOpen && sessionId) {
       loadSettings();
@@ -80,7 +79,7 @@ const AISettingsModal: React.FC<AISettingsModalProps> = ({
     setError("");
     try {
       const response = await fetch(
-        `${API_BASE}/ai/settings?session_id=${sessionId}`
+        `${API_BASE_URL}/ai/settings?session_id=${sessionId}`
       );
       const data = await response.json();
 
@@ -101,7 +100,7 @@ const AISettingsModal: React.FC<AISettingsModalProps> = ({
     setSaving(true);
     setError("");
     try {
-      const response = await fetch(`${API_BASE}/ai/settings`, {
+      const response = await fetch(`${API_BASE_URL}/ai/settings`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

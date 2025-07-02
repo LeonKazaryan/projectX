@@ -262,3 +262,8 @@
   --- Deleted button "Logout"
 - Domain chathut.net bought!
 - Deployed to Digital Ocean
+
+# 0.7.1
+
+- Hardcoding deleted
+- Preparations for professional development

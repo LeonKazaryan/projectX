@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { RAGService } from "../utils/ragService";
 import { motion, AnimatePresence } from "framer-motion";
+import { API_BASE_URL } from "../../services/authService";
 
 interface Message {
   id: number;
@@ -65,7 +66,7 @@ const useAISettings = (sessionId: string) => {
       try {
         // This would be your actual API call
         const response = await fetch(
-          `http://localhost:8000/api/ai/settings?session_id=${sessionId}`
+          `${API_BASE_URL}/ai/settings?session_id=${sessionId}`
         );
         const data = await response.json();
         if (data.success && data.settings) {
@@ -120,8 +121,6 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const previousChatIdRef = useRef<number>(0);
   const isChatSwitchRef = useRef(true);
 
-  const API_BASE = "http://localhost:8000/api";
-
   const connectWebSocket = useCallback(() => {
     if (!sessionId || !chatId) {
       console.log("No session ID or chat ID, skipping WebSocket connection");
@@ -132,7 +131,11 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
       setConnectionStatus("connecting");
       console.log("Connecting MessageArea WebSocket...");
 
-      const ws = new WebSocket(`ws://localhost:8000/ws/${sessionId}`);
+      const wsProtocol = API_BASE_URL.startsWith("https") ? "wss" : "ws";
+      const wsHost = API_BASE_URL.split("//")[1].split("/api")[0];
+      const wsUrl = `${wsProtocol}://${wsHost}/ws/${sessionId}`;
+
+      const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         console.log("MessageArea WebSocket connected");
@@ -321,7 +324,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
     try {
       setLoading(true);
       const response = await fetch(
-        `${API_BASE}/messages/history?session_id=${sessionId}&dialog_id=${chatId}&limit=200`
+        `${API_BASE_URL}/messages/history?session_id=${sessionId}&dialog_id=${chatId}&limit=200`
       );
       const data = await response.json();
 
@@ -359,7 +362,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
     try {
       const oldestMessageId = messages[0].id;
       const response = await fetch(
-        `${API_BASE}/messages/history?session_id=${sessionId}&dialog_id=${chatId}&limit=100&offset_id=${oldestMessageId}`
+        `${API_BASE_URL}/messages/history?session_id=${sessionId}&dialog_id=${chatId}&limit=100&offset_id=${oldestMessageId}`
       );
       const data = await response.json();
 
@@ -397,7 +400,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
       setHasSuggestion(false);
       setSuggestionDismissed(true);
 
-      const response = await fetch(`${API_BASE}/messages/send`, {
+      const response = await fetch(`${API_BASE_URL}/messages/send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

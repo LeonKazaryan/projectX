@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "../../../src/components/ui/card";
 import { Loader2, Phone, Lock, ArrowLeft } from "lucide-react";
+import { API_BASE_URL } from "../../services/authService";
 
 interface MTProtoAuthProps {
   onAuthenticated: (sessionId: string, sessionString: string) => void;
@@ -30,8 +31,6 @@ const MTProtoAuth: React.FC<MTProtoAuthProps> = ({
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
 
-  const API_BASE = "http://localhost:8000/api";
-
   const sendCode = async () => {
     if (!phone.trim()) {
       onError("Введите номер телефона");
@@ -40,7 +39,7 @@ const MTProtoAuth: React.FC<MTProtoAuthProps> = ({
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/auth/send-code`, {
+      const response = await fetch(`${API_BASE_URL}/auth/send-code`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -76,7 +75,7 @@ const MTProtoAuth: React.FC<MTProtoAuthProps> = ({
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/auth/verify-code`, {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-code`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -118,7 +117,7 @@ const MTProtoAuth: React.FC<MTProtoAuthProps> = ({
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/auth/verify-password`, {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

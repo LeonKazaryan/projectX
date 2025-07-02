@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
+import { ScrollArea } from "../../../src/components/ui/scroll-area";
+import { Button } from "../../../src/components/ui/button";
+import { Badge } from "../../../src/components/ui/badge";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "../../../src/components/ui/avatar";
+import { Input } from "../../../src/components/ui/input";
 import { Loader2, RotateCcw, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "../../../src/lib/utils";
+import { API_BASE_URL } from "../../services/authService";
 
 interface Dialog {
   id: number;
@@ -50,8 +55,6 @@ const ChatList: React.FC<ChatListProps> = ({
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const API_BASE = "http://localhost:8000/api";
-
   const connectWebSocket = useCallback(async () => {
     if (!sessionId) {
       console.log("No session ID, skipping WebSocket connection");
@@ -61,7 +64,11 @@ const ChatList: React.FC<ChatListProps> = ({
     try {
       console.log("Connecting ChatList WebSocket...");
 
-      const ws = new WebSocket(`ws://localhost:8000/ws/${sessionId}`);
+      const wsProtocol = API_BASE_URL.startsWith("https") ? "wss" : "ws";
+      const wsHost = API_BASE_URL.split("//")[1].split("/api")[0];
+      const wsUrl = `${wsProtocol}://${wsHost}/ws/${sessionId}`;
+
+      const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         console.log("ChatList WebSocket connected");
@@ -183,7 +190,7 @@ const ChatList: React.FC<ChatListProps> = ({
         include_groups: includeGroups.toString(),
       });
 
-      const response = await fetch(`${API_BASE}/chats/dialogs?${params}`);
+      const response = await fetch(`${API_BASE_URL}/chats/dialogs?${params}`);
       const data = await response.json();
 
       if (data.success) {

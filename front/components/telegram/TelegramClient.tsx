@@ -3,14 +3,15 @@ import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-} from "@/components/ui/resizable";
+} from "../../src/components/ui/resizable";
 import ChatList from "./chats/ChatList";
 import MessageArea from "./messages/MessageArea";
 import MTProtoAuth from "./auth/MTProtoAuth";
-import { Button } from "@/components/ui/button";
+import { Button } from "../../src/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Settings } from "./ui/Settings";
+import { API_BASE_URL } from "../services/authService";
 
 const useTelegramSession = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -29,14 +30,11 @@ const useTelegramSession = () => {
       const sessionString = localStorage.getItem("telegram_session_string");
       if (sessionString) {
         try {
-          const response = await fetch(
-            "http://localhost:8000/api/auth/restore-session",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ session_string: sessionString }),
-            }
-          );
+          const response = await fetch(`${API_BASE_URL}/auth/restore-session`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_string: sessionString }),
+          });
           const data = await response.json();
           if (data.success) {
             setSessionId(data.session_id);
@@ -54,7 +52,7 @@ const useTelegramSession = () => {
         const token = localStorage.getItem("chathut_access_token");
         if (token) {
           const response = await fetch(
-            "http://localhost:8000/api/telegram/restore-session",
+            `${API_BASE_URL}/telegram/restore-session`,
             {
               method: "GET",
               headers: {
@@ -67,7 +65,7 @@ const useTelegramSession = () => {
             const data = await response.json();
             // Restore the session using the existing endpoint
             const restoreResponse = await fetch(
-              "http://localhost:8000/api/auth/restore-session",
+              `${API_BASE_URL}/auth/restore-session`,
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -114,7 +112,7 @@ const useTelegramSession = () => {
 
     try {
       const token = localStorage.getItem("chathut_access_token");
-      await fetch("http://localhost:8000/api/telegram/connect", {
+      await fetch(`${API_BASE_URL}/telegram/connect`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
