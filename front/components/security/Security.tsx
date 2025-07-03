@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { gsap } from "gsap";
+import { useNavigate } from "react-router-dom";
 import {
   Shield,
   MessageCircle,
@@ -16,12 +17,17 @@ import {
   Cpu,
   Network,
   Key,
+  Home,
+  Play,
+  Terminal,
 } from "lucide-react";
 import { Button } from "../../src/components/ui/button";
 import { Card } from "../../src/components/ui/card";
 import ParticleBackground from "../cyberpunk/ParticleBackground";
 import GlitchText from "../cyberpunk/GlitchText";
 import HolographicCard from "../cyberpunk/HolographicCard";
+import Hexagon from "../cyberpunk/Hexagon";
+import { authService } from "../services/authService";
 import "./Security.css";
 
 interface ProcessStep {
@@ -115,6 +121,7 @@ const securityFeatures = [
 ];
 
 const Security: React.FC = () => {
+  const navigate = useNavigate();
   const heroRef = useRef<HTMLDivElement>(null);
   const stepsRef = useRef<HTMLDivElement>(null);
   const securityRef = useRef<HTMLDivElement>(null);
@@ -125,15 +132,32 @@ const Security: React.FC = () => {
     margin: "-100px",
   });
 
+  const isAuthenticated = authService.isAuthenticated();
+
+  const handleNavigateToApp = () => {
+    if (isAuthenticated) {
+      navigate("/profile");
+    } else {
+      navigate("/");
+    }
+  };
+
   useEffect(() => {
     if (heroRef.current) {
-      gsap.from(heroRef.current.children, {
-        y: 50,
-        opacity: 0,
-        duration: 1,
-        stagger: 0.2,
-        ease: "power3.out",
-      });
+      gsap.fromTo(
+        heroRef.current.children,
+        {
+          y: 50,
+          opacity: 0,
+        },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 1,
+          stagger: 0.2,
+          ease: "power3.out",
+        }
+      );
     }
   }, []);
 
@@ -143,6 +167,57 @@ const Security: React.FC = () => {
 
       {/* Cyber Grid Background */}
       <div className="cyber-grid-overlay" />
+
+      {/* Navigation */}
+      <motion.nav
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 1 }}
+        className="fixed top-0 left-0 right-0 z-50 p-6"
+      >
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            className="flex items-center space-x-2"
+          >
+            <Hexagon
+              size={40}
+              className="bg-gradient-to-r from-cyan-500 to-purple-500 flex items-center justify-center"
+            >
+              <Terminal className="w-6 h-6 text-white" />
+            </Hexagon>
+            <GlitchText className="text-2xl font-bold font-orbitron">
+              chathut
+            </GlitchText>
+          </motion.div>
+
+          <div className="flex items-center space-x-4">
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                onClick={() => navigate("/")}
+                variant="ghost"
+                className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 px-4 py-2 font-rajdhani"
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Home
+              </Button>
+            </motion.div>
+
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                onClick={handleNavigateToApp}
+                className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-black font-bold px-6 py-2 border-0"
+                style={{
+                  boxShadow: "0 0 20px rgba(0,255,255,0.5)",
+                }}
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Launch App
+              </Button>
+            </motion.div>
+          </div>
+        </div>
+      </motion.nav>
 
       {/* Hero Section */}
       <section ref={heroRef} className="relative z-10 pt-20 pb-16 px-4">
@@ -155,7 +230,7 @@ const Security: React.FC = () => {
           >
             <Shield className="h-20 w-20 mx-auto mb-6 text-cyan-400 neon-glow" />
             <h1 className="text-5xl md:text-7xl font-orbitron font-bold mb-6 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-              <GlitchText text="TRANSPARENCY" />
+              <GlitchText>TRANSPARENCY</GlitchText>
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
               Discover how{" "}

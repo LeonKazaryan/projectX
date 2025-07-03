@@ -12,7 +12,7 @@ import Security from "../components/security/Security";
 
 const AppLayout = () => {
   const location = useLocation();
-  const noNavRoutes = ["/", "/home", "/profile"];
+  const noNavRoutes = ["/", "/home", "/profile", "/security"];
   const mainClass =
     location.pathname === "/profile"
       ? "flex-grow"

@@ -15,21 +15,15 @@ const HolographicCard = ({
     if (!card) return;
 
     const handleMouseMove = (e: MouseEvent) => {
+      // Rotation effects removed - keeping the function for potential future effects
       const rect = card.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
-
-      const rotateX = (y - centerY) / 10;
-      const rotateY = (centerX - x) / 10;
-
+      // Simple glow effect instead of rotation
       gsap.to(card, {
         duration: 0.3,
-        rotationX: rotateX,
-        rotationY: rotateY,
-        transformPerspective: 1000,
+        scale: 1.02,
         ease: "power2.out",
       });
     };
@@ -37,8 +31,7 @@ const HolographicCard = ({
     const handleMouseLeave = () => {
       gsap.to(card, {
         duration: 0.3,
-        rotationX: 0,
-        rotationY: 0,
+        scale: 1,
         ease: "power2.out",
       });
     };
