@@ -88,12 +88,35 @@ function setupClient(sessionId, client) {
   });
 
   client.on('message', (msg) => {
+    console.log(`[${sessionId}] New message received:`, {
+      from: msg.from,
+      to: msg.to,
+      body: msg.body,
+      fromMe: msg.fromMe
+    });
+    
     // Store messages in memory
     if (!sessions[sessionId].messages[msg.from]) {
       sessions[sessionId].messages[msg.from] = [];
     }
     sessions[sessionId].messages[msg.from].push(msg);
-    io.to(sessionId).emit('message', msg);
+    
+    // Format message for frontend
+    const formattedMessage = {
+      id: msg.id._serialized,
+      chatId: msg.from, // The chat this message belongs to
+      from: msg.from,
+      to: msg.to,
+      text: msg.body || '',
+      timestamp: new Date(msg.timestamp * 1000).toISOString(),
+      isOutgoing: msg.fromMe,
+      type: msg.type || 'chat',
+      source: 'whatsapp'
+    };
+    
+    // Emit to all clients in this session
+    io.to(sessionId).emit('new_message', formattedMessage);
+    console.log(`[${sessionId}] Emitted new_message event for chat ${msg.from}`);
   });
 
   client.on('disconnected', (reason) => {
@@ -146,7 +169,118 @@ app.get('/whatsapp/chats', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Client not ready' });
     }
     const chats = await sessions[sessionId].client.getChats();
-    res.json({ success: true, chats });
+    
+    // Enrich chats with last message info
+    const enrichedChats = await Promise.all(chats.map(async (chat) => {
+      try {
+        // Get the last message for this chat
+        const messages = await chat.fetchMessages({ limit: 1 });
+        let lastMessage = messages.length > 0 ? messages[0] : null;
+        
+        // Filter out system messages and empty messages
+        if (lastMessage) {
+          const isSystemMessage = lastMessage.type === 'system' || 
+                                 lastMessage.type === 'notification' ||
+                                 !lastMessage.body || 
+                                 lastMessage.body.trim() === '';
+          
+          if (isSystemMessage) {
+            console.log(`Filtering out system/empty message for "${chat.name}":`, {
+              type: lastMessage.type,
+              body: lastMessage.body,
+              bodyLength: lastMessage.body?.length
+            });
+            lastMessage = null; // Treat as no message
+          }
+        }
+        
+        // Debug: Log message details for groups
+        if (chat.isGroup && lastMessage) {
+          console.log(`Group "${chat.name}" has REAL message:`, {
+            body: lastMessage.body,
+            type: lastMessage.type,
+            fromMe: lastMessage.fromMe,
+            timestamp: lastMessage.timestamp
+          });
+        }
+        
+        return {
+          id: chat.id._serialized,
+          name: chat.name,
+          isGroup: chat.isGroup,
+          timestamp: chat.timestamp,
+          unreadCount: chat.unreadCount || 0,
+          archived: chat.archived || false,
+          pinned: chat.pinned || false,
+          lastMessage: lastMessage ? {
+            text: lastMessage.body || '',
+            date: new Date(lastMessage.timestamp * 1000).toISOString(),
+            fromMe: lastMessage.fromMe,
+            type: lastMessage.type
+          } : null
+        };
+      } catch (error) {
+        console.error(`Error fetching last message for chat ${chat.id._serialized}:`, error);
+        // Return chat without last message if there's an error
+        return {
+          id: chat.id._serialized,
+          name: chat.name,
+          isGroup: chat.isGroup,
+          timestamp: chat.timestamp,
+          unreadCount: chat.unreadCount || 0,
+          archived: chat.archived || false,
+          pinned: chat.pinned || false,
+          lastMessage: null
+        };
+      }
+    }));
+    
+    // Debug: Log first few chats before sorting
+    console.log('=== BEFORE SORTING ===');
+    enrichedChats.slice(0, 5).forEach((chat, index) => {
+      console.log(`${index + 1}. ${chat.name} (${chat.isGroup ? 'GROUP' : 'USER'})`);
+      console.log(`   Has lastMessage: ${!!chat.lastMessage}`);
+      console.log(`   LastMessage date: ${chat.lastMessage?.date || 'NONE'}`);
+      console.log(`   Chat timestamp: ${chat.timestamp}`);
+      console.log(`   Unread count: ${chat.unreadCount}`);
+    });
+
+    // Sort chats by last message timestamp (most recent first)
+    // Chats with messages always come before chats without messages
+    enrichedChats.sort((a, b) => {
+      // Priority 1: Chats with real messages come first
+      if (a.lastMessage && !b.lastMessage) return -1;
+      if (!a.lastMessage && b.lastMessage) return 1;
+      
+      // Priority 2: If both have messages, sort by message timestamp
+      if (a.lastMessage && b.lastMessage) {
+        const aTime = new Date(a.lastMessage.date).getTime();
+        const bTime = new Date(b.lastMessage.date).getTime();
+        return bTime - aTime; // Newest first
+      }
+      
+      // Priority 3: If both have no messages, sort by unread count (chats with unread come first)
+      if (a.unreadCount !== b.unreadCount) {
+        return b.unreadCount - a.unreadCount; // Higher unread count first
+      }
+      
+      // Priority 4: If same unread count, sort by chat timestamp (newer chats first)
+      const aTime = a.timestamp || 0;
+      const bTime = b.timestamp || 0;
+      return bTime - aTime;
+    });
+
+    // Debug: Log first few chats after sorting
+    console.log('=== AFTER SORTING ===');
+    enrichedChats.slice(0, 5).forEach((chat, index) => {
+      console.log(`${index + 1}. ${chat.name} (${chat.isGroup ? 'GROUP' : 'USER'})`);
+      console.log(`   Has lastMessage: ${!!chat.lastMessage}`);
+      console.log(`   LastMessage date: ${chat.lastMessage?.date || 'NONE'}`);
+      console.log(`   Chat timestamp: ${chat.timestamp}`);
+      console.log(`   Unread count: ${chat.unreadCount}`);
+    });
+    
+    res.json({ success: true, chats: enrichedChats });
   } catch (e) {
     console.error('Error in /whatsapp/chats:', e);
     res.status(500).json({ success: false, error: e.message });
@@ -186,9 +320,28 @@ app.post('/whatsapp/send', async (req, res) => {
   const { sessionId, chatId, text } = req.body;
   if (!sessionId || !chatId || !text || !sessions[sessionId]) return res.status(400).json({ success: false, error: 'Missing params' });
   try {
-    await sessions[sessionId].client.sendMessage(chatId, text);
+    // Send the message
+    const sentMessage = await sessions[sessionId].client.sendMessage(chatId, text);
+    
+    // Manually emit new_message event for own messages since WhatsApp Web doesn't always trigger it
+    const formattedMessage = {
+      id: sentMessage.id._serialized,
+      chatId: chatId,
+      from: chatId, // For own messages, 'from' is the chat ID
+      to: chatId,
+      text: text,
+      timestamp: new Date().toISOString(),
+      isOutgoing: true, // This is our own message
+      type: 'chat',
+      source: 'whatsapp'
+    };
+    
+    console.log(`[${sessionId}] Emitting new_message for own sent message in chat ${chatId}`);
+    io.to(sessionId).emit('new_message', formattedMessage);
+    
     res.json({ success: true });
   } catch (e) {
+    console.error('Error sending WhatsApp message:', e);
     res.status(500).json({ success: false, error: e.message });
   }
 });

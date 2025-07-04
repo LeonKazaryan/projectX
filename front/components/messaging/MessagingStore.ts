@@ -27,6 +27,7 @@ interface MessagingState {
   disconnectProvider: (source: 'telegram' | 'whatsapp') => Promise<void>;
   loadChats: (source?: 'telegram' | 'whatsapp') => Promise<void>;
   loadMessages: (chatId: string) => Promise<void>;
+  refreshMessages: (chatId: string) => Promise<void>;
   sendMessage: (chatId: string, text: string) => Promise<boolean>;
   selectChat: (chat: Chat | null) => void;
   handleEvent: (event: MessagingEvent) => void;
@@ -182,6 +183,32 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
     }
   },
 
+  // Refresh messages for a chat (force reload)
+  refreshMessages: async (chatId: string) => {
+    const { providers, chats } = get();
+    const chat = chats.find(c => c.id === chatId);
+    
+    if (!chat) return;
+
+    const provider = providers[chat.source];
+    if (!provider) return;
+
+    console.log(`Refreshing messages for chat: ${chatId}`);
+
+    try {
+      const messages = await provider.loadHistory(chatId);
+      set((state) => ({
+        messages: {
+          ...state.messages,
+          [chatId]: messages
+        }
+      }));
+      console.log(`Refreshed ${messages.length} messages for ${chatId}`);
+    } catch (error) {
+      console.error(`Failed to refresh messages for ${chatId}:`, error);
+    }
+  },
+
   // Send a message
   sendMessage: async (chatId: string, text: string) => {
     const { providers, chats } = get();
@@ -194,10 +221,7 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
 
     try {
       const success = await provider.sendMessage(chatId, text);
-      if (success) {
-        // Reload messages to get the new one
-        await get().loadMessages(chatId);
-      }
+      // Messages now come via real-time events, no need to reload
       return success;
     } catch (error) {
       set({ error: `Failed to send message: ${error}` });
@@ -216,6 +240,9 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
     switch (event.type) {
       case 'message:new':
         const newMessage = event.data as Message;
+        console.log('Handling new message event:', newMessage);
+        
+        // Add message to messages
         set((state) => ({
           messages: {
             ...state.messages,
@@ -225,8 +252,41 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
             ]
           }
         }));
-        // Reload chats to update last message
-        get().loadChats();
+        
+        // Update chat list immediately for better UX
+        set((state) => {
+          const updatedChats = state.chats.map(chat => {
+            if (chat.id === newMessage.chatId) {
+              return {
+                ...chat,
+                lastMessage: {
+                  text: newMessage.text,
+                  date: newMessage.timestamp
+                }
+              };
+            }
+            return chat;
+          });
+          
+          // Sort chats by last message timestamp
+          updatedChats.sort((a, b) => {
+            if (a.lastMessage && !b.lastMessage) return -1;
+            if (!a.lastMessage && b.lastMessage) return 1;
+            if (a.lastMessage && b.lastMessage) {
+              const aTime = new Date(a.lastMessage.date).getTime();
+              const bTime = new Date(b.lastMessage.date).getTime();
+              return bTime - aTime;
+            }
+            return 0;
+          });
+          
+          return { chats: updatedChats };
+        });
+        
+        // Also reload chats from provider to ensure consistency
+        setTimeout(() => {
+          get().loadChats();
+        }, 100);
         break;
         
       case 'chat:updated':

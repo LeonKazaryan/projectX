@@ -309,3 +309,21 @@
 - **Frontend Components**: Complete WhatsApp UI components (auth, chat list, message area)
 - **Session Management**: Secure session handling for both messaging platforms
 - **Future-Ready**: Architecture prepared for merging Telegram and WhatsApp into single client view
+
+# 0.7.4
+
+- 📱 **WhatsApp UX Enhancement** - Upgraded WhatsApp interface to match Telegram UX patterns
+- **Auto-Focus Input**: Input field automatically focuses when opening chats, like in Telegram
+- **Smart Scrolling**: Instant scroll to bottom when switching chats, smooth scroll for new messages
+- **Scroll-to-Bottom Button**: Animated floating button appears when scrolled up, with hover effects
+- **Textarea with Auto-Resize**: Replaced simple input with multi-line textarea that grows with content
+- **Message Layout**: Improved message bubbles with better spacing and rounded corners
+- **Last Message Display**: Chat list now shows last message preview and timestamps like Telegram
+- **Search Functionality**: Added search bar to filter chats with real-time results
+- **Loading States**: Proper loading indicators and empty states throughout the interface
+- **Backend Enrichment**: WhatsApp backend now fetches and includes last message for each chat
+- **Avatar Styling**: Consistent avatar styling with proper fallbacks and colors
+- **Time Formatting**: Smart time display (today: HH:MM, yesterday: "вчера", older: weekday/date)
+- **Chat Sorting**: Chats automatically sorted by last message timestamp for better organization
+- **Keyboard Navigation**: Full keyboard support for sending messages (Enter to send, Shift+Enter for new line)
+- **Visual Polish**: Improved spacing, borders, and visual hierarchy throughout WhatsApp interface

@@ -66,7 +66,8 @@ const WhatsAppClient: React.FC = () => {
               wa.setReady(true);
             }
             setIsAuthenticated(true);
-            // Don't auto-load chats - let user click "Обновить" button
+            // Auto-load chats after successful QR scan
+            loadChats("whatsapp");
           }
         } catch {}
       }, 1500);

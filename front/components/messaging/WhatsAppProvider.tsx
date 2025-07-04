@@ -4,11 +4,12 @@ import type {
   Message,
   MessagingEvent,
 } from "./types";
+import { io, Socket } from "socket.io-client";
 
 export class WhatsAppProvider implements IMessagingProvider {
   private isConnectedState: boolean = false;
   private subscribers: ((event: MessagingEvent) => void)[] = [];
-  private websocket: WebSocket | null = null;
+  private socket: Socket | null = null;
   private sessionId: string | null = null;
   private qrCode: string | null = null;
   private ready: boolean = false;
@@ -17,11 +18,12 @@ export class WhatsAppProvider implements IMessagingProvider {
 
   async connect(): Promise<boolean> {
     try {
-      // Generate a sessionId (for dev, just use a random string or user id)
-      const sessionId =
-        "whatsapp_" +
-        (localStorage.getItem("user_id") ||
-          Math.random().toString(36).slice(2));
+      // Try to use existing sessionId from localStorage, or generate new one
+      let sessionId = localStorage.getItem("whatsapp_session_id");
+      if (!sessionId) {
+        sessionId = "whatsapp_" + Math.random().toString(36).slice(2);
+        localStorage.setItem("whatsapp_session_id", sessionId);
+      }
       const response = await fetch("http://localhost:3000/whatsapp/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -34,7 +36,7 @@ export class WhatsAppProvider implements IMessagingProvider {
         this.qrCode = data.qrCode;
         this.isConnectedState = false; // Not ready until QR is scanned
         this.ready = false;
-        this.setupWebSocket();
+        this.setupSocketIO();
         return true;
       }
 
@@ -46,9 +48,9 @@ export class WhatsAppProvider implements IMessagingProvider {
   }
 
   async disconnect(): Promise<void> {
-    if (this.websocket) {
-      this.websocket.close();
-      this.websocket = null;
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
     }
 
     if (this.sessionId) {
@@ -65,6 +67,8 @@ export class WhatsAppProvider implements IMessagingProvider {
 
     this.isConnectedState = false;
     this.sessionId = null;
+    // Clear saved sessionId so user gets fresh session next time
+    localStorage.removeItem("whatsapp_session_id");
   }
 
   async sendMessage(chatId: string, text: string): Promise<boolean> {
@@ -136,23 +140,28 @@ export class WhatsAppProvider implements IMessagingProvider {
       if (data.success) {
         console.log("WhatsApp chats raw data:", data.chats.slice(0, 2)); // Debug first 2 chats
         return data.chats.map((chat: any) => {
-          const chatId = chat.id._serialized || chat.id.toString() || chat.id;
-          console.log("Mapping chat:", { original: chat.id, mapped: chatId });
+          // Backend now returns enriched chats with proper structure
+          const chatId = chat.id; // Already serialized by backend
+          console.log("Mapping chat:", {
+            id: chatId,
+            name: chat.name,
+            lastMessage: chat.lastMessage,
+          });
           return {
-            id: chatId, // Convert WhatsApp ID object to string
+            id: chatId,
             title: chat.name,
             participants: chat.participants || [],
             source: "whatsapp" as const,
-            isUser: chat.isUser,
+            isUser: !chat.isGroup, // If not group, then it's a user
             isGroup: chat.isGroup,
             isChannel: false, // WhatsApp doesn't have channels
             canSendMessages: true, // WhatsApp chats are always writable
-            isArchived: chat.isArchived || false,
+            isArchived: chat.archived || false,
             unreadCount: chat.unreadCount || 0,
             lastMessage: chat.lastMessage
               ? {
-                  text: chat.lastMessage.text,
-                  date: chat.lastMessage.timestamp,
+                  text: chat.lastMessage.text || "",
+                  date: chat.lastMessage.date,
                 }
               : undefined,
           };
@@ -173,9 +182,83 @@ export class WhatsAppProvider implements IMessagingProvider {
     return "whatsapp";
   }
 
-  private setupWebSocket(): void {
-    // Real backend uses Socket.IO; raw WebSocket endpoint is not available.
-    // Disable for now to avoid connection errors that reset isConnectedState.
+  private setupSocketIO(): void {
+    if (!this.sessionId) return;
+
+    try {
+      console.log("Setting up Socket.IO connection for WhatsApp...");
+
+      // Connect to Socket.IO server
+      this.socket = io("http://localhost:3000", {
+        autoConnect: true,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+      });
+
+      // Join the session room
+      this.socket.emit("join-session", this.sessionId);
+
+      // Handle connection events
+      this.socket.on("connect", () => {
+        console.log("WhatsApp Socket.IO connected");
+      });
+
+      this.socket.on("disconnect", (reason) => {
+        console.log("WhatsApp Socket.IO disconnected:", reason);
+      });
+
+      // Handle WhatsApp events
+      this.socket.on("qr", (data) => {
+        console.log("QR code received via Socket.IO");
+        this.qrCode = data.qr;
+        this.ready = false;
+        this.isConnectedState = false;
+      });
+
+      this.socket.on("ready", () => {
+        console.log("WhatsApp client ready via Socket.IO");
+        this.qrCode = null;
+        this.ready = true;
+        this.isConnectedState = true;
+      });
+
+      this.socket.on("auth_failure", (data) => {
+        console.error("WhatsApp auth failure via Socket.IO:", data.message);
+        this.ready = false;
+        this.isConnectedState = false;
+      });
+
+      // Handle new messages in real-time
+      this.socket.on("new_message", (message) => {
+        console.log("New WhatsApp message received via Socket.IO:", message);
+
+        // Notify all subscribers about the new message
+        this.subscribers.forEach((callback) => {
+          callback({
+            type: "message:new",
+            source: "whatsapp",
+            data: {
+              id: message.id,
+              chatId: message.chatId,
+              from: message.from,
+              text: message.text,
+              timestamp: message.timestamp,
+              source: "whatsapp" as const,
+              isOutgoing: message.isOutgoing,
+            },
+          });
+        });
+      });
+
+      this.socket.on("disconnected", (data) => {
+        console.log("WhatsApp client disconnected via Socket.IO:", data.reason);
+        this.ready = false;
+        this.isConnectedState = false;
+      });
+    } catch (error) {
+      console.error("Failed to setup Socket.IO connection:", error);
+    }
   }
 
   getQrCode(): string | null {
