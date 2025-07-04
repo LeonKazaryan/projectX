@@ -38,4 +38,5 @@ beautifulsoup4
 requests
 fastapi-cors
 numpy<2.0.0
-gunicorn 
+gunicorn
+aiohttp>=3.8.0 

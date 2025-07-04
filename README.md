@@ -295,3 +295,17 @@
 
 - Bugs fixed
 - Profile page slightly changed
+
+# 0.7.3
+
+- 🚀 **WhatsApp Integration** - Complete WhatsApp Web integration with unified messaging architecture
+- **Unified Messaging System**: Created abstract messaging provider interface supporting both Telegram and WhatsApp
+- **WhatsApp Web Service**: Separate Node.js service using whatsapp-web.js for WhatsApp connectivity
+- **Provider Architecture**: Clean separation between Telegram and WhatsApp with shared interfaces
+- **Real-time Messaging**: WebSocket support for both platforms with unified event handling
+- **Unified Store**: Zustand-based messaging store that manages both Telegram and WhatsApp data
+- **Feature Flag System**: Prepared foundation for future unified client view
+- **Backend Integration**: New WhatsApp API endpoints and client manager in FastAPI backend
+- **Frontend Components**: Complete WhatsApp UI components (auth, chat list, message area)
+- **Session Management**: Secure session handling for both messaging platforms
+- **Future-Ready**: Architecture prepared for merging Telegram and WhatsApp into single client view

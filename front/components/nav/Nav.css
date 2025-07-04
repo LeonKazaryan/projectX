@@ -239,6 +239,12 @@
   color: #ffff00;
 }
 
+.whatsapp-btn:hover {
+  border-color: #25D366;
+  box-shadow: 0 0 15px rgba(37, 211, 102, 0.5);
+  color: #25D366;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .nav-content {

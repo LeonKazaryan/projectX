@@ -8,6 +8,7 @@ import Home from "../components/home/Home";
 import { Nav } from "../components/nav/Nav";
 import Profile from "../components/profile/Profile";
 import TelegramClient from "../components/telegram/TelegramClient";
+import WhatsAppClient from "../components/whatsapp/WhatsAppClient";
 import Security from "../components/security/Security";
 
 const AppLayout = () => {
@@ -33,6 +34,7 @@ const AppLayout = () => {
           <Route path="/home" element={<Home />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/telegram" element={<TelegramClient />} />
+          <Route path="/whatsapp" element={<WhatsAppClient />} />
           <Route path="/security" element={<Security />} />
         </Routes>
       </main>

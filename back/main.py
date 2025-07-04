@@ -20,6 +20,7 @@ from back.api.chats import chats_router
 from back.api.ai import router as ai_router
 from back.api.rag import router as rag_router
 from back.api.telegram import router as telegram_router
+from back.api.whatsapp import router as whatsapp_router
 from back.database.config import connect_database, disconnect_database, init_database, test_connection
 from back.utils.websocket_monitor import ws_monitor
 import back.globals as globals
@@ -85,6 +86,7 @@ app.include_router(chats_router, prefix="/api/chats", tags=["chats"])
 app.include_router(ai_router, prefix="/api/ai", tags=["ai"])
 app.include_router(rag_router, prefix="/api/rag", tags=["rag"])
 app.include_router(telegram_router, prefix="/api/telegram", tags=["Telegram"])
+app.include_router(whatsapp_router, prefix="/api", tags=["WhatsApp"])
 
 @app.get("/")
 async def root():

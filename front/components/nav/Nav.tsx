@@ -5,7 +5,7 @@ import {
   AvatarImage,
 } from "../../src/components/ui/avatar";
 import { Button } from "../../src/components/ui/button";
-import { Settings, Home, User, Terminal } from "lucide-react";
+import { Settings, Home, User, Terminal, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authService, type User as UserType } from "../services/authService";
 import "./Nav.css";
@@ -74,6 +74,15 @@ export const Nav: React.FC<NavProps> = ({ onSettingsClick }) => {
             className="nav-btn profile-btn"
           >
             <User className="h-5 w-5" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/whatsapp")}
+            className="nav-btn whatsapp-btn"
+          >
+            <MessageCircle className="h-5 w-5" />
           </Button>
 
           <Button

@@ -161,6 +161,27 @@ const Profile: React.FC = () => {
     }
   };
 
+  const handleWhatsAppLogout = async () => {
+    try {
+      const token = authService.getAccessToken();
+      const response = await fetch(`${API_BASE_URL}/whatsapp/disconnect`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        fetchProfile();
+      } else {
+        setError("Failed to logout from WhatsApp.");
+      }
+    } catch (error) {
+      console.error("WhatsApp logout error:", error);
+      setError("An error occurred during WhatsApp logout.");
+    }
+  };
+
   const renderAccountCard = (account: ConnectedAccount) => {
     const details = providerDetails[account.provider];
     if (!details) return null;
@@ -169,8 +190,12 @@ const Profile: React.FC = () => {
     const isConnected = account.is_active;
 
     const handleCardClick = () => {
-      if (isConnected && account.provider === "telegram") {
-        navigate("/telegram");
+      if (isConnected) {
+        if (account.provider === "telegram") {
+          navigate("/telegram");
+        } else if (account.provider === "whatsapp") {
+          navigate("/whatsapp");
+        }
       }
     };
 
@@ -245,9 +270,19 @@ const Profile: React.FC = () => {
                   } else {
                     navigate("/telegram");
                   }
+                } else if (account.provider === "whatsapp") {
+                  if (isConnected) {
+                    handleWhatsAppLogout();
+                  } else {
+                    navigate("/whatsapp");
+                  }
                 }
               }}
-              disabled={!isConnected && account.provider !== "telegram"}
+              disabled={
+                !isConnected &&
+                account.provider !== "telegram" &&
+                account.provider !== "whatsapp"
+              }
             >
               {isConnected ? (
                 <Power className="btn-icon" />
