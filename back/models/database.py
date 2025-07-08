@@ -55,6 +55,7 @@ class User(Base, TimestampMixin):
     is_active = Column(Boolean, default=True, nullable=False, index=True)
     is_verified = Column(Boolean, default=False, nullable=False)
     is_telegram_connected = Column(Boolean, default=False, nullable=False)
+    is_whatsapp_connected = Column(Boolean, default=False, nullable=False)
     last_login = Column(DateTime(timezone=True), nullable=True)
     
     # Relationships

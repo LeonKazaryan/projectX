@@ -64,11 +64,25 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
       telegram: new TelegramProvider(),
       whatsapp: new WhatsAppProvider(),
     };
-    
+
     set({ providers });
-    
+
+    // Attempt to auto-restore WhatsApp session
+    (async () => {
+      const wa = providers.whatsapp as any;
+      if (wa.init) {
+        const restored = await wa.init();
+        if (restored) {
+          // Trigger state change so selectors update
+          set((state) => ({ providers: { ...state.providers } }));
+          // Preload chats silently
+          await get().loadChats("whatsapp");
+        }
+      }
+    })();
+
     // Subscribe to events from all providers
-    Object.values(providers).forEach(provider => {
+    Object.values(providers).forEach((provider) => {
       provider.subscribe((event) => get().handleEvent(event));
     });
   },

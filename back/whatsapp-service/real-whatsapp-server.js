@@ -119,12 +119,19 @@ function setupClient(sessionId, client) {
     console.log(`[${sessionId}] Emitted new_message event for chat ${msg.from}`);
   });
 
-  client.on('disconnected', (reason) => {
+  client.on('disconnected', async (reason) => {
     console.log(`[${sessionId}] Disconnected:`, reason);
-    sessions[sessionId].ready = false;
-    sessions[sessionId].qr = null;
-    sessions[sessionId].qrImage = null;
     io.to(sessionId).emit('disconnected', { reason });
+
+    // Clean up the existing client entirely to avoid corrupted state
+    try {
+      await client.destroy();
+    } catch (err) {
+      console.warn(`[${sessionId}] Error during client.destroy():`, err?.message || err);
+    }
+
+    // Remove the session so that the next /connect call creates a fresh one (which will trigger a new QR)
+    delete sessions[sessionId];
   });
 }
 
@@ -283,7 +290,13 @@ app.get('/whatsapp/chats', async (req, res) => {
     res.json({ success: true, chats: enrichedChats });
   } catch (e) {
     console.error('Error in /whatsapp/chats:', e);
-    res.status(500).json({ success: false, error: e.message });
+    // Gracefully handle known Puppeteer evaluation errors that occur right after authentication
+    const safeError = String(e.message || e);
+    if (safeError.includes('getChats')) {
+      console.warn('getChats failed immediately after auth, returning empty chat list instead of 500');
+      return res.json({ success: true, chats: [] });
+    }
+    res.status(500).json({ success: false, error: safeError });
   }
 });
 

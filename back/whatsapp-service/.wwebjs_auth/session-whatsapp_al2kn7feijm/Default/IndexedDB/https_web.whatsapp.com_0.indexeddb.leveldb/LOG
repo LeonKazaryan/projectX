@@ -1,0 +1,23 @@
+2025/07/08-11:03:24.224 b403 Reusing MANIFEST /Users/leonkazaran/Documents/nFac/project/back/whatsapp-service/.wwebjs_auth/session-whatsapp_al2kn7feijm/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/07/08-11:03:24.225 b403 Recovering log #223
+2025/07/08-11:03:24.232 b403 Reusing old log /Users/leonkazaran/Documents/nFac/project/back/whatsapp-service/.wwebjs_auth/session-whatsapp_al2kn7feijm/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/000223.log 
+2025/07/08-11:03:26.437 22c03 Level-0 table #233: started
+2025/07/08-11:03:26.442 22c03 Level-0 table #233: 125808 bytes OK
+2025/07/08-11:03:26.451 22c03 Delete type=0 #223
+2025/07/08-11:03:26.451 22c03 Manual compaction at level-0 from '\x00/\x00\x00\x00' @ 72057594037927935 : 1 .. '\x000\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/07/08-11:03:27.737 21d03 Compacting 1@1 + 6@2 files
+2025/07/08-11:03:27.780 21d03 Generated table #234@1: 43661 keys, 2218836 bytes
+2025/07/08-11:03:27.799 21d03 Generated table #235@1: 2760 keys, 2152255 bytes
+2025/07/08-11:03:27.834 21d03 Generated table #236@1: 15851 keys, 2186611 bytes
+2025/07/08-11:03:27.870 21d03 Generated table #237@1: 22438 keys, 2196962 bytes
+2025/07/08-11:03:27.926 21d03 Generated table #238@1: 90800 keys, 2239551 bytes
+2025/07/08-11:03:27.949 21d03 Generated table #239@1: 36618 keys, 870904 bytes
+2025/07/08-11:03:27.949 21d03 Compacted 1@1 + 6@2 files => 11865119 bytes
+2025/07/08-11:03:27.955 21d03 compacted to: files[ 0 0 6 0 0 0 0 ]
+2025/07/08-11:03:27.956 21d03 Delete type=2 #228
+2025/07/08-11:03:27.956 21d03 Delete type=2 #229
+2025/07/08-11:03:27.956 21d03 Delete type=2 #230
+2025/07/08-11:03:27.956 21d03 Delete type=2 #225
+2025/07/08-11:03:27.956 21d03 Delete type=2 #233
+2025/07/08-11:03:27.956 21d03 Delete type=2 #227
+2025/07/08-11:03:27.956 21d03 Delete type=2 #226

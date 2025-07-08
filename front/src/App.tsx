@@ -10,8 +10,14 @@ import Profile from "../components/profile/Profile";
 import TelegramClient from "../components/telegram/TelegramClient";
 import WhatsAppClient from "../components/whatsapp/WhatsAppClient";
 import Security from "../components/security/Security";
+import { useEffect } from "react";
+import { useMessagingStore } from "../components/messaging/MessagingStore";
 
 const AppLayout = () => {
+  // Initialize messaging providers once
+  useEffect(() => {
+    useMessagingStore.getState().initializeProviders();
+  }, []);
   const location = useLocation();
   const noNavRoutes = ["/", "/home", "/profile", "/security"];
   const mainClass =

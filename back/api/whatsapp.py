@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Depends
 from typing import Optional
 import json
+from sqlalchemy.ext.asyncio import AsyncSession
 from ..whatsapp.whatsapp_client import WhatsAppClientManager
 from back.models.database import User
+from back.database.config import get_async_db
 from ..auth import jwt_handler
 from back.api.auth import get_current_user
 
@@ -12,13 +14,20 @@ router = APIRouter(prefix="/whatsapp", tags=["whatsapp"])
 whatsapp_manager = WhatsAppClientManager()
 
 @router.post("/connect")
-async def connect_whatsapp(current_user: User = Depends(get_current_user)):
+async def connect_whatsapp(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
     """Connect to WhatsApp Web"""
     try:
         session_id = f"whatsapp_{current_user.id}"
         result = await whatsapp_manager.create_session(session_id)
         
         if result.get("success"):
+            # Update user's WhatsApp connection status
+            current_user.is_whatsapp_connected = True
+            await db.commit()
+            
             return {
                 "success": True,
                 "sessionId": session_id,
@@ -31,13 +40,20 @@ async def connect_whatsapp(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/disconnect")
-async def disconnect_whatsapp(current_user: User = Depends(get_current_user)):
+async def disconnect_whatsapp(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
     """Disconnect from WhatsApp Web"""
     try:
         session_id = f"whatsapp_{current_user.id}"
         result = await whatsapp_manager.disconnect_session(session_id)
         
         if result.get("success"):
+            # Update user's WhatsApp connection status
+            current_user.is_whatsapp_connected = False
+            await db.commit()
+            
             return {
                 "success": True,
                 "message": "WhatsApp session disconnected successfully"

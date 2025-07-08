@@ -300,15 +300,23 @@ async def get_current_user_profile(
         phone_number=None
     ))
 
-    # Add placeholders for other services
-    for provider in ["whatsapp", "instagram"]:
-        connected_accounts.append(ConnectedAccount(
-            provider=provider,
-            username=None,
-            connected_at=None,
-            is_active=False,
-            phone_number=None
-        ))
+    # WhatsApp connection status using database field
+    connected_accounts.append(ConnectedAccount(
+        provider="whatsapp",
+        username="WhatsApp" if current_user.is_whatsapp_connected else None,
+        connected_at=None,  # We can set this later if needed
+        is_active=current_user.is_whatsapp_connected,
+        phone_number=None
+    ))
+
+    # Add placeholder for Instagram
+    connected_accounts.append(ConnectedAccount(
+        provider="instagram",
+        username=None,
+        connected_at=None,
+        is_active=False,
+        phone_number=None
+    ))
 
     return ProfileResponse(
         id=current_user.id,

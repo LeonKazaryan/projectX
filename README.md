@@ -198,6 +198,24 @@
 - MultiAgent System Release
 - Significant AI upgrade
 
+  #0.6.4
+
+- 📱 **WhatsApp Integration** - Complete WhatsApp Web integration with real-time messaging
+- **WhatsApp Web Client**: Full integration with whatsapp-web.js for seamless messaging
+- **Real-time Messaging**: Live message updates using Socket.IO with instant chat synchronization
+- **QR Code Authentication**: Secure WhatsApp login via QR code scanning
+- **Session Management**: Persistent WhatsApp sessions with automatic reconnection
+- **Unified Messaging Interface**: WhatsApp and Telegram now share the same modern UI/UX
+- **Profile Integration**: WhatsApp connection status now shows in Profile page like Telegram
+- **Database Integration**: Added `is_whatsapp_connected` field to user model for persistent status tracking
+- **Auto-scroll & Focus**: WhatsApp messages auto-scroll to bottom and input auto-focuses like Telegram
+- **Chat Sorting**: WhatsApp chats sort by last message timestamp with real-time updates
+- **Message History**: Full message history loading with proper pagination
+- **Typing Indicators**: Real-time typing status for better user experience
+- **Search Functionality**: WhatsApp chat search with instant filtering
+- **Loading States**: Proper loading indicators and error handling throughout
+- **Cross-platform Support**: Works on both desktop and mobile browsers
+
 #0.7.3
 
 - 🎨 **Complete Profile Page Cyberpunk Overhaul** - Transformed boring profile page into cyberpunk masterpiece
@@ -220,13 +238,11 @@
 - Landing Redesign
 - Enhaced animations
 
-  #0.6.5
+#0.6.5
 
-  - 🧠 **Smart Context Break Detection** - Fixed AI giving inappropriate suggestions for greetings after long conversations
-  - **Time-Aware AI**: AI now detects when someone sends a greeting after a long pause (2+ hours) and treats it as a fresh conversation start
-  - **Greeting Pattern Recognition**: System recognizes common greeting patterns ("привет", "как дела", "hi", "hey", etc.) to identify conversation restarts
-  - **Context Reset**: When greeting after long pause is detected, AI ignores old conversation topics and responds appropriately to the greeting
-  - **Smart Caching**: Updated suggestion caching to ensure fresh responses for context breaks
+- 🧠 **Smart Context Break Detection** - Fixed AI giving inappropriate suggestions for greetings after long conversations
+- **Time-Aware AI**: AI now detects when someone sends a greeting after a long pause (2+ hours) and treats it as a fresh conversation start - **Greeting Pattern Recognition**: System recognizes common greeting patterns ("привет", "как дела", "hi", "hey", etc.) to identify conversation restarts
+- **Context Reset**: When greeting after long pause is detected, AI ignores old conversation topics and responds appropriately to the greeting - **Smart Caching**: Updated suggestion caching to ensure fresh responses for context breaks
   - **Enhanced Response Logic**: AI system now differentiates between:
     - **Continuous conversation**: Uses full context for relevant suggestions
     - **Fresh greeting**: Responds naturally to greeting without referencing old topics
@@ -327,3 +343,9 @@
 - **Chat Sorting**: Chats automatically sorted by last message timestamp for better organization
 - **Keyboard Navigation**: Full keyboard support for sending messages (Enter to send, Shift+Enter for new line)
 - **Visual Polish**: Improved spacing, borders, and visual hierarchy throughout WhatsApp interface
+
+# 0.7.5
+
+- Working version of Whatsapp available
+- Whatsapp session stores in the profile
+- Whatsapp session info display in the profile UI

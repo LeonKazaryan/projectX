@@ -23,10 +23,13 @@ const WhatsAppClient: React.FC = () => {
     isLoading,
     selectedChat,
     selectChat,
-    getProviderStatus,
     providers,
     loadChats,
   } = useMessagingStore();
+
+  const whatsappConnected = useMessagingStore((state) =>
+    state.getProviderStatus("whatsapp")
+  );
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -38,16 +41,21 @@ const WhatsAppClient: React.FC = () => {
   // Get WhatsAppProvider instance
   const whatsappProvider = providers?.whatsapp;
 
+  // Update readiness when provider already connected
   useEffect(() => {
-    // Initialize providers when component mounts
-    useMessagingStore.getState().initializeProviders();
-  }, []);
+    if (whatsappConnected && whatsappProvider) {
+      const wa = whatsappProvider as WhatsAppProvider;
+      if (wa.isReady()) {
+        setIsReady(true);
+      }
+    }
+  }, [whatsappConnected, whatsappProvider]);
+
+  // Providers are initialized at app startup; no need to re-initialize here
 
   useEffect(() => {
-    // Check if WhatsApp is connected
-    const whatsappStatus = getProviderStatus("whatsapp");
-    setIsAuthenticated(whatsappStatus);
-  }, [getProviderStatus]);
+    setIsAuthenticated(whatsappConnected);
+  }, [whatsappConnected]);
 
   // Poll for readiness if QR is shown
   useEffect(() => {
@@ -82,9 +90,19 @@ const WhatsAppClient: React.FC = () => {
       if (success && whatsappProvider) {
         const wa = whatsappProvider as WhatsAppProvider;
         setSessionId(wa.getSessionId());
-        setQrCode(wa.getQrCode());
-        setShowQr(true);
-        setIsReady(false);
+        const qr = wa.getQrCode();
+        setQrCode(qr);
+        if (qr) {
+          setShowQr(true);
+          setIsReady(false);
+        } else {
+          // Session already ready
+          setShowQr(false);
+          setIsReady(true);
+          setIsAuthenticated(true);
+          // Load chats immediately
+          loadChats("whatsapp");
+        }
       }
     } catch (error) {
       console.error("Failed to connect WhatsApp:", error);

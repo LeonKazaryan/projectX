@@ -14,16 +14,77 @@ export class WhatsAppProvider implements IMessagingProvider {
   private qrCode: string | null = null;
   private ready: boolean = false;
 
+  /**
+   * Attempt to restore an existing WhatsApp session from localStorage.
+   * If successful, sets up Socket.IO and marks the provider as connected.
+   * Returns true if a ready session was restored.
+   */
+  async init(): Promise<boolean> {
+    const storedId = localStorage.getItem("whatsapp_session_id");
+    if (!storedId) return false;
+
+    try {
+      const res = await fetch(
+        `http://localhost:3000/whatsapp/status?sessionId=${storedId}`
+      );
+      const data = await res.json();
+
+      if (data.success && data.isReady) {
+        // Session is alive
+        this.sessionId = storedId;
+        this.ready = true;
+        this.isConnectedState = true;
+        this.qrCode = null;
+        this.setupSocketIO();
+
+        // Notify subscribers that status changed
+        this.subscribers.forEach((cb) => {
+          cb({ type: "status:changed", source: "whatsapp", data: true });
+        });
+
+        return true;
+      }
+    } catch (e) {
+      console.warn("Failed to restore WhatsApp session", e);
+    }
+
+    return false;
+  }
+
   constructor() {}
 
   async connect(): Promise<boolean> {
     try {
-      // Try to use existing sessionId from localStorage, or generate new one
+      // Use existing sessionId if present
       let sessionId = localStorage.getItem("whatsapp_session_id");
+
+      // If we already have sessionId, first check its status
+      if (sessionId) {
+        try {
+          const statusRes = await fetch(
+            `http://localhost:3000/whatsapp/status?sessionId=${sessionId}`
+          );
+          const statusData = await statusRes.json();
+          if (statusData.success && statusData.isReady) {
+            // Session already ready – no need for QR
+            this.sessionId = sessionId;
+            this.qrCode = null;
+            this.isConnectedState = true;
+            this.ready = true;
+            this.setupSocketIO();
+            return true;
+          }
+        } catch (e) {
+          console.warn("WhatsApp status check failed, will reconnect", e);
+        }
+      }
+
+      // If no sessionId or not ready – create a new one
       if (!sessionId) {
         sessionId = "whatsapp_" + Math.random().toString(36).slice(2);
         localStorage.setItem("whatsapp_session_id", sessionId);
       }
+
       const response = await fetch("http://localhost:3000/whatsapp/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -33,9 +94,9 @@ export class WhatsAppProvider implements IMessagingProvider {
       const data = await response.json();
       if (data.success) {
         this.sessionId = data.sessionId;
-        this.qrCode = data.qrCode;
-        this.isConnectedState = false; // Not ready until QR is scanned
-        this.ready = false;
+        this.qrCode = data.qrCode; // may be null if already linked
+        this.isConnectedState = data.qrCode ? false : true;
+        this.ready = data.qrCode ? false : true;
         this.setupSocketIO();
         return true;
       }

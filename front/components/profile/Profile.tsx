@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import authService from "../services/authService";
 import { API_BASE_URL } from "../services/authService";
 import type { ProfileData, ConnectedAccount } from "../services/authService";
+
 import "./Profile.css";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -50,6 +51,7 @@ import {
   AvatarImage,
   AvatarFallback,
 } from "../../src/components/ui/avatar";
+import { useMessagingStore } from "../messaging/MessagingStore";
 
 const providerDetails: Record<
   string,
@@ -67,6 +69,13 @@ const Profile: React.FC = () => {
   const navigate = useNavigate();
   const heroRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
+  // Individual provider statuses from messaging store (avoid object selector)
+  const telegramStatus = useMessagingStore((state) =>
+    state.getProviderStatus("telegram")
+  );
+  const whatsappStatus = useMessagingStore((state) =>
+    state.getProviderStatus("whatsapp")
+  );
 
   const fetchProfile = async () => {
     try {
@@ -187,7 +196,14 @@ const Profile: React.FC = () => {
     if (!details) return null;
 
     const { icon: Icon, color } = details;
-    const isConnected = account.is_active;
+    // Combine backend status and local provider status
+    const isConnected =
+      account.is_active ||
+      (account.provider === "telegram"
+        ? telegramStatus
+        : account.provider === "whatsapp"
+        ? whatsappStatus
+        : false);
 
     const handleCardClick = () => {
       if (isConnected) {
