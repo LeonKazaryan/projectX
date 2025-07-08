@@ -93,11 +93,18 @@ async def generate_agent_response(
 
         chief_agent = ChiefAgent(llm_client=llm_client, telegram_manager=manager)
         
+        # Prepare last_message for agents expecting it
+        last_message = {
+            "sender": "user",
+            "text": request.query
+        }
+
         initial_state = {
             "session_id": request.session_id,
             "chat_id": request.chat_id,
             "query": request.query,
-            "message_history": request.message_history
+            "message_history": request.message_history,
+            "last_message": last_message,
         }
 
         result_state = await chief_agent.execute(initial_state)

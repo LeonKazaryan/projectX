@@ -1,17 +1,62 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useMessagingStore } from "../../messaging/MessagingStore";
 import type { Message } from "../../messaging/types";
 import { Button } from "../../../src/components/ui/button";
 import { Textarea } from "../../../src/components/ui/textarea";
 import { Avatar, AvatarFallback } from "../../../src/components/ui/avatar";
-import { ScrollArea } from "../../../src/components/ui/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, MessageCircle, ChevronDown, Loader2 } from "lucide-react";
+import {
+  Send,
+  MessageCircle,
+  ChevronDown,
+  Loader2,
+  Bot,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
+import { RAGService } from "../../telegram/utils/ragService";
+import { API_BASE_URL } from "../../services/authService";
 
 interface WhatsAppMessageAreaProps {
   chatId: string;
   chatName: string;
 }
+
+// AI settings interface
+interface AISettings {
+  enabled: boolean;
+  memory_limit: number;
+  suggestion_delay: number;
+}
+
+// Hook to load AI settings for the current WhatsApp session
+const useAISettings = (sessionId: string) => {
+  const [aiSettings, setAiSettings] = useState<AISettings>({
+    enabled: true,
+    memory_limit: 20,
+    suggestion_delay: 1,
+  });
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/ai/settings?session_id=${sessionId}`
+        );
+        const data = await res.json();
+        if (data.success && data.settings) {
+          setAiSettings(data.settings);
+        }
+      } catch (e) {
+        console.error("Failed to load AI settings:", e);
+      }
+    })();
+  }, [sessionId]);
+
+  return { aiSettings };
+};
 
 const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   chatId,
@@ -22,6 +67,7 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
     sendMessage,
     loadMessages,
     refreshMessages,
+    providers,
   } = useMessagingStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -38,6 +84,18 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   const previousChatIdRef = useRef<string>("");
   const isChatSwitchRef = useRef(true);
   const justSentMessageRef = useRef(false);
+
+  // WhatsApp session for AI backend
+  const whatsappSessionId =
+    (providers?.whatsapp as any)?.getSessionId?.() || "";
+  const { aiSettings } = useAISettings(whatsappSessionId);
+
+  // AI suggestion states
+  const [aiSuggestion, setAiSuggestion] = useState("");
+  const [showAiSuggestion, setShowAiSuggestion] = useState(false);
+  const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
+
+  // Refs – (reserved for future enhancements)
 
   // Auto-load messages when chat changes, but only once per chat
   useEffect(() => {
@@ -168,8 +226,63 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   // Real-time messages now come via Socket.IO, no need for polling
   // The MessagingStore automatically handles new message events from providers
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+  const getAISuggestion = useCallback(async () => {
+    if (!aiSettings.enabled || aiSuggestionLoading) return;
+
+    setAiSuggestionLoading(true);
+    setAiSuggestion("");
+
+    const recentHistory = messages.slice(-15);
+    const lastIncoming = [...recentHistory].filter((m) => !m.isOutgoing).pop();
+    const query = lastIncoming?.text || "Что ответить?";
+
+    try {
+      // Extract numeric part of chatId for backend that expects int
+      const numericChatId = parseInt(chatId.replace(/\D/g, "")) || 0;
+
+      const rag = new RAGService();
+      const suggestion = await rag.getAgentResponse(
+        whatsappSessionId,
+        numericChatId,
+        query,
+        recentHistory.map((m) => ({
+          sender: m.isOutgoing ? "user" : "contact",
+          text: m.text,
+        })) as any
+      );
+
+      console.log("AI suggestion response:", suggestion);
+
+      if (suggestion) {
+        setAiSuggestion(suggestion.suggestion);
+        setShowAiSuggestion(true);
+      }
+    } catch (e) {
+      console.error("AI suggestion error:", e);
+    } finally {
+      setAiSuggestionLoading(false);
+    }
+  }, [aiSettings, aiSuggestionLoading, messages, whatsappSessionId, chatId]);
+
+  const useAISuggestion = () => {
+    setNewMessage(aiSuggestion);
+    setShowAiSuggestion(false);
+    if (textareaRef.current) textareaRef.current.focus();
+  };
+
+  const dismissAISuggestion = () => {
+    setShowAiSuggestion(false);
+  };
+
+  // Key handler with AI suggestion shortcuts
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Tab" && showAiSuggestion) {
+      e.preventDefault();
+      useAISuggestion();
+    } else if (e.key === "Escape" && showAiSuggestion) {
+      e.preventDefault();
+      dismissAISuggestion();
+    } else if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       setIsTyping(false);
       handleSendMessage();
@@ -345,9 +458,70 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
         </AnimatePresence>
       </div>
 
+      {/* AI Suggestion Panel */}
+      {aiSettings.enabled && showAiSuggestion && aiSuggestion && (
+        <div className="px-4 py-2 border-t border-border">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex items-start gap-2">
+            <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">
+                AI предлагает ответ:
+              </p>
+              <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap break-words">
+                {aiSuggestion}
+              </p>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={dismissAISuggestion}
+                className="text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={useAISuggestion}
+                className="text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+              >
+                Использовать
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {aiSettings.enabled && aiSuggestionLoading && (
+        <div className="px-4 py-2 border-t border-border">
+          <div className="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800 rounded-lg p-3 flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-gray-600 dark:text-gray-400" />
+            <span className="text-xs text-gray-600 dark:text-gray-400">
+              AI анализирует переписку...
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div className="flex-shrink-0 p-4 border-t border-border bg-card">
         <div className="flex items-end gap-2">
+          {aiSettings.enabled && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={getAISuggestion}
+              disabled={aiSuggestionLoading}
+              className="flex-shrink-0 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30"
+            >
+              {aiSuggestionLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Bot className="h-4 w-4" />
+              )}
+            </Button>
+          )}
           <div className="flex-1">
             <Textarea
               ref={textareaRef}

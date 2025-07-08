@@ -32,6 +32,14 @@ class SecureTelegramRAGEngine:
         self.qdrant_host = os.getenv("QDRANT_HOST", "localhost")
         self.qdrant_port = int(os.getenv("QDRANT_PORT", 6333))
         self.qdrant_api_key = os.getenv("QDRANT_API_KEY")
+        # Determine if HTTPS should be used: explicit env flag or default for port 443
+        env_https_flag = os.getenv("QDRANT_HTTPS", "auto").lower()
+        if env_https_flag == "true":
+            self.qdrant_https = True
+        elif env_https_flag == "false":
+            self.qdrant_https = False
+        else:  # auto
+            self.qdrant_https = self.qdrant_port == 443
         
         # Initialize Qdrant client
         try:
@@ -40,13 +48,13 @@ class SecureTelegramRAGEngine:
                     host=self.qdrant_host,
                     port=self.qdrant_port,
                     api_key=self.qdrant_api_key,
-                    https=False  # Disable HTTPS for local development
+                    https=self.qdrant_https
                 )
             else:
                 self.qdrant_client = QdrantClient(
                     host=self.qdrant_host,
                     port=self.qdrant_port,
-                    https=False  # Disable HTTPS for local development
+                    https=self.qdrant_https
                 )
             logger.info("Qdrant client initialized successfully")
         except Exception as e:
@@ -81,6 +89,9 @@ class SecureTelegramRAGEngine:
                 try:
                     collection_info = self.qdrant_client.get_collection(collection_name)
                     logger.info(f"Collection {collection_name} already exists")
+
+                    # Ensure required payload indexes exist
+                    self._ensure_payload_indexes(collection_name)
                 except Exception:
                     # Collection doesn't exist, create it
                     self.qdrant_client.create_collection(
@@ -105,8 +116,36 @@ class SecureTelegramRAGEngine:
                         )
                     )
                     logger.info(f"Created collection {collection_name} with optimized settings")
+
+                    # After creation, add payload indexes
+                    self._ensure_payload_indexes(collection_name)
         except Exception as e:
             logger.error(f"Error ensuring collections exist: {e}")
+
+    def _ensure_payload_indexes(self, collection_name: str):
+        """Create payload indexes for fields used in filters if they are missing."""
+        if not self.qdrant_client:
+            return
+
+        indexes = [
+            ("session_id", models.PayloadSchemaType.KEYWORD),
+            ("chat_id", models.PayloadSchemaType.INTEGER)
+        ]
+
+        for field_name, field_type in indexes:
+            try:
+                self.qdrant_client.create_payload_index(
+                    collection_name=collection_name,
+                    field_name=field_name,
+                    field_schema=models.PayloadSchemaType(field_type)
+                )
+                logger.info(f"Created payload index {field_name} on {collection_name}")
+            except Exception as e:
+                # If index already exists, ignore
+                if "already exists" in str(e):
+                    pass
+                else:
+                    logger.warning(f"Could not create index for {field_name} on {collection_name}: {e}")
     
     def _generate_secure_message_id(self, session_id: str, chat_id: int, message_id: int, timestamp: str) -> str:
         """Generate secure, unique ID for a message as UUID"""
@@ -267,6 +306,11 @@ class SecureTelegramRAGEngine:
                     )
                 )
             
+            # Ensure collections exist on first search
+            if not self._collections_initialized:
+                await self._ensure_collections_exist()
+                self._collections_initialized = True
+
             # Search in Qdrant
             search_results = self.qdrant_client.search(
                 collection_name=self.collections["messages"],
@@ -306,6 +350,11 @@ class SecureTelegramRAGEngine:
     ) -> Dict:
         """Get enhanced conversation context using secure RAG"""
         try:
+            # Ensure collections exist before scroll/search
+            if not self._collections_initialized:
+                await self._ensure_collections_exist()
+                self._collections_initialized = True
+
             # Get recent messages by metadata search
             recent_filter = models.Filter(
                 must=[

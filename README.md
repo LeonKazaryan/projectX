@@ -349,3 +349,8 @@
 - Working version of Whatsapp available
 - Whatsapp session stores in the profile
 - Whatsapp session info display in the profile UI
+
+# 0.7.6
+
+- WhatsApp AI integrations works now succesfully
+- Copied existing Telegram UI to WhatsAPP
