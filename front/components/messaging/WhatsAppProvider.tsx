@@ -5,6 +5,7 @@ import type {
   MessagingEvent,
 } from "./types";
 import { io, Socket } from "socket.io-client";
+import authService from "../services/authService";
 
 export class WhatsAppProvider implements IMessagingProvider {
   private isConnectedState: boolean = false;
@@ -14,14 +15,56 @@ export class WhatsAppProvider implements IMessagingProvider {
   private qrCode: string | null = null;
   private ready: boolean = false;
 
+  private getCurrentUser() {
+    return authService.getUser();
+  }
+
+  private isSessionForCurrentUser(sessionId: string): boolean {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) return false;
+
+    // Check if sessionId contains current user's ID
+    return sessionId.includes(`whatsapp_${currentUser.id}_`);
+  }
+
+  private clearForeignSession(): void {
+    // Clear any session that doesn't belong to current user
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) return;
+
+    const keys = Object.keys(localStorage);
+    keys.forEach((key) => {
+      if (
+        key.startsWith("whatsapp_session_id_") &&
+        key !== `whatsapp_session_id_${currentUser.id}`
+      ) {
+        localStorage.removeItem(key);
+      }
+    });
+  }
+
   /**
    * Attempt to restore an existing WhatsApp session from localStorage.
    * If successful, sets up Socket.IO and marks the provider as connected.
    * Returns true if a ready session was restored.
    */
   async init(): Promise<boolean> {
-    const storedId = localStorage.getItem("whatsapp_session_id");
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) return false;
+
+    // Clear any sessions that don't belong to current user
+    this.clearForeignSession();
+
+    const storedId = localStorage.getItem(
+      `whatsapp_session_id_${currentUser.id}`
+    );
     if (!storedId) return false;
+
+    // Double-check session belongs to current user
+    if (!this.isSessionForCurrentUser(storedId)) {
+      localStorage.removeItem(`whatsapp_session_id_${currentUser.id}`);
+      return false;
+    }
 
     try {
       const res = await fetch(
@@ -55,8 +98,16 @@ export class WhatsAppProvider implements IMessagingProvider {
 
   async connect(): Promise<boolean> {
     try {
-      // Use existing sessionId if present
-      let sessionId = localStorage.getItem("whatsapp_session_id");
+      const currentUser = this.getCurrentUser();
+      if (!currentUser) {
+        console.error("No authenticated user found");
+        return false;
+      }
+
+      // Use user-specific sessionId
+      let sessionId = localStorage.getItem(
+        `whatsapp_session_id_${currentUser.id}`
+      );
 
       // If we already have sessionId, first check its status
       if (sessionId) {
@@ -79,10 +130,15 @@ export class WhatsAppProvider implements IMessagingProvider {
         }
       }
 
-      // If no sessionId or not ready – create a new one
+      // If no sessionId or not ready – create a new one with user ID
       if (!sessionId) {
-        sessionId = "whatsapp_" + Math.random().toString(36).slice(2);
-        localStorage.setItem("whatsapp_session_id", sessionId);
+        sessionId = `whatsapp_${currentUser.id}_${Math.random()
+          .toString(36)
+          .slice(2)}`;
+        localStorage.setItem(
+          `whatsapp_session_id_${currentUser.id}`,
+          sessionId
+        );
       }
 
       const response = await fetch("http://localhost:3000/whatsapp/connect", {
@@ -128,12 +184,19 @@ export class WhatsAppProvider implements IMessagingProvider {
 
     this.isConnectedState = false;
     this.sessionId = null;
-    // Clear saved sessionId so user gets fresh session next time
-    localStorage.removeItem("whatsapp_session_id");
+
+    // Clear user-specific session ID
+    const currentUser = this.getCurrentUser();
+    if (currentUser) {
+      localStorage.removeItem(`whatsapp_session_id_${currentUser.id}`);
+    }
   }
 
-  async sendMessage(chatId: string, text: string): Promise<boolean> {
-    if (!this.sessionId) return false;
+  async sendMessage(chatId: string, message: string): Promise<void> {
+    if (!this.sessionId) {
+      console.error("WhatsApp provider not connected");
+      return;
+    }
 
     try {
       const response = await fetch("http://localhost:3000/whatsapp/send", {
@@ -142,15 +205,19 @@ export class WhatsAppProvider implements IMessagingProvider {
         body: JSON.stringify({
           sessionId: this.sessionId,
           chatId: chatId,
-          text: text,
+          message: message,
         }),
       });
 
+      if (!response.ok) {
+        console.error("Failed to send WhatsApp message:", response.statusText);
+        return;
+      }
+
       const data = await response.json();
-      return data.success;
+      console.log("WhatsApp message sent successfully:", data);
     } catch (error) {
-      console.error("Failed to send WhatsApp message:", error);
-      return false;
+      console.error("Error sending WhatsApp message:", error);
     }
   }
 
@@ -337,5 +404,37 @@ export class WhatsAppProvider implements IMessagingProvider {
   setReady(val: boolean) {
     this.ready = val;
     this.isConnectedState = val;
+  }
+
+  /**
+   * Reset provider state and clear foreign sessions
+   * Should be called when user logs out or changes
+   */
+  async reset(): Promise<void> {
+    this.isConnectedState = false;
+    this.sessionId = null;
+    this.qrCode = null;
+    this.ready = false;
+    this.subscribers = [];
+
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+
+    // Only clear foreign sessions, not current user's session
+    this.clearForeignSession();
+  }
+
+  /**
+   * Clear all WhatsApp sessions - use only for user switching
+   */
+  clearAllSessions(): void {
+    const keys = Object.keys(localStorage);
+    keys.forEach((key) => {
+      if (key.startsWith("whatsapp_session_id_")) {
+        localStorage.removeItem(key);
+      }
+    });
   }
 }

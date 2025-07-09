@@ -198,7 +198,7 @@
 - MultiAgent System Release
 - Significant AI upgrade
 
-  #0.6.4
+#0.6.4
 
 - 📱 **WhatsApp Integration** - Complete WhatsApp Web integration with real-time messaging
 - **WhatsApp Web Client**: Full integration with whatsapp-web.js for seamless messaging
@@ -354,3 +354,8 @@
 
 - WhatsApp AI integrations works now succesfully
 - Copied existing Telegram UI to WhatsAPP
+
+# 0.7.7
+
+- Redesigned Profile Page
+- WhatsApp session storage fixed

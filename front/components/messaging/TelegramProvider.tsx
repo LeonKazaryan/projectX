@@ -1,4 +1,9 @@
-import { IMessagingProvider, Chat, Message, MessagingEvent } from "./types";
+import type {
+  IMessagingProvider,
+  Chat,
+  Message,
+  MessagingEvent,
+} from "./types";
 import { API_BASE_URL } from "../services/authService";
 
 export class TelegramProvider implements IMessagingProvider {
@@ -8,6 +13,45 @@ export class TelegramProvider implements IMessagingProvider {
   private websocket: WebSocket | null = null;
 
   constructor() {}
+
+  /**
+   * Attempt to restore an existing Telegram session from localStorage.
+   * If successful, sets up WebSocket and marks the provider as connected.
+   * Returns true if a session was restored.
+   */
+  async init(): Promise<boolean> {
+    try {
+      // Try to restore session from localStorage
+      const sessionString = localStorage.getItem("telegram_session_string");
+      if (!sessionString) {
+        return false;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/telegram/restore-session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem(
+            "chathut_access_token"
+          )}`,
+        },
+        body: JSON.stringify({ session_string: sessionString }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        this.sessionId = data.session_id;
+        this.isConnectedState = true;
+        this.setupWebSocket();
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error("Failed to restore Telegram session:", error);
+      return false;
+    }
+  }
 
   async connect(): Promise<boolean> {
     try {
@@ -47,25 +91,43 @@ export class TelegramProvider implements IMessagingProvider {
     this.sessionId = null;
   }
 
-  async sendMessage(chatId: string, text: string): Promise<boolean> {
-    if (!this.sessionId) return false;
+  async sendMessage(chatId: string, message: string): Promise<void> {
+    if (!this.isConnected()) {
+      console.error("Telegram provider not connected");
+      return;
+    }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/messages/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          session_id: this.sessionId,
-          dialog_id: parseInt(chatId),
-          text: text,
-        }),
-      });
+      const token = localStorage.getItem("chathut_access_token");
+      if (!token) {
+        console.error("No access token found");
+        return;
+      }
+
+      const response = await fetch(
+        `http://localhost:8000/api/telegram/send_message`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: message,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Failed to send message:", response.statusText);
+        return;
+      }
 
       const data = await response.json();
-      return data.success;
+      console.log("Message sent successfully:", data);
     } catch (error) {
-      console.error("Failed to send Telegram message:", error);
-      return false;
+      console.error("Error sending message:", error);
     }
   }
 
@@ -173,5 +235,39 @@ export class TelegramProvider implements IMessagingProvider {
     this.websocket.onclose = () => {
       this.isConnectedState = false;
     };
+  }
+
+  /**
+   * Reset Telegram provider state and clear localStorage
+   * Should be called when user logs out or changes
+   */
+  async reset(): Promise<void> {
+    console.log("Resetting Telegram provider state");
+
+    // Disconnect socket if connected
+    if (this.websocket) {
+      this.websocket.close();
+      this.websocket = null;
+    }
+
+    // Reset all state
+    this.isConnectedState = false;
+    this.sessionId = null;
+    this.subscribers = [];
+
+    // Clear localStorage to prevent session persistence across users
+    localStorage.removeItem("telegram_session_id");
+    localStorage.removeItem("telegram_session_string");
+
+    console.log("Telegram provider reset complete");
+  }
+
+  /**
+   * Clear all Telegram sessions - use only for user switching
+   */
+  clearAllSessions(): void {
+    // Telegram sessions are per-user by default, so this is the same as reset
+    localStorage.removeItem("telegram_session_id");
+    localStorage.removeItem("telegram_session_string");
   }
 }

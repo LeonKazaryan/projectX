@@ -41,6 +41,18 @@ const WhatsAppClient: React.FC = () => {
   // Get WhatsAppProvider instance
   const whatsappProvider = providers?.whatsapp;
 
+  // Restore provider state on component mount
+  useEffect(() => {
+    const restoreState = async () => {
+      try {
+        await useMessagingStore.getState().restoreProviderStates();
+      } catch (error) {
+        console.error("Failed to restore provider states:", error);
+      }
+    };
+    restoreState();
+  }, []);
+
   // Update readiness when provider already connected
   useEffect(() => {
     if (whatsappConnected && whatsappProvider) {

@@ -12,6 +12,7 @@ import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Settings } from "./ui/Settings";
 import { API_BASE_URL } from "../services/authService";
+import { useMessagingStore } from "../messaging/MessagingStore";
 
 const useTelegramSession = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -155,6 +156,18 @@ const TelegramClient: React.FC = () => {
   } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const navigate = useNavigate();
+
+  // Restore provider state on component mount
+  useEffect(() => {
+    const restoreState = async () => {
+      try {
+        await useMessagingStore.getState().restoreProviderStates();
+      } catch (error) {
+        console.error("Failed to restore provider states:", error);
+      }
+    };
+    restoreState();
+  }, []);
 
   if (isRestoring) {
     return (

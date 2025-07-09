@@ -4,6 +4,8 @@ const socketIo = require('socket.io');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
@@ -19,6 +21,19 @@ app.use(express.json());
 
 // In-memory session store (for dev)
 const sessions = {};
+
+// Helper to delete LocalAuth session files
+function deleteLocalAuthSession(sessionId) {
+  try {
+    const authPath = path.join('.wwebjs_auth', `session-${sessionId}`);
+    if (fs.existsSync(authPath)) {
+      fs.rmSync(authPath, { recursive: true, force: true });
+      console.log(`[${sessionId}] LocalAuth files deleted`);
+    }
+  } catch (error) {
+    console.error(`[${sessionId}] Error deleting LocalAuth files:`, error);
+  }
+}
 
 // Helper to get or create a WhatsApp client for a session
 function getClient(sessionId) {
@@ -364,11 +379,39 @@ app.post('/whatsapp/disconnect', async (req, res) => {
   if (!sessionId || !sessions[sessionId]) return res.status(400).json({ success: false, error: 'Session not found' });
   try {
     await sessions[sessionId].client.destroy();
+    deleteLocalAuthSession(sessionId); // Delete local auth files
     delete sessions[sessionId];
+    console.log(`[${sessionId}] Session disconnected and cleaned up`);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
+});
+
+app.post('/whatsapp/clear-user-sessions', async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ success: false, error: 'User ID required' });
+
+  const sessionPrefix = `whatsapp_${userId}`;
+  const sessionsToDelete = Object.keys(sessions).filter(sessionId => {
+    return sessionId.startsWith(sessionPrefix);
+  });
+
+  for (const sessionId of sessionsToDelete) {
+    try {
+      if (sessions[sessionId]?.client) {
+        await sessions[sessionId].client.destroy();
+      }
+      deleteLocalAuthSession(sessionId);
+      delete sessions[sessionId];
+      console.log(`[${sessionId}] Cleared session for user ${userId}`);
+    } catch (e) {
+      console.error(`[${sessionId}] Error clearing session for user ${userId}:`, e);
+    }
+  }
+
+  console.log(`User ${userId}: Cleared ${sessionsToDelete.length} WhatsApp sessions`);
+  res.json({ success: true, clearedSessions: sessionsToDelete.length });
 });
 
 app.get('/health', (req, res) => {

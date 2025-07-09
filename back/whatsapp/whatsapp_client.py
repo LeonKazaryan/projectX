@@ -165,4 +165,32 @@ class WhatsAppClientManager:
         """Clean up a session and all its resources"""
         await self.disconnect_session(session_id)
         if session_id in self.websockets:
-            del self.websockets[session_id] 
+            del self.websockets[session_id]
+
+    async def clear_user_sessions(self, user_id: str) -> dict:
+        """Clear all WhatsApp sessions for a specific user"""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{self.whatsapp_service_url}/whatsapp/clear-user-sessions",
+                    json={"userId": str(user_id)}
+                ) as response:
+                    data = await response.json()
+                    if data.get('success'):
+                        # Also clean up local tracking
+                        session_prefix = f"whatsapp_{user_id}"
+                        sessions_to_remove = [
+                            sid for sid in self.active_clients.keys() 
+                            if sid.startswith(session_prefix)
+                        ]
+                        for sid in sessions_to_remove:
+                            if sid in self.active_clients:
+                                del self.active_clients[sid]
+                            if sid in self.websockets:
+                                del self.websockets[sid]
+                    return data
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            } 

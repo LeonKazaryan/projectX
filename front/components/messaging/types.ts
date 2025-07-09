@@ -35,13 +35,16 @@ export interface MessagingEvent {
 export interface IMessagingProvider {
   connect(): Promise<boolean>;
   disconnect(): Promise<void>;
-  sendMessage(chatId: string, text: string): Promise<boolean>;
+  sendMessage?(chatId: string, message: string): Promise<void>;
   subscribe(callback: (event: MessagingEvent) => void): void;
   unsubscribe(callback: (event: MessagingEvent) => void): void;
   loadHistory(chatId: string, cursor?: string): Promise<Message[]>;
   getChats(): Promise<Chat[]>;
   isConnected(): boolean;
   getSource(): 'telegram' | 'whatsapp';
+  init?(): Promise<boolean>; // Optional method to restore provider state
+  reset?(): Promise<void>; // Optional method to reset provider state
+  clearAllSessions?(): void;
 }
 
 export interface ProviderConfig {

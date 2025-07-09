@@ -129,6 +129,30 @@ async def send_whatsapp_message(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/clear-sessions")
+async def clear_whatsapp_sessions(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """Clear all WhatsApp sessions for the current user"""
+    try:
+        result = await whatsapp_manager.clear_user_sessions(current_user.id)
+        
+        if result.get("success"):
+            # Update user's WhatsApp connection status
+            current_user.is_whatsapp_connected = False
+            await db.commit()
+            
+            return {
+                "success": True,
+                "message": f"Cleared {result.get('clearedSessions', 0)} WhatsApp sessions"
+            }
+        else:
+            raise HTTPException(status_code=400, detail=result.get("error", "Failed to clear sessions"))
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/status")
 async def get_whatsapp_status(current_user: User = Depends(get_current_user)):
     """Get WhatsApp session status"""

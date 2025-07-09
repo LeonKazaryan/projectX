@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from back.database.config import get_async_db
-from back.models.database import User, create_user_async, get_user_by_email_async, get_user_by_username_async, create_user_session_async, get_user_by_id_async, get_user_by_email_or_username_async, update_user_last_login_async
+from back.models.database import User, create_user_async, get_user_by_email_async, get_user_by_username_async, create_user_session_async, get_user_by_id_async, get_user_by_email_or_username_async, update_user_last_login_async, get_active_user_session_async, deactivate_user_session_async, cleanup_expired_sessions_async, get_user_preferences_async, update_user_preferences_async
 from back.models.auth import (
     UserCreate, UserLogin, UserResponse, UserUpdate, Token, 
     RefreshTokenRequest, MessageResponse, UserProfile, 
@@ -25,9 +25,13 @@ from back.auth.jwt_handler import (
     TokenHandler, validate_password_strength, 
     extract_device_info, generate_secure_token,
 )
+from back.whatsapp.whatsapp_client import WhatsAppClientManager
 
 router = APIRouter(tags=["Authentication"])
 security = HTTPBearer()
+
+# Global WhatsApp client manager for session cleanup
+whatsapp_manager = WhatsAppClientManager()
 
 
 async def get_current_user(
@@ -279,6 +283,18 @@ async def logout(
     session = await get_active_user_session_async(db, current_user.id, refresh_token_hash)
     if session:
         await deactivate_user_session_async(db, session.id)
+    
+    # Clear all WhatsApp sessions for this user to prevent session persistence
+    try:
+        await whatsapp_manager.clear_user_sessions(current_user.id)
+        # Update user's WhatsApp connection status
+        current_user.is_whatsapp_connected = False
+        await db.commit()
+        print(f"[AUTH] Cleared WhatsApp sessions for user {current_user.id} on logout")
+    except Exception as e:
+        print(f"[AUTH] Error clearing WhatsApp sessions for user {current_user.id}: {e}")
+        # Don't fail the logout if WhatsApp cleanup fails
+    
     return MessageResponse(message="Successfully logged out")
 
 

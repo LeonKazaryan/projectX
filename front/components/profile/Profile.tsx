@@ -39,6 +39,8 @@ import {
   XCircle,
   Loader2,
   Home,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import ParticleBackground from "../cyberpunk/ParticleBackground";
 import GlitchText from "../cyberpunk/GlitchText";
@@ -55,11 +57,26 @@ import { useMessagingStore } from "../messaging/MessagingStore";
 
 const providerDetails: Record<
   string,
-  { icon: React.ElementType; color: string }
+  { icon: React.ElementType; color: string; gradient: string; name: string }
 > = {
-  telegram: { icon: FaTelegram, color: "#0088cc" },
-  whatsapp: { icon: FaWhatsapp, color: "#25D366" },
-  instagram: { icon: FaInstagram, color: "#E4405F" },
+  telegram: {
+    icon: FaTelegram,
+    color: "#0088cc",
+    gradient: "from-blue-500 to-cyan-400",
+    name: "Telegram",
+  },
+  whatsapp: {
+    icon: FaWhatsapp,
+    color: "#25D366",
+    gradient: "from-green-500 to-emerald-400",
+    name: "WhatsApp",
+  },
+  instagram: {
+    icon: FaInstagram,
+    color: "#E4405F",
+    gradient: "from-purple-500 to-pink-400",
+    name: "Instagram",
+  },
 };
 
 const Profile: React.FC = () => {
@@ -83,6 +100,9 @@ const Profile: React.FC = () => {
       const data = await authService.getProfile();
       setProfile(data);
       setError(null);
+
+      // Restore provider states to ensure UI shows correct status
+      await useMessagingStore.getState().restoreProviderStates();
     } catch (err) {
       console.error("Profile fetch error:", err);
       if (!authService.getAccessToken()) {
@@ -195,7 +215,7 @@ const Profile: React.FC = () => {
     const details = providerDetails[account.provider];
     if (!details) return null;
 
-    const { icon: Icon, color } = details;
+    const { icon: Icon, color, gradient, name } = details;
     // Combine backend status and local provider status
     const isConnected =
       account.is_active ||
@@ -218,66 +238,67 @@ const Profile: React.FC = () => {
     return (
       <motion.div
         key={account.provider}
-        className={`cyber-messenger-card ${
+        className={`neural-interface-card ${
           isConnected ? "connected" : "disconnected"
-        }`}
+        } ${account.provider}-theme`}
         onClick={handleCardClick}
         whileHover={{ scale: isConnected ? 1.02 : 1 }}
         whileTap={{ scale: 0.98 }}
         transition={{ type: "spring", stiffness: 300 }}
       >
-        <HolographicCard className="messenger-card-content">
-          <div className="messenger-card-header">
-            <div className="messenger-icon-container">
-              <Hexagon size={80} className="messenger-hexagon">
-                <Icon
-                  className="messenger-icon"
-                  style={{ color, fontSize: "2.5rem" }}
-                />
-              </Hexagon>
+        <div className="neural-connection-line">
+          <div
+            className={`connection-flow ${isConnected ? "active" : "inactive"}`}
+          ></div>
+        </div>
+
+        <div className="interface-card-glass">
+          <div className="interface-header">
+            <div className={`interface-icon bg-gradient-to-br ${gradient}`}>
+              <Icon className="provider-icon" />
             </div>
-            <div className="messenger-info">
-              <h3 className="font-orbitron messenger-title">
-                {account.provider.charAt(0).toUpperCase() +
-                  account.provider.slice(1)}
-              </h3>
-              <div className="status-indicator">
+            <div className="interface-info">
+              <h3 className="font-orbitron interface-name">{name}</h3>
+              <div className="connection-status">
                 {isConnected ? (
-                  <CheckCircle className="status-icon connected" />
+                  <div className="status-active">
+                    <Wifi className="status-icon" />
+                    <span className="font-rajdhani">CONNECTED</span>
+                  </div>
                 ) : (
-                  <XCircle className="status-icon disconnected" />
+                  <div className="status-inactive">
+                    <WifiOff className="status-icon" />
+                    <span className="font-rajdhani">OFFLINE</span>
+                  </div>
                 )}
-                <span className="status-text font-rajdhani">
-                  {isConnected ? "ACTIVE" : "OFFLINE"}
-                </span>
               </div>
             </div>
           </div>
 
           {isConnected && (
-            <div className="messenger-details">
-              <div className="detail-item">
-                <User className="detail-icon" />
+            <div className="interface-details">
+              <div className="user-data">
+                <User className="data-icon" />
                 <span className="font-rajdhani">@{account.username}</span>
               </div>
-              <div className="cyber-stats">
-                <div className="stat-item">
-                  <Activity className="stat-icon" />
-                  <span className="font-rajdhani">Online</span>
+              <div className="security-badges">
+                <div className="security-badge">
+                  <Shield className="badge-icon" />
+                  <span className="font-rajdhani">E2E</span>
                 </div>
-                <div className="stat-item">
-                  <Shield className="stat-icon" />
-                  <span className="font-rajdhani">Encrypted</span>
+                <div className="security-badge">
+                  <Activity className="badge-icon" />
+                  <span className="font-rajdhani">LIVE</span>
                 </div>
               </div>
             </div>
           )}
 
-          <div className="messenger-actions">
+          <div className="interface-actions">
             <Button
-              className={`cyberpunk-btn messenger-btn ${
-                isConnected ? "disconnect-btn" : "connect-btn"
-              }`}
+              className={`neural-action-btn ${
+                isConnected ? "disconnect-action" : "connect-action"
+              } ${account.provider}-btn`}
               onClick={(e) => {
                 e.stopPropagation();
                 if (account.provider === "telegram") {
@@ -301,16 +322,16 @@ const Profile: React.FC = () => {
               }
             >
               {isConnected ? (
-                <Power className="btn-icon" />
+                <Power className="action-icon" />
               ) : (
-                <Zap className="btn-icon" />
+                <Zap className="action-icon" />
               )}
               <span className="font-rajdhani">
                 {isConnected ? "DISCONNECT" : "CONNECT"}
               </span>
             </Button>
           </div>
-        </HolographicCard>
+        </div>
       </motion.div>
     );
   };
@@ -374,164 +395,164 @@ const Profile: React.FC = () => {
       <ParticleBackground />
       <div className="cyber-grid-overlay"></div>
 
-      <div className="profile-content">
-        {/* Hero Section */}
+      <div className="profile-content-new">
+        {/* Main Profile Layout - Left User Info, Right Neural Interfaces */}
         <motion.div
           ref={heroRef}
-          className="profile-hero"
+          className="profile-layout"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1 }}
         >
-          <div className="hero-header">
-            <GlitchText className="hero-title font-orbitron">
-              NEURAL PROFILE
-            </GlitchText>
-            <div className="cyber-divider"></div>
+          {/* Left Side - User Profile */}
+          <div className="user-profile-section">
+            <div className="profile-glass-card">
+              <div className="profile-header">
+                <GlitchText className="profile-title font-orbitron">
+                  chathut
+                </GlitchText>
+                <div className="neural-divider"></div>
+              </div>
+
+              <div className="user-avatar-container">
+                <div className="avatar-brain-center">
+                  <Avatar className="main-avatar">
+                    <AvatarImage
+                      src={
+                        profile?.username
+                          ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`
+                          : undefined
+                      }
+                      alt={profile?.username || "User"}
+                    />
+                    <AvatarFallback className="avatar-fallback">
+                      <Terminal size={48} className="avatar-terminal" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="neural-pulse"></div>
+                </div>
+
+                <motion.div
+                  className="user-status-badge"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <Activity className="pulse-icon" />
+                  <span className="font-rajdhani">ONLINE</span>
+                </motion.div>
+              </div>
+
+              <div className="user-info-section">
+                <div className="info-item primary">
+                  <User className="info-icon" />
+                  <div className="info-content">
+                    <span className="info-label font-rajdhani">IDENTITY</span>
+                    <span className="info-value font-orbitron">
+                      {profile?.username || "Anonymous"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="info-item">
+                  <Mail className="info-icon" />
+                  <div className="info-content">
+                    <span className="info-label font-rajdhani">CHANNEL</span>
+                    <span className="info-value font-rajdhani">
+                      {profile?.email || "No channel"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="info-item">
+                  <Network className="info-icon" />
+                  <div className="info-content">
+                    <span className="info-label font-rajdhani">
+                      ACTIVE LINKS
+                    </span>
+                    <span className="info-value font-rajdhani">
+                      {profile?.connected_accounts.filter(
+                        (acc) => acc.is_active
+                      ).length || 0}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="info-item">
+                  <Shield className="info-icon" />
+                  <div className="info-content">
+                    <span className="info-label font-rajdhani">SECURITY</span>
+                    <span className="info-value font-rajdhani">
+                      <CheckCircle className="security-check" />
+                      ENCRYPTED
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="user-avatar-section">
-            <Hexagon size={120} className="avatar-hexagon">
-              <div className="avatar-container">
-                <Avatar className="cyber-avatar">
-                  <AvatarImage
-                    src={
-                      profile?.username
-                        ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`
-                        : undefined
-                    }
-                    alt={profile?.username || "User"}
-                  />
-                  <AvatarFallback className="cyber-avatar-fallback">
-                    <Terminal size={48} className="avatar-icon" />
-                  </AvatarFallback>
-                </Avatar>
-              </div>
-            </Hexagon>
+          {/* Right Side - Neural Interfaces */}
+          <div className="neural-interfaces-section">
+            <div className="interfaces-header">
+              <GlitchText className="interfaces-title font-orbitron">
+                NEURAL INTERFACES
+              </GlitchText>
+              <div className="neural-divider"></div>
+            </div>
+
             <motion.div
-              className="user-status"
-              initial={{ x: -50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
+              ref={cardsRef}
+              className="interfaces-grid"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
             >
-              <div className="status-badge">
-                <Activity className="status-pulse" />
-                <span className="font-rajdhani">ONLINE</span>
-              </div>
+              {profile?.connected_accounts.map(renderAccountCard)}
             </motion.div>
           </div>
         </motion.div>
 
-        {/* User Info Cards */}
-        <div className="user-info-grid">
-          <HolographicCard className="info-card">
-            <div className="info-header">
-              <User className="info-icon" />
-              <span className="font-orbitron">IDENTITY</span>
-            </div>
-            <div className="info-value font-rajdhani">
-              {profile?.username || "Anonymous"}
-            </div>
-          </HolographicCard>
-
-          <HolographicCard className="info-card">
-            <div className="info-header">
-              <Mail className="info-icon" />
-              <span className="font-orbitron">COMM CHANNEL</span>
-            </div>
-            <div className="info-value font-rajdhani">
-              {profile?.email || "No comm channel"}
-            </div>
-          </HolographicCard>
-
-          <HolographicCard className="info-card">
-            <div className="info-header">
-              <Network className="info-icon" />
-              <span className="font-orbitron">CONNECTIONS</span>
-            </div>
-            <div className="info-value font-rajdhani">
-              {profile?.connected_accounts.filter((acc) => acc.is_active)
-                .length || 0}{" "}
-              Active
-            </div>
-          </HolographicCard>
-
-          <HolographicCard className="info-card">
-            <div className="info-header">
-              <Shield className="info-icon" />
-              <span className="font-orbitron">SECURITY</span>
-            </div>
-            <div className="info-value font-rajdhani">
-              <CheckCircle className="security-icon" />
-              ENCRYPTED
-            </div>
-          </HolographicCard>
-        </div>
-
-        {/* Messenger Connections */}
+        {/* System Control Panel */}
         <motion.div
-          className="messengers-section"
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-        >
-          <div className="section-header">
-            <GlitchText className="section-title font-orbitron">
-              NEURAL INTERFACES
-            </GlitchText>
-            <div className="cyber-divider-small"></div>
-          </div>
-
-          <motion.div
-            ref={cardsRef}
-            className="messengers-grid"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-          >
-            {profile?.connected_accounts.map(renderAccountCard)}
-          </motion.div>
-        </motion.div>
-
-        {/* Control Panel */}
-        <motion.div
-          className="control-panel"
+          className="system-control-panel"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.2 }}
         >
-          <HolographicCard className="control-card">
+          <div className="control-glass-card">
             <div className="control-header">
               <Cpu className="control-icon" />
               <span className="font-orbitron">SYSTEM CONTROL</span>
             </div>
             <div className="control-actions">
               <Button
-                className="cyberpunk-btn control-btn"
+                className="control-action-btn home-btn"
                 onClick={() => navigate("/home")}
               >
-                <Home className="btn-icon" />
+                <Home className="action-icon" />
                 <span className="font-rajdhani">HOME</span>
               </Button>
               <Button
-                className="cyberpunk-btn control-btn"
+                className="control-action-btn settings-btn"
                 onClick={() => navigate("/settings")}
               >
-                <Settings className="btn-icon" />
+                <Settings className="action-icon" />
                 <span className="font-rajdhani">CONFIGURE</span>
               </Button>
               <Button
-                className="cyberpunk-btn control-btn disconnect-btn"
-                onClick={() => {
-                  localStorage.clear();
+                className="control-action-btn disconnect-btn"
+                onClick={async () => {
+                  // Proper logout using authService
+                  await authService.logout();
                   navigate("/home");
                 }}
               >
-                <Power className="btn-icon" />
+                <Power className="action-icon" />
                 <span className="font-rajdhani">DISCONNECT</span>
               </Button>
             </div>
-          </HolographicCard>
+          </div>
         </motion.div>
       </div>
     </div>

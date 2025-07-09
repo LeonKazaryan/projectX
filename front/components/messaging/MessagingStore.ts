@@ -28,7 +28,7 @@ interface MessagingState {
   loadChats: (source?: 'telegram' | 'whatsapp') => Promise<void>;
   loadMessages: (chatId: string) => Promise<void>;
   refreshMessages: (chatId: string) => Promise<void>;
-  sendMessage: (chatId: string, text: string) => Promise<boolean>;
+  sendMessage: (source: 'telegram' | 'whatsapp', chatId: string, text: string) => Promise<void>;
   selectChat: (chat: Chat | null) => void;
   handleEvent: (event: MessagingEvent) => void;
   updateSettings: (settings: Partial<{
@@ -42,6 +42,9 @@ interface MessagingState {
   getFilteredChats: () => Chat[];
   getChatMessages: (chatId: string) => Message[];
   getProviderStatus: (source: 'telegram' | 'whatsapp') => boolean;
+  resetAllProviders: () => Promise<void>;
+  clearAllUserSessions: () => void;
+  restoreProviderStates: () => Promise<void>;
 }
 
 export const useMessagingStore = create<MessagingState>((set, get) => ({
@@ -64,27 +67,32 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
       telegram: new TelegramProvider(),
       whatsapp: new WhatsAppProvider(),
     };
-
+    
     set({ providers });
-
-    // Attempt to auto-restore WhatsApp session
-    (async () => {
-      const wa = providers.whatsapp as any;
-      if (wa.init) {
-        const restored = await wa.init();
-        if (restored) {
-          // Trigger state change so selectors update
-          set((state) => ({ providers: { ...state.providers } }));
-          // Preload chats silently
-          await get().loadChats("whatsapp");
-        }
-      }
-    })();
-
+    
     // Subscribe to events from all providers
-    Object.values(providers).forEach((provider) => {
+    Object.values(providers).forEach(provider => {
       provider.subscribe((event) => get().handleEvent(event));
     });
+
+    // Auto-restore provider states after initialization
+    setTimeout(async () => {
+      try {
+        // Try to restore WhatsApp session
+        const whatsappRestored = await providers.whatsapp.init();
+        if (whatsappRestored) {
+          console.log("WhatsApp session restored successfully");
+        }
+
+        // Try to restore Telegram session
+        const telegramRestored = await providers.telegram.init();
+        if (telegramRestored) {
+          console.log("Telegram session restored successfully");
+        }
+      } catch (error) {
+        console.error("Error restoring provider states:", error);
+      }
+    }, 100); // Small delay to allow providers to fully initialize
   },
 
   // Connect to a specific provider
@@ -223,23 +231,23 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
     }
   },
 
-  // Send a message
-  sendMessage: async (chatId: string, text: string) => {
-    const { providers, chats } = get();
-    const chat = chats.find(c => c.id === chatId);
-    
-    if (!chat) return false;
+  // Send message through provider
+  sendMessage: async (source: 'telegram' | 'whatsapp', chatId: string, text: string) => {
+    const provider = get().providers[source];
+    if (!provider) {
+      console.error(`Provider ${source} not found`);
+      return;
+    }
 
-    const provider = providers[chat.source];
-    if (!provider) return false;
+    if (!provider.sendMessage) {
+      console.error(`Provider ${source} does not support sending messages`);
+      return;
+    }
 
     try {
-      const success = await provider.sendMessage(chatId, text);
-      // Messages now come via real-time events, no need to reload
-      return success;
+      await provider.sendMessage(chatId, text);
     } catch (error) {
-      set({ error: `Failed to send message: ${error}` });
-      return false;
+      console.error(`Error sending message via ${source}:`, error);
     }
   },
 
@@ -342,5 +350,74 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
     const { providers } = get();
     const provider = providers[source];
     return provider ? provider.isConnected() : false;
+  },
+
+  // Reset all providers (for user switching)
+  resetAllProviders: async () => {
+    console.log("Resetting all messaging providers");
+    
+    const providers = get().providers;
+    
+    // Reset each provider
+    await Promise.all(
+      Object.values(providers).map(async (provider) => {
+        try {
+          if (provider.reset) {
+            await provider.reset();
+          }
+        } catch (error) {
+          console.error(`Error resetting ${provider.getSource()}:`, error);
+        }
+      })
+    );
+    
+    console.log("All providers reset complete");
+  },
+
+  // Clear all user sessions (for user switching)
+  clearAllUserSessions: () => {
+    console.log("Clearing all user sessions");
+    
+    const providers = get().providers;
+    
+    // Clear all sessions for each provider
+    Object.values(providers).forEach((provider) => {
+      try {
+        if (provider.clearAllSessions) {
+          provider.clearAllSessions();
+        }
+      } catch (error) {
+        console.error(`Error clearing sessions for ${provider.getSource()}:`, error);
+      }
+    });
+    
+    console.log("All user sessions cleared");
+  },
+
+  // Restore provider states (can be called manually when needed)
+  restoreProviderStates: async () => {
+    console.log("Restoring provider states");
+    
+    const providers = get().providers;
+    
+    try {
+      // Try to restore WhatsApp session
+      if (providers.whatsapp?.init) {
+        const whatsappRestored = await providers.whatsapp.init();
+        if (whatsappRestored) {
+          console.log("WhatsApp session restored successfully");
+        }
+      }
+
+      // Try to restore Telegram session
+      if (providers.telegram?.init) {
+        const telegramRestored = await providers.telegram.init();
+        if (telegramRestored) {
+          console.log("Telegram session restored successfully");
+        }
+      }
+    } catch (error) {
+      console.error("Error restoring provider states:", error);
+    }
   },
 })); 

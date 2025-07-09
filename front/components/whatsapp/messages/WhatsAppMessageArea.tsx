@@ -165,29 +165,27 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
     setIsSending(true);
     setIsTyping(false);
     try {
-      const success = await sendMessage(chatId, newMessage.trim());
-      if (success) {
-        setNewMessage("");
-        justSentMessageRef.current = true;
-        if (textareaRef.current) {
-          textareaRef.current.style.height = "auto";
-        }
-        // Keep focus on the input after sending message
-        setTimeout(() => {
-          if (textareaRef.current && justSentMessageRef.current) {
-            textareaRef.current.focus();
-            justSentMessageRef.current = false;
-          }
-        }, 100);
-        // Force scroll to bottom after sending your own message
-        setIsNearBottom(true);
-        setTimeout(() => scrollToBottom(true), 150);
-
-        // Reload messages after sending to see the new message
-        setTimeout(() => {
-          refreshMessages(chatId);
-        }, 500);
+      await sendMessage("whatsapp", chatId, newMessage.trim());
+      setNewMessage("");
+      justSentMessageRef.current = true;
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
       }
+      // Keep focus on the input after sending message
+      setTimeout(() => {
+        if (textareaRef.current && justSentMessageRef.current) {
+          textareaRef.current.focus();
+          justSentMessageRef.current = false;
+        }
+      }, 100);
+      // Force scroll to bottom after sending your own message
+      setIsNearBottom(true);
+      setTimeout(() => scrollToBottom(true), 150);
+
+      // Reload messages after sending to see the new message
+      setTimeout(() => {
+        refreshMessages(chatId);
+      }, 500);
     } catch (error) {
       console.error("Failed to send message:", error);
     } finally {

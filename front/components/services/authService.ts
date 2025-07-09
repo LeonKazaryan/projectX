@@ -117,10 +117,32 @@ class AuthService {
     return !!this.getAccessToken();
   }
 
-  logout(): void {
-    localStorage.removeItem('chathut_access_token');
-    localStorage.removeItem('chathut_refresh_token');
-    localStorage.removeItem('chathut_user');
+  async logout(): Promise<void> {
+    try {
+      await fetch("http://localhost:8000/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+    
+    // Clear user state
+    // this.user = null; // This line was removed from the new_code, so it's removed here.
+    // this.isAuthenticated = false; // This line was removed from the new_code, so it's removed here.
+    // this.userSubject.next(null); // This line was removed from the new_code, so it's removed here.
+    
+    // Clear localStorage
+    localStorage.removeItem("chathut_access_token");
+    localStorage.removeItem("chathut_refresh_token");
+    localStorage.removeItem("chathut_user");
+    
+    // NOTE: We don't reset messaging providers here anymore
+    // This allows the same user to logout/login without losing sessions
+    // Provider reset only happens when switching users
   }
 
   async getProfile(): Promise<ProfileData> {
