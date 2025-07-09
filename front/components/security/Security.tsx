@@ -13,22 +13,21 @@ import {
   Eye,
   ArrowRight,
   CheckCircle,
-  AlertTriangle,
   Cpu,
   Network,
   Key,
   Home,
-  Play,
-  Terminal,
+  Send,
+  Globe,
 } from "lucide-react";
 import { Button } from "../../src/components/ui/button";
-import { Card } from "../../src/components/ui/card";
-import ParticleBackground from "../cyberpunk/ParticleBackground";
-import GlitchText from "../cyberpunk/GlitchText";
-import HolographicCard from "../cyberpunk/HolographicCard";
-import Hexagon from "../cyberpunk/Hexagon";
 import { authService } from "../services/authService";
 import "./Security.css";
+import MessagingBackground from "../home/MessagingBackground";
+import ChatCard from "../home/ChatCard";
+import TypingIndicator from "../home/TypingIndicator";
+import { useLanguage } from "../i18n/LanguageContext";
+import LanguageSwitcher from "../i18n/LanguageSwitcher";
 
 interface ProcessStep {
   id: number;
@@ -36,95 +35,15 @@ interface ProcessStep {
   description: string;
   icon: React.ReactNode;
   details: string[];
-  color: string;
+  platform: "telegram" | "whatsapp" | "ai" | "general";
 }
-
-const processSteps: ProcessStep[] = [
-  {
-    id: 1,
-    title: "Message Reception",
-    description: "Your messages are securely received through Telegram's API",
-    icon: <MessageCircle className="h-8 w-8" />,
-    details: [
-      "Direct connection to Telegram MTProto protocol",
-      "End-to-end encryption maintained",
-      "No message content stored permanently",
-      "Real-time WebSocket communication",
-    ],
-    color: "#00ffff",
-  },
-  {
-    id: 2,
-    title: "Context Analysis",
-    description: "AI analyzes conversation context using advanced NLP",
-    icon: <Brain className="h-8 w-8" />,
-    details: [
-      "Local processing for privacy",
-      "Context-aware understanding",
-      "Sentiment and intent recognition",
-      "Multi-language support",
-    ],
-    color: "#ff00ff",
-  },
-  {
-    id: 3,
-    title: "Knowledge Retrieval",
-    description:
-      "RAG system searches relevant information from your chat history",
-    icon: <Database className="h-8 w-8" />,
-    details: [
-      "Vector-based semantic search",
-      "Personalized knowledge base",
-      "Encrypted data storage",
-      "Privacy-first architecture",
-    ],
-    color: "#ffff00",
-  },
-  {
-    id: 4,
-    title: "AI Response Generation",
-    description: "Smart AI generates contextual suggestions for your replies",
-    icon: <Cpu className="h-8 w-8" />,
-    details: [
-      "GPT-powered suggestion engine",
-      "Context-aware responses",
-      "Tone and style matching",
-      "Real-time generation",
-    ],
-    color: "#00ff00",
-  },
-];
-
-const securityFeatures = [
-  {
-    icon: <Lock className="h-6 w-6" />,
-    title: "End-to-End Encryption",
-    description:
-      "All communications use Telegram's proven encryption protocols",
-  },
-  {
-    icon: <Eye className="h-6 w-6" />,
-    title: "No Data Mining",
-    description: "We don't sell, share, or monetize your personal data",
-  },
-  {
-    icon: <Server className="h-6 w-6" />,
-    title: "Local Processing",
-    description: "Most AI processing happens locally on your device",
-  },
-  {
-    icon: <Key className="h-6 w-6" />,
-    title: "Your Keys, Your Data",
-    description:
-      "You control your Telegram session and can revoke access anytime",
-  },
-];
 
 const Security: React.FC = () => {
   const navigate = useNavigate();
   const heroRef = useRef<HTMLDivElement>(null);
   const stepsRef = useRef<HTMLDivElement>(null);
   const securityRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
 
   const stepsInView = useInView(stepsRef, { once: true, margin: "-100px" });
   const securityInView = useInView(securityRef, {
@@ -161,58 +80,136 @@ const Security: React.FC = () => {
     }
   }, []);
 
-  return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden font-rajdhani">
-      <ParticleBackground />
+  const processSteps: ProcessStep[] = [
+    {
+      id: 1,
+      title: "Message Reception",
+      description: "Your messages are securely received through Telegram's API",
+      icon: <MessageCircle className="h-8 w-8" />,
+      details: [
+        "Direct connection to Telegram MTProto protocol",
+        "End-to-end encryption maintained",
+        "No message content stored permanently",
+        "Real-time WebSocket communication",
+      ],
+      platform: "telegram",
+    },
+    {
+      id: 2,
+      title: "Context Analysis",
+      description: "AI analyzes conversation context using advanced NLP",
+      icon: <Brain className="h-8 w-8" />,
+      details: [
+        "Local processing for privacy",
+        "Context-aware understanding",
+        "Sentiment and intent recognition",
+        "Multi-language support",
+      ],
+      platform: "ai",
+    },
+    {
+      id: 3,
+      title: "Knowledge Retrieval",
+      description:
+        "RAG system searches relevant information from your chat history",
+      icon: <Database className="h-8 w-8" />,
+      details: [
+        "Vector-based semantic search",
+        "Personalized knowledge base",
+        "Encrypted data storage",
+        "Privacy-first architecture",
+      ],
+      platform: "general",
+    },
+    {
+      id: 4,
+      title: "AI Response Generation",
+      description: "Smart AI generates contextual suggestions for your replies",
+      icon: <Cpu className="h-8 w-8" />,
+      details: [
+        "GPT-powered suggestion engine",
+        "Context-aware responses",
+        "Tone and style matching",
+        "Real-time generation",
+      ],
+      platform: "whatsapp",
+    },
+  ];
 
-      {/* Cyber Grid Background */}
-      <div className="cyber-grid-overlay" />
+  const securityFeatures = [
+    {
+      icon: <Lock className="h-6 w-6" />,
+      title: "End-to-End Encryption",
+      description:
+        "All communications use Telegram's proven encryption protocols",
+      platform: "telegram" as const,
+    },
+    {
+      icon: <Eye className="h-6 w-6" />,
+      title: "No Data Mining",
+      description: "We don't sell, share, or monetize your personal data",
+      platform: "general" as const,
+    },
+    {
+      icon: <Server className="h-6 w-6" />,
+      title: "Local Processing",
+      description: "Most AI processing happens locally on your device",
+      platform: "ai" as const,
+    },
+    {
+      icon: <Key className="h-6 w-6" />,
+      title: "Your Keys, Your Data",
+      description:
+        "You control your Telegram session and can revoke access anytime",
+      platform: "whatsapp" as const,
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white relative overflow-hidden">
+      <MessagingBackground />
 
       {/* Navigation */}
       <motion.nav
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 1 }}
-        className="fixed top-0 left-0 right-0 z-50 p-6"
+        className="fixed top-0 left-0 right-0 z-50 p-6 bg-black/20 backdrop-blur-md border-b border-white/10"
       >
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <motion.div
-            whileHover={{ scale: 1.1 }}
-            className="flex items-center space-x-2"
+            whileHover={{ scale: 1.05 }}
+            className="flex items-center space-x-3"
           >
-            <Hexagon
-              size={40}
-              className="bg-gradient-to-r from-cyan-500 to-purple-500 flex items-center justify-center"
-            >
-              <Terminal className="w-6 h-6 text-white" />
-            </Hexagon>
-            <GlitchText className="text-2xl font-bold font-orbitron">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Home className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               chathut
-            </GlitchText>
+            </span>
           </motion.div>
 
           <div className="flex items-center space-x-4">
+            <LanguageSwitcher variant="nav" />
+
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button
                 onClick={() => navigate("/")}
                 variant="ghost"
-                className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 px-4 py-2 font-rajdhani"
+                className="text-gray-300 hover:text-white hover:bg-white/10 px-4 py-2"
               >
                 <Home className="w-4 h-4 mr-2" />
-                Home
+                {t("nav.security")}
               </Button>
             </motion.div>
 
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button
                 onClick={handleNavigateToApp}
-                className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-black font-bold px-6 py-2 border-0"
-                style={{
-                  boxShadow: "0 0 20px rgba(0,255,255,0.5)",
-                }}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white font-medium px-6 py-2 rounded-xl shadow-lg"
               >
-                <Play className="w-4 h-4 mr-2" />
-                Launch App
+                <Send className="w-4 h-4 mr-2" />
+                {isAuthenticated ? t("nav.openHut") : t("nav.startChatting")}
               </Button>
             </motion.div>
           </div>
@@ -220,7 +217,7 @@ const Security: React.FC = () => {
       </motion.nav>
 
       {/* Hero Section */}
-      <section ref={heroRef} className="relative z-10 pt-20 pb-16 px-4">
+      <section ref={heroRef} className="relative z-10 pt-32 pb-16 px-4">
         <div className="max-w-6xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -228,16 +225,33 @@ const Security: React.FC = () => {
             transition={{ duration: 0.8 }}
             className="mb-8"
           >
-            <Shield className="h-20 w-20 mx-auto mb-6 text-cyan-400 neon-glow" />
-            <h1 className="text-5xl md:text-7xl font-orbitron font-bold mb-6 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-              <GlitchText>TRANSPARENCY</GlitchText>
+            <div className="flex justify-center mb-8">
+              <div className="relative">
+                <Shield className="h-20 w-20 text-blue-400" />
+                <motion.div
+                  className="absolute inset-0"
+                  animate={{
+                    boxShadow: [
+                      "0 0 20px rgba(59, 130, 246, 0.5)",
+                      "0 0 40px rgba(59, 130, 246, 0.7)",
+                      "0 0 20px rgba(59, 130, 246, 0.5)",
+                    ],
+                  }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+              </div>
+            </div>
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 bg-clip-text text-transparent">
+              {t("security.title")}
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              Discover how{" "}
-              <span className="text-cyan-400 font-bold">chathut</span> works
-              under the hood. Complete transparency, zero bullshit, maximum
-              security.
+              {t("security.subtitle")}
             </p>
+            <div className="flex justify-center mt-6">
+              <TypingIndicator platform="telegram" size="lg" className="mx-2" />
+              <TypingIndicator platform="ai" size="lg" className="mx-2" />
+              <TypingIndicator platform="whatsapp" size="lg" className="mx-2" />
+            </div>
           </motion.div>
 
           <motion.div
@@ -245,10 +259,11 @@ const Security: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.6 }}
           >
-            <Button className="cyberpunk-btn bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-black font-bold px-8 py-3 text-lg">
-              <Zap className="mr-2 h-5 w-5" />
-              See It In Action
-            </Button>
+            <ChatCard platform="general" className="p-6 max-w-2xl mx-auto">
+              <p className="text-gray-300 leading-relaxed">
+                {t("security.description")}
+              </p>
+            </ChatCard>
           </motion.div>
         </div>
       </section>
@@ -262,7 +277,7 @@ const Security: React.FC = () => {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-orbitron font-bold mb-6 text-cyan-400">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               HOW IT WORKS
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
@@ -275,24 +290,23 @@ const Security: React.FC = () => {
             {processSteps.map((step, index) => (
               <motion.div
                 key={step.id}
-                initial={{ opacity: 0, y: 50, rotateX: -15 }}
-                animate={stepsInView ? { opacity: 1, y: 0, rotateX: 0 } : {}}
+                initial={{ opacity: 0, y: 50 }}
+                animate={stepsInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.8, delay: index * 0.2 }}
                 className="relative"
               >
-                <HolographicCard className="h-full p-6 transform-gpu">
-                  <div
-                    className="flex items-center justify-center w-16 h-16 rounded-full mb-4 mx-auto neon-glow"
-                    style={{ backgroundColor: step.color, color: "#000" }}
-                  >
-                    {step.icon}
-                  </div>
-
-                  <div className="text-center mb-4">
-                    <div className="text-sm font-bold text-gray-400 mb-2">
+                <ChatCard
+                  platform={step.platform}
+                  className="h-full p-6 transform-gpu"
+                >
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center border border-blue-400/30 mb-4">
+                      {step.icon}
+                    </div>
+                    <div className="text-sm font-medium text-gray-400 mb-2">
                       STEP {step.id}
                     </div>
-                    <h3 className="text-xl font-orbitron font-bold text-white mb-3">
+                    <h3 className="text-xl font-bold text-white mb-3">
                       {step.title}
                     </h3>
                     <p className="text-gray-300 text-sm leading-relaxed">
@@ -315,10 +329,10 @@ const Security: React.FC = () => {
                   {/* Connection Arrow */}
                   {index < processSteps.length - 1 && (
                     <div className="hidden lg:block absolute top-1/2 -right-4 transform -translate-y-1/2 z-20">
-                      <ArrowRight className="h-8 w-8 text-cyan-400 neon-pulse" />
+                      <ArrowRight className="h-8 w-8 text-blue-400" />
                     </div>
                   )}
-                </HolographicCard>
+                </ChatCard>
               </motion.div>
             ))}
           </div>
@@ -334,7 +348,7 @@ const Security: React.FC = () => {
             transition={{ duration: 1 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-orbitron font-bold mb-6 text-purple-400">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               DATA FLOW
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
@@ -342,31 +356,42 @@ const Security: React.FC = () => {
             </p>
           </motion.div>
 
-          <div className="relative bg-gradient-to-r from-purple-900/20 to-cyan-900/20 rounded-2xl p-8 border border-purple-500/30 neon-border">
+          <ChatCard platform="general" className="p-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
               <motion.div
                 whileInView={{ scale: [1, 1.05, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
                 className="text-center"
               >
-                <div className="w-20 h-20 mx-auto bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center mb-4 neon-glow">
-                  <MessageCircle className="h-10 w-10 text-black" />
-                </div>
-                <h3 className="text-lg font-orbitron font-bold text-cyan-400 mb-2">
+                <ChatCard platform="telegram" className="p-4 mb-4">
+                  <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 bg-blue-500/20 border border-blue-500/40">
+                    <MessageCircle className="h-10 w-10 text-blue-400" />
+                  </div>
+                </ChatCard>
+                <h3 className="text-lg font-bold text-blue-400 mb-2">
                   YOUR MESSAGE
                 </h3>
                 <p className="text-sm text-gray-400">Encrypted at source</p>
               </motion.div>
 
-              <motion.div
-                whileInView={{ rotateY: 360 }}
-                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                className="text-center"
-              >
-                <div className="w-20 h-20 mx-auto bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-4 neon-glow">
-                  <Network className="h-10 w-10 text-black" />
-                </div>
-                <h3 className="text-lg font-orbitron font-bold text-purple-400 mb-2">
+              <motion.div className="text-center">
+                <ChatCard platform="ai" className="p-4 mb-4">
+                  <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 bg-orange-500/20 border border-orange-500/40">
+                    <Network className="h-10 w-10 text-orange-400" />
+                    <motion.div
+                      className="absolute inset-0 rounded-full"
+                      animate={{
+                        boxShadow: [
+                          "0 0 10px rgba(255, 107, 53, 0.3)",
+                          "0 0 20px rgba(255, 107, 53, 0.5)",
+                          "0 0 10px rgba(255, 107, 53, 0.3)",
+                        ],
+                      }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    />
+                  </div>
+                </ChatCard>
+                <h3 className="text-lg font-bold text-orange-400 mb-2">
                   AI PROCESSING
                 </h3>
                 <p className="text-sm text-gray-400">Local & secure</p>
@@ -377,10 +402,12 @@ const Security: React.FC = () => {
                 transition={{ duration: 2, repeat: Infinity, delay: 1 }}
                 className="text-center"
               >
-                <div className="w-20 h-20 mx-auto bg-gradient-to-r from-green-500 to-yellow-500 rounded-full flex items-center justify-center mb-4 neon-glow">
-                  <Zap className="h-10 w-10 text-black" />
-                </div>
-                <h3 className="text-lg font-orbitron font-bold text-green-400 mb-2">
+                <ChatCard platform="whatsapp" className="p-4 mb-4">
+                  <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 bg-green-500/20 border border-green-500/40">
+                    <Zap className="h-10 w-10 text-green-400" />
+                  </div>
+                </ChatCard>
+                <h3 className="text-lg font-bold text-green-400 mb-2">
                   SMART RESPONSE
                 </h3>
                 <p className="text-sm text-gray-400">Generated for you</p>
@@ -418,15 +445,15 @@ const Security: React.FC = () => {
                   >
                     <stop
                       offset="0%"
-                      style={{ stopColor: "#00ffff", stopOpacity: 0 }}
+                      style={{ stopColor: "#0088cc", stopOpacity: 0 }}
                     />
                     <stop
                       offset="50%"
-                      style={{ stopColor: "#ff00ff", stopOpacity: 1 }}
+                      style={{ stopColor: "#ff6b35", stopOpacity: 1 }}
                     />
                     <stop
                       offset="100%"
-                      style={{ stopColor: "#ff00ff", stopOpacity: 0 }}
+                      style={{ stopColor: "#ff6b35", stopOpacity: 0 }}
                     />
                   </linearGradient>
                   <linearGradient
@@ -438,21 +465,21 @@ const Security: React.FC = () => {
                   >
                     <stop
                       offset="0%"
-                      style={{ stopColor: "#ff00ff", stopOpacity: 0 }}
+                      style={{ stopColor: "#ff6b35", stopOpacity: 0 }}
                     />
                     <stop
                       offset="50%"
-                      style={{ stopColor: "#00ff00", stopOpacity: 1 }}
+                      style={{ stopColor: "#25d366", stopOpacity: 1 }}
                     />
                     <stop
                       offset="100%"
-                      style={{ stopColor: "#00ff00", stopOpacity: 0 }}
+                      style={{ stopColor: "#25d366", stopOpacity: 0 }}
                     />
                   </linearGradient>
                 </defs>
               </svg>
             </div>
-          </div>
+          </ChatCard>
         </div>
       </section>
 
@@ -465,7 +492,7 @@ const Security: React.FC = () => {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-orbitron font-bold mb-6 text-red-400">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               SECURITY FIRST
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
@@ -481,13 +508,13 @@ const Security: React.FC = () => {
                 animate={securityInView ? { opacity: 1, x: 0 } : {}}
                 transition={{ duration: 0.8, delay: index * 0.2 }}
               >
-                <Card className="p-6 bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-700 hover:border-cyan-500/50 transition-all duration-300 transform hover:scale-105">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-lg text-black">
+                <ChatCard platform={feature.platform} className="h-full">
+                  <div className="flex items-start gap-4 p-6">
+                    <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-400/30">
                       {feature.icon}
                     </div>
                     <div>
-                      <h3 className="text-xl font-orbitron font-bold text-white mb-2">
+                      <h3 className="text-xl font-bold text-white mb-2">
                         {feature.title}
                       </h3>
                       <p className="text-gray-300 leading-relaxed">
@@ -495,40 +522,73 @@ const Security: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                </Card>
+                </ChatCard>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Trust Statement */}
+      {/* CTA Section */}
       <section className="relative z-10 py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <motion.div
-            whileInView={{ opacity: 1, y: 0 }}
-            initial={{ opacity: 0, y: 30 }}
-            transition={{ duration: 0.8 }}
-            className="bg-gradient-to-r from-purple-900/30 to-cyan-900/30 rounded-2xl p-8 border border-purple-500/30 neon-border"
-          >
-            <AlertTriangle className="h-16 w-16 mx-auto mb-6 text-yellow-400 neon-glow" />
-            <h2 className="text-3xl md:text-4xl font-orbitron font-bold mb-6 text-yellow-400">
-              OUR COMMITMENT
-            </h2>
-            <p className="text-lg text-gray-300 leading-relaxed mb-6">
-              We're not here to mine your data, sell your information, or
-              compromise your privacy.
-              <span className="text-cyan-400 font-bold"> chathut </span>
-              is built by developers who care about user rights and digital
-              freedom.
-            </p>
-            <p className="text-base text-gray-400 leading-relaxed">
-              Our code is open to inspection, our methods are transparent, and
-              our commitment to your privacy is absolute. If you have any
-              questions about how we handle your data, we're here to answer
-              them.
-            </p>
-          </motion.div>
+          <ChatCard platform="ai" className="p-12">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="space-y-8"
+            >
+              <div className="flex justify-center space-x-4 mb-6">
+                <div className="flex items-center space-x-2 bg-blue-500/20 px-4 py-2 rounded-full border border-blue-400/30">
+                  <MessageCircle className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm text-blue-400">
+                    {t("platform.telegram")}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 bg-green-500/20 px-4 py-2 rounded-full border border-green-400/30">
+                  <MessageCircle className="w-4 h-4 text-green-400" />
+                  <span className="text-sm text-green-400">
+                    {t("platform.whatsapp")}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 bg-orange-500/20 px-4 py-2 rounded-full border border-orange-400/30">
+                  <Brain className="w-4 h-4 text-orange-400" />
+                  <span className="text-sm text-orange-400">
+                    {t("platform.ai")}
+                  </span>
+                </div>
+              </div>
+
+              <h2 className="text-4xl md:text-6xl font-bold">
+                {t("cta.readyToBuild")}{" "}
+                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  {t("cta.chatHut")}
+                </span>
+                ?
+              </h2>
+              <p className="text-xl text-gray-300">{t("cta.description")}</p>
+
+              <div className="flex justify-center">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    onClick={handleNavigateToApp}
+                    size="lg"
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white font-bold px-12 py-6 text-xl rounded-2xl shadow-2xl"
+                  >
+                    <ArrowRight className="w-6 h-6 mr-3" />
+                    {isAuthenticated
+                      ? t("home.enterHut")
+                      : t("cta.startBuilding")}
+                  </Button>
+                </motion.div>
+              </div>
+            </motion.div>
+          </ChatCard>
         </div>
       </section>
     </div>

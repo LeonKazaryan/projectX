@@ -281,11 +281,11 @@
   -- Connected Messangers (for now only Telegram)
 - Thousands of small bugs fixed
 
-# 0.6.9
+#0.6.9
 
 - Now Telegram session is storing within the account
 
-# 0.7.0
+#0.7.0
 
 - Nav Redesign in telegram Client
   -- Cyberpunk Nav design
@@ -296,23 +296,33 @@
 - Domain chathut.net bought!
 - Deployed to Digital Ocean
 
-# 0.7.1
+#0.7.1
 
 - Hardcoding deleted
 - Preparations for professional development
 
-# 0.7.2
+#0.7.2
 
 - Fixed bugs with input focus
 - Fixed bugs with scroll
 - 🛡️ **Security & Transparency Page** - Added comprehensive "How It Works" page accessible from the landing page
 
-# 0.7.2a
+#0.7.2a
 
 - Bugs fixed
 - Profile page slightly changed
+- NavBar Redisgned
 
-# 0.7.3
+#0.7.2b
+
+- **Improved Navigation UX**: Enhanced navigation bar with better user experience
+  - Removed redundant home button (logo now serves as home button)
+  - Added user dropdown menu with profile, settings and logout options
+  - Moved user avatar to the right side for better accessibility
+  - Improved platform switcher button placement
+  - Enhanced mobile responsiveness with compact dropdown
+
+#0.7.3
 
 - 🚀 **WhatsApp Integration** - Complete WhatsApp Web integration with unified messaging architecture
 - **Unified Messaging System**: Created abstract messaging provider interface supporting both Telegram and WhatsApp
@@ -326,7 +336,7 @@
 - **Session Management**: Secure session handling for both messaging platforms
 - **Future-Ready**: Architecture prepared for merging Telegram and WhatsApp into single client view
 
-# 0.7.4
+#0.7.4
 
 - 📱 **WhatsApp UX Enhancement** - Upgraded WhatsApp interface to match Telegram UX patterns
 - **Auto-Focus Input**: Input field automatically focuses when opening chats, like in Telegram
@@ -344,7 +354,7 @@
 - **Keyboard Navigation**: Full keyboard support for sending messages (Enter to send, Shift+Enter for new line)
 - **Visual Polish**: Improved spacing, borders, and visual hierarchy throughout WhatsApp interface
 
-# 0.7.5
+#0.7.5
 
 - Working version of Whatsapp available
 - Whatsapp session stores in the profile
@@ -359,3 +369,23 @@
 
 - Redesigned Profile Page
 - WhatsApp session storage fixed
+
+# 0.7.8
+
+- Complete Redesign - Bye Cyberpunk, Hello Chat Hut!
+- Floating Messages Background: New animated background with real chat messages floating across the screen (Telegram blue, WhatsApp green, AI orange)
+- Cozy Chat Hut Branding: Repositioned chathut as "your cozy messaging home" rather than cyberpunk neural matrix
+- Multi-Language Support: Added full Russian/English language support with context-based translations
+  - Language switcher component with flag indicators
+  - Persistent language preference stored in localStorage
+  - Complete translation system with React context
+  - Redesigned Security page with language support
+- Profile Page Redesign: Complete profile page redesign to match new messaging theme
+  - Replaced cyberpunk elements with modern chat-focused design
+  - Added floating message bubbles background with platform-specific colors
+  - Implemented multi-language support with Russian/English translations
+  - Redesigned platform connection cards with cleaner messaging aesthetic
+  - Updated user information display with modern card layout
+  - Enhanced responsive design for better mobile experience
+  - Improved loading and error states with consistent styling
+- NavBar UX Changed

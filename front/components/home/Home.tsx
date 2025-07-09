@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
 import { TypeAnimation } from "react-type-animation";
 import { Button } from "../../src/components/ui/button";
-import { Card, CardContent } from "../../src/components/ui/card";
 import AuthModal from "../auth/AuthModal";
 import {
   authService,
@@ -14,30 +13,27 @@ import {
 } from "../services/authService";
 import "./Home.css";
 import {
-  Bot,
   MessageSquare,
-  ShieldCheck,
-  Zap,
-  BarChart,
   Users,
-  Star,
-  CheckCircle,
+  Bot,
   ArrowRight,
-  Play,
-  Sparkles,
-  Brain,
-  Cpu,
-  Network,
   Shield,
-  Rocket,
-  Eye,
-  Wifi,
-  Terminal,
+  Zap,
+  Heart,
+  Home as HomeIcon,
+  Smartphone,
+  Send,
+  MessageCircle,
+  BrainCircuit,
+  Sparkles,
+  Globe,
+  Lock,
 } from "lucide-react";
-import ParticleBackground from "../cyberpunk/ParticleBackground";
-import GlitchText from "../cyberpunk/GlitchText";
-import Hexagon from "../cyberpunk/Hexagon";
-import HolographicCard from "../cyberpunk/HolographicCard";
+import MessagingBackground from "./MessagingBackground";
+import TypingIndicator from "./TypingIndicator";
+import ChatCard from "./ChatCard";
+import { useLanguage } from "../i18n/LanguageContext";
+import LanguageSwitcher from "../i18n/LanguageSwitcher";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -48,6 +44,7 @@ const Home = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(
     authService.isAuthenticated()
   );
+  const { t } = useLanguage();
 
   useEffect(() => {
     setIsLoaded(true);
@@ -129,48 +126,57 @@ const Home = () => {
 
   const features = [
     {
-      icon: Brain,
-      title: "AI-Powered Intelligence",
-      description:
-        "Advanced neural networks analyze and enhance your communications",
-      color: "#00ffff",
+      icon: BrainCircuit,
+      title: t("features.smartAI.title"),
+      description: t("features.smartAI.desc"),
+      platform: "ai" as const,
     },
     {
-      icon: Shield,
-      title: "Quantum Security",
-      description:
-        "Military-grade encryption protects your digital conversations",
-      color: "#ff00ff",
+      icon: MessageCircle,
+      title: t("features.multiPlatform.title"),
+      description: t("features.multiPlatform.desc"),
+      platform: "telegram" as const,
     },
     {
-      icon: Network,
-      title: "Neural Networks",
-      description:
-        "Connect across multiple platforms with seamless integration",
-      color: "#ffff00",
+      icon: Lock,
+      title: t("features.privacy.title"),
+      description: t("features.privacy.desc"),
+      platform: "general" as const,
     },
     {
-      icon: Rocket,
-      title: "Hyperspeed Processing",
-      description:
-        "Real-time message analysis and instant intelligent responses",
-      color: "#00ff00",
+      icon: Zap,
+      title: t("features.lightning.title"),
+      description: t("features.lightning.desc"),
+      platform: "whatsapp" as const,
     },
   ];
 
   const stats = [
-    { number: "99.9%", label: "Uptime", icon: Cpu },
-    { number: "1M+", label: "Messages Processed", icon: MessageSquare },
-    { number: "256-bit", label: "Encryption", icon: ShieldCheck },
-    { number: "< 50ms", label: "Response Time", icon: Zap },
+    {
+      number: "🏠",
+      label: t("stats.chatHut.label"),
+      subtext: t("stats.chatHut.text"),
+    },
+    {
+      number: "🤖",
+      label: t("stats.aiAssistant.label"),
+      subtext: t("stats.aiAssistant.text"),
+    },
+    {
+      number: "📱",
+      label: t("stats.multiPlatform.label"),
+      subtext: t("stats.multiPlatform.text"),
+    },
+    {
+      number: "🔒",
+      label: t("stats.secure.label"),
+      subtext: t("stats.secure.text"),
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden relative font-rajdhani">
-      <ParticleBackground />
-
-      {/* Cyberpunk Grid Background */}
-      <div className="fixed inset-0 pointer-events-none z-[1] cyberpunk-grid" />
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white overflow-hidden relative">
+      <MessagingBackground />
 
       <div className="relative z-10">
         {/* Navigation */}
@@ -178,25 +184,24 @@ const Home = () => {
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 1 }}
-          className="fixed top-0 left-0 right-0 z-50 p-6"
+          className="fixed top-0 left-0 right-0 z-50 p-6 bg-black/20 backdrop-blur-md border-b border-white/10"
         >
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <motion.div
-              whileHover={{ scale: 1.1 }}
-              className="flex items-center space-x-2"
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center space-x-3"
             >
-              <Hexagon
-                size={40}
-                className="bg-gradient-to-r from-cyan-500 to-purple-500 flex items-center justify-center"
-              >
-                <Terminal className="w-6 h-6 text-white" />
-              </Hexagon>
-              <GlitchText className="text-2xl font-bold font-orbitron">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <HomeIcon className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 chathut
-              </GlitchText>
+              </span>
             </motion.div>
 
             <div className="flex items-center space-x-4">
+              <LanguageSwitcher variant="nav" />
+
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -204,10 +209,10 @@ const Home = () => {
                 <Button
                   onClick={() => navigate("/security")}
                   variant="ghost"
-                  className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 px-4 py-2 font-rajdhani"
+                  className="text-gray-300 hover:text-white hover:bg-white/10 px-4 py-2"
                 >
                   <Shield className="w-4 h-4 mr-2" />
-                  How It Works
+                  {t("nav.security")}
                 </Button>
               </motion.div>
 
@@ -217,13 +222,10 @@ const Home = () => {
               >
                 <Button
                   onClick={handleNavigateToApp}
-                  className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-black font-bold px-6 py-2 border-0"
-                  style={{
-                    boxShadow: "0 0 20px rgba(0,255,255,0.5)",
-                  }}
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white font-medium px-6 py-2 rounded-xl shadow-lg"
                 >
-                  <Play className="w-4 h-4 mr-2" />
-                  Launch App
+                  <Send className="w-4 h-4 mr-2" />
+                  {isAuthenticated ? t("nav.openHut") : t("nav.startChatting")}
                 </Button>
               </motion.div>
             </div>
@@ -240,21 +242,42 @@ const Home = () => {
               animate="visible"
               className="space-y-8"
             >
-              <motion.div variants={itemVariants}>
-                <GlitchText className="text-6xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent font-orbitron">
-                  chathut
-                </GlitchText>
+              <motion.div variants={itemVariants} className="space-y-6">
+                <div className="flex justify-center items-center space-x-4 mb-8">
+                  <TypingIndicator platform="telegram" size="lg" />
+                  <TypingIndicator platform="ai" size="lg" />
+                  <TypingIndicator platform="whatsapp" size="lg" />
+                </div>
+
+                <h1 className="text-6xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 bg-clip-text text-transparent">
+                  {t("home.title")}
+                </h1>
+
+                <div className="flex justify-center">
+                  <ChatCard
+                    variant="bubble"
+                    platform="general"
+                    className="px-6 py-3 inline-block"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <HomeIcon className="w-5 h-5 text-blue-400" />
+                      <span className="text-lg font-medium">
+                        {t("home.tagline")}
+                      </span>
+                    </div>
+                  </ChatCard>
+                </div>
               </motion.div>
 
               <motion.div variants={itemVariants} className="max-w-4xl mx-auto">
-                <h2 className="text-2xl md:text-4xl mb-6 text-cyan-300">
+                <h2 className="text-2xl md:text-4xl mb-6 text-gray-300">
                   <TypeAnimation
                     sequence={[
-                      "The Future of Intelligent Messaging",
+                      t("home.sequence.conversations"),
                       2000,
-                      "Neural-Enhanced Communication Hub",
+                      t("home.sequence.smartAI"),
                       2000,
-                      "AI-Powered Telegram Experience",
+                      t("home.sequence.platforms"),
                       2000,
                     ]}
                     wrapper="span"
@@ -262,10 +285,8 @@ const Home = () => {
                     repeat={Infinity}
                   />
                 </h2>
-                <p className="text-xl text-gray-300 leading-relaxed">
-                  Experience the next evolution of digital communication with
-                  our cybernetic AI assistant. Seamlessly integrated with
-                  Telegram, enhanced with quantum-level intelligence.
+                <p className="text-xl text-gray-400 leading-relaxed">
+                  {t("home.description")}
                 </p>
               </motion.div>
 
@@ -274,57 +295,48 @@ const Home = () => {
                 className="flex justify-center space-x-6 flex-wrap gap-y-4"
               >
                 <motion.div
-                  whileHover={{
-                    scale: 1.05,
-                    boxShadow: "0 0 30px rgba(0,255,255,0.8)",
-                  }}
+                  whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   <Button
                     onClick={handleNavigateToApp}
                     size="lg"
-                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-8 py-4 text-lg border-0 cyberpunk-btn font-rajdhani"
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white font-bold px-8 py-4 text-lg rounded-2xl shadow-xl"
                   >
-                    <Rocket className="w-5 h-5 mr-2" />
-                    {isAuthenticated
-                      ? "Enter Neural Matrix"
-                      : "Initialize Neural Link"}
+                    <HomeIcon className="w-5 h-5 mr-2" />
+                    {isAuthenticated ? t("home.enterHut") : t("home.buildHut")}
                   </Button>
                 </motion.div>
 
                 <motion.div
-                  whileHover={{
-                    scale: 1.05,
-                    boxShadow: "0 0 30px rgba(255,0,255,0.8)",
-                  }}
+                  whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   <Button
                     onClick={() => openAuthModal("register")}
                     variant="outline"
                     size="lg"
-                    className="border-2 border-purple-500 text-purple-400 hover:bg-purple-500/10 px-8 py-4 text-lg cyberpunk-btn font-rajdhani neon-border"
+                    className="border-2 border-blue-400/40 text-blue-400 hover:bg-blue-400/10 px-8 py-4 text-lg rounded-2xl backdrop-blur-sm"
                   >
-                    <Eye className="w-5 h-5 mr-2" />
-                    {isAuthenticated ? "Neural Settings" : "Register"}
+                    <Users className="w-5 h-5 mr-2" />
+                    {isAuthenticated
+                      ? t("home.profile")
+                      : t("home.joinCommunity")}
                   </Button>
                 </motion.div>
 
                 <motion.div
-                  whileHover={{
-                    scale: 1.05,
-                    boxShadow: "0 0 30px rgba(255,255,0,0.8)",
-                  }}
+                  whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   <Button
                     onClick={() => navigate("/security")}
                     variant="outline"
                     size="lg"
-                    className="border-2 border-yellow-500 text-yellow-400 hover:bg-yellow-500/10 px-8 py-4 text-lg cyberpunk-btn font-rajdhani neon-border"
+                    className="border-2 border-green-400/40 text-green-400 hover:bg-green-400/10 px-8 py-4 text-lg rounded-2xl backdrop-blur-sm"
                   >
                     <Shield className="w-5 h-5 mr-2" />
-                    Security & Transparency
+                    {t("home.learnMore")}
                   </Button>
                 </motion.div>
               </motion.div>
@@ -343,18 +355,17 @@ const Home = () => {
               className="grid grid-cols-2 md:grid-cols-4 gap-8"
             >
               {stats.map((stat, index) => (
-                <motion.div
-                  key={index}
-                  variants={itemVariants}
-                  whileHover={{ scale: 1.05 }}
-                >
-                  <HolographicCard className="p-6 rounded-lg text-center">
-                    <stat.icon className="w-8 h-8 mx-auto mb-3 text-cyan-400" />
-                    <div className="text-3xl font-bold text-white mb-2">
-                      {stat.number}
+                <motion.div key={index} variants={itemVariants}>
+                  <ChatCard
+                    platform="general"
+                    className="p-6 text-center h-full"
+                  >
+                    <div className="text-4xl mb-3">{stat.number}</div>
+                    <div className="text-lg font-semibold text-white mb-2">
+                      {stat.label}
                     </div>
-                    <div className="text-gray-400">{stat.label}</div>
-                  </HolographicCard>
+                    <div className="text-sm text-gray-400">{stat.subtext}</div>
+                  </ChatCard>
                 </motion.div>
               ))}
             </motion.div>
@@ -371,12 +382,15 @@ const Home = () => {
               transition={{ duration: 0.8 }}
               className="text-center mb-16"
             >
-              <h2 className="text-4xl md:text-6xl font-bold mb-6 font-orbitron">
-                <GlitchText>Neural Architecture</GlitchText>
+              <h2 className="text-4xl md:text-6xl font-bold mb-6">
+                {t("features.whyChoose")}{" "}
+                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  chathut
+                </span>
+                ?
               </h2>
-              <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-                Powered by advanced quantum algorithms and neural networks, our
-                platform redefines intelligent communication.
+              <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+                {t("features.description")}
               </p>
             </motion.div>
 
@@ -388,28 +402,11 @@ const Home = () => {
               className="grid md:grid-cols-2 lg:grid-cols-4 gap-8"
             >
               {features.map((feature, index) => (
-                <motion.div
-                  key={index}
-                  variants={itemVariants}
-                  whileHover={{
-                    scale: 1.05,
-                    boxShadow: `0 0 30px ${feature.color}80`,
-                  }}
-                  className="group"
-                >
-                  <HolographicCard className="p-8 rounded-lg h-full">
+                <motion.div key={index} variants={itemVariants}>
+                  <ChatCard platform={feature.platform} className="p-8 h-full">
                     <div className="text-center">
-                      <div
-                        className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center"
-                        style={{
-                          background: `linear-gradient(145deg, ${feature.color}20, ${feature.color}40)`,
-                          border: `1px solid ${feature.color}60`,
-                        }}
-                      >
-                        <feature.icon
-                          className="w-8 h-8"
-                          style={{ color: feature.color }}
-                        />
+                      <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center border border-blue-400/30">
+                        <feature.icon className="w-8 h-8 text-blue-400" />
                       </div>
                       <h3 className="text-xl font-bold mb-4 text-white">
                         {feature.title}
@@ -418,7 +415,7 @@ const Home = () => {
                         {feature.description}
                       </p>
                     </div>
-                  </HolographicCard>
+                  </ChatCard>
                 </motion.div>
               ))}
             </motion.div>
@@ -428,75 +425,75 @@ const Home = () => {
         {/* CTA Section */}
         <section className="py-20 px-6">
           <div className="max-w-4xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
-              className="space-y-8"
-            >
-              <h2 className="text-4xl md:text-6xl font-bold">
-                <GlitchText>Ready to Evolve?</GlitchText>
-              </h2>
-              <p className="text-xl text-gray-300">
-                Join the neural revolution and experience communication beyond
-                human limitations.
-              </p>
-
+            <ChatCard platform="ai" className="p-12">
               <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8 }}
+                className="space-y-8"
               >
-                <Button
-                  onClick={handleNavigateToApp}
-                  size="lg"
-                  className="bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 hover:from-purple-500 hover:via-pink-500 hover:to-cyan-500 text-white font-bold px-12 py-6 text-xl border-0 cyberpunk-btn font-rajdhani"
-                  style={{
-                    boxShadow: "0 0 40px rgba(255,0,255,0.6)",
-                  }}
-                >
-                  <Wifi className="w-6 h-6 mr-3" />
-                  Connect to the Matrix
-                  <ArrowRight className="w-6 h-6 ml-3" />
-                </Button>
+                <div className="flex justify-center space-x-4 mb-6">
+                  <div className="flex items-center space-x-2 bg-blue-500/20 px-4 py-2 rounded-full border border-blue-400/30">
+                    <MessageSquare className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm text-blue-400">
+                      {t("platform.telegram")}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2 bg-green-500/20 px-4 py-2 rounded-full border border-green-400/30">
+                    <MessageCircle className="w-4 h-4 text-green-400" />
+                    <span className="text-sm text-green-400">
+                      {t("platform.whatsapp")}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2 bg-orange-500/20 px-4 py-2 rounded-full border border-orange-400/30">
+                    <Bot className="w-4 h-4 text-orange-400" />
+                    <span className="text-sm text-orange-400">
+                      {t("platform.ai")}
+                    </span>
+                  </div>
+                </div>
+
+                <h2 className="text-4xl md:text-6xl font-bold">
+                  {t("cta.readyToBuild")}{" "}
+                  <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                    {t("cta.chatHut")}
+                  </span>
+                  ?
+                </h2>
+                <p className="text-xl text-gray-300">{t("cta.description")}</p>
+
+                <div className="flex justify-center">
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button
+                      onClick={handleNavigateToApp}
+                      size="lg"
+                      className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white font-bold px-12 py-6 text-xl rounded-2xl shadow-2xl"
+                    >
+                      <ArrowRight className="w-6 h-6 mr-3" />
+                      {isAuthenticated
+                        ? t("home.enterHut")
+                        : t("cta.startBuilding")}
+                    </Button>
+                  </motion.div>
+                </div>
               </motion.div>
-            </motion.div>
+            </ChatCard>
           </div>
         </section>
-
-        {/* Footer */}
-        <footer className="py-12 px-6 border-t border-cyan-500/20">
-          <div className="max-w-7xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              className="flex items-center justify-center space-x-2 mb-4"
-            >
-              <Hexagon
-                size={30}
-                className="bg-gradient-to-r from-cyan-500 to-purple-500 flex items-center justify-center"
-              >
-                <Terminal className="w-4 h-4 text-white" />
-              </Hexagon>
-              <span className="text-lg font-bold text-cyan-300 font-orbitron">
-                chathut
-              </span>
-            </motion.div>
-            <p className="text-gray-400">
-              © 2024 chathut. Neural architecture designed for the future.
-            </p>
-          </div>
-        </footer>
       </div>
 
-      {/* Authentication Modal */}
+      {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+        mode={authMode}
         onLogin={handleLogin}
         onRegister={handleRegister}
-        initialMode={authMode}
+        onSwitchMode={setAuthMode}
       />
     </div>
   );

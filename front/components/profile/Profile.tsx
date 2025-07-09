@@ -5,77 +5,59 @@ import type { ProfileData, ConnectedAccount } from "../services/authService";
 
 import "./Profile.css";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { gsap } from "gsap";
-import {
-  FaTelegram,
-  FaWhatsapp,
-  FaInstagram,
-  FaUser,
-  FaEnvelope,
-} from "react-icons/fa";
-import {
-  FiPower,
-  FiSettings,
-  FiUser,
-  FiMail,
-  FiActivity,
-  FiZap,
-  FiShield,
-} from "react-icons/fi";
+import { FaTelegram, FaWhatsapp } from "react-icons/fa";
 import {
   User,
   Mail,
   Shield,
-  Zap,
   Activity,
   Settings,
   Power,
   Terminal,
-  Cpu,
   Network,
-  Eye,
   CheckCircle,
   XCircle,
   Loader2,
   Home,
   Wifi,
   WifiOff,
+  Zap,
 } from "lucide-react";
-import ParticleBackground from "../cyberpunk/ParticleBackground";
-import GlitchText from "../cyberpunk/GlitchText";
-import HolographicCard from "../cyberpunk/HolographicCard";
-import Hexagon from "../cyberpunk/Hexagon";
+import MessagingBackground from "../home/MessagingBackground";
 import { Button } from "../../src/components/ui/button";
-import { Card } from "../../src/components/ui/card";
 import {
   Avatar,
   AvatarImage,
   AvatarFallback,
 } from "../../src/components/ui/avatar";
 import { useMessagingStore } from "../messaging/MessagingStore";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const providerDetails: Record<
   string,
-  { icon: React.ElementType; color: string; gradient: string; name: string }
+  {
+    icon: React.ElementType;
+    color: string;
+    gradient: string;
+    name: string;
+    themeColor: "telegram" | "whatsapp" | "ai" | "general";
+  }
 > = {
   telegram: {
     icon: FaTelegram,
     color: "#0088cc",
     gradient: "from-blue-500 to-cyan-400",
     name: "Telegram",
+    themeColor: "telegram",
   },
   whatsapp: {
     icon: FaWhatsapp,
     color: "#25D366",
     gradient: "from-green-500 to-emerald-400",
     name: "WhatsApp",
-  },
-  instagram: {
-    icon: FaInstagram,
-    color: "#E4405F",
-    gradient: "from-purple-500 to-pink-400",
-    name: "Instagram",
+    themeColor: "whatsapp",
   },
 };
 
@@ -86,6 +68,8 @@ const Profile: React.FC = () => {
   const navigate = useNavigate();
   const heroRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
+
   // Individual provider statuses from messaging store (avoid object selector)
   const telegramStatus = useMessagingStore((state) =>
     state.getProviderStatus("telegram")
@@ -138,12 +122,12 @@ const Profile: React.FC = () => {
       gsap.set(cardsRef.current.children, {
         opacity: 1,
         scale: 0.8,
-        rotationY: -15,
+        y: 30,
       });
 
       gsap.to(cardsRef.current.children, {
         scale: 1,
-        rotationY: 0,
+        y: 0,
         duration: 0.8,
         stagger: 0.1,
         ease: "power3.out",
@@ -215,7 +199,7 @@ const Profile: React.FC = () => {
     const details = providerDetails[account.provider];
     if (!details) return null;
 
-    const { icon: Icon, color, gradient, name } = details;
+    const { icon: Icon, color, gradient, name, themeColor } = details;
     // Combine backend status and local provider status
     const isConnected =
       account.is_active ||
@@ -238,7 +222,7 @@ const Profile: React.FC = () => {
     return (
       <motion.div
         key={account.provider}
-        className={`neural-interface-card ${
+        className={`message-platform-card ${
           isConnected ? "connected" : "disconnected"
         } ${account.provider}-theme`}
         onClick={handleCardClick}
@@ -246,29 +230,23 @@ const Profile: React.FC = () => {
         whileTap={{ scale: 0.98 }}
         transition={{ type: "spring", stiffness: 300 }}
       >
-        <div className="neural-connection-line">
-          <div
-            className={`connection-flow ${isConnected ? "active" : "inactive"}`}
-          ></div>
-        </div>
-
-        <div className="interface-card-glass">
-          <div className="interface-header">
-            <div className={`interface-icon bg-gradient-to-br ${gradient}`}>
+        <div className="platform-card-content">
+          <div className="platform-header">
+            <div className={`platform-icon bg-gradient-to-br ${gradient}`}>
               <Icon className="provider-icon" />
             </div>
-            <div className="interface-info">
-              <h3 className="font-orbitron interface-name">{name}</h3>
+            <div className="platform-info">
+              <h3 className="platform-name">{name}</h3>
               <div className="connection-status">
                 {isConnected ? (
                   <div className="status-active">
                     <Wifi className="status-icon" />
-                    <span className="font-rajdhani">CONNECTED</span>
+                    <span>{t("profile.status.connected")}</span>
                   </div>
                 ) : (
                   <div className="status-inactive">
                     <WifiOff className="status-icon" />
-                    <span className="font-rajdhani">OFFLINE</span>
+                    <span>{t("profile.status.offline")}</span>
                   </div>
                 )}
               </div>
@@ -276,27 +254,27 @@ const Profile: React.FC = () => {
           </div>
 
           {isConnected && (
-            <div className="interface-details">
+            <div className="platform-details">
               <div className="user-data">
                 <User className="data-icon" />
-                <span className="font-rajdhani">@{account.username}</span>
+                <span>@{account.username}</span>
               </div>
               <div className="security-badges">
                 <div className="security-badge">
                   <Shield className="badge-icon" />
-                  <span className="font-rajdhani">E2E</span>
+                  <span>E2E</span>
                 </div>
                 <div className="security-badge">
                   <Activity className="badge-icon" />
-                  <span className="font-rajdhani">LIVE</span>
+                  <span>LIVE</span>
                 </div>
               </div>
             </div>
           )}
 
-          <div className="interface-actions">
+          <div className="platform-actions">
             <Button
-              className={`neural-action-btn ${
+              className={`platform-action-btn ${
                 isConnected ? "disconnect-action" : "connect-action"
               } ${account.provider}-btn`}
               onClick={(e) => {
@@ -326,8 +304,10 @@ const Profile: React.FC = () => {
               ) : (
                 <Zap className="action-icon" />
               )}
-              <span className="font-rajdhani">
-                {isConnected ? "DISCONNECT" : "CONNECT"}
+              <span>
+                {isConnected
+                  ? t("profile.action.disconnect")
+                  : t("profile.action.connect")}
               </span>
             </Button>
           </div>
@@ -339,23 +319,17 @@ const Profile: React.FC = () => {
   // Loading State
   if (isLoading) {
     return (
-      <div className="cyber-profile-container">
-        <ParticleBackground />
-        <div className="cyber-grid-overlay"></div>
+      <div className="profile-container">
+        <MessagingBackground />
         <div className="loading-container">
           <motion.div
-            className="cyber-loading"
+            className="profile-loading"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
             <Loader2 className="loading-spinner" />
-            <GlitchText className="loading-text font-orbitron">
-              ACCESSING NEURAL INTERFACE...
-            </GlitchText>
-            <div className="loading-progress">
-              <div className="progress-bar"></div>
-            </div>
+            <div className="loading-text">{t("profile.loading")}</div>
           </motion.div>
         </div>
       </div>
@@ -365,9 +339,8 @@ const Profile: React.FC = () => {
   // Error State
   if (error) {
     return (
-      <div className="cyber-profile-container">
-        <ParticleBackground />
-        <div className="cyber-grid-overlay"></div>
+      <div className="profile-container">
+        <MessagingBackground color="general" />
         <motion.div
           className="error-container"
           initial={{ opacity: 0, scale: 0.8 }}
@@ -377,13 +350,11 @@ const Profile: React.FC = () => {
           <div className="error-icon">
             <XCircle size={64} className="text-red-500" />
           </div>
-          <GlitchText className="error-title font-orbitron">
-            SYSTEM ERROR
-          </GlitchText>
-          <p className="error-message font-rajdhani">{error}</p>
-          <Button className="cyberpunk-btn" onClick={() => navigate("/home")}>
-            <Terminal className="btn-icon" />
-            RETURN TO HUB
+          <h2 className="error-title">{t("profile.error.title")}</h2>
+          <p className="error-message">{error}</p>
+          <Button className="return-home-btn" onClick={() => navigate("/home")}>
+            <Home className="btn-icon" />
+            {t("profile.error.returnHome")}
           </Button>
         </motion.div>
       </div>
@@ -391,12 +362,11 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <div className="cyber-profile-container">
-      <ParticleBackground />
-      <div className="cyber-grid-overlay"></div>
+    <div className="profile-container">
+      <MessagingBackground color="general" />
 
-      <div className="profile-content-new">
-        {/* Main Profile Layout - Left User Info, Right Neural Interfaces */}
+      <div className="profile-content">
+        {/* Main Profile Layout - Left User Info, Right Connected Platforms */}
         <motion.div
           ref={heroRef}
           className="profile-layout"
@@ -406,31 +376,26 @@ const Profile: React.FC = () => {
         >
           {/* Left Side - User Profile */}
           <div className="user-profile-section">
-            <div className="profile-glass-card">
+            <div className="profile-card">
               <div className="profile-header">
-                <GlitchText className="profile-title font-orbitron">
-                  chathut
-                </GlitchText>
-                <div className="neural-divider"></div>
+                <h2 className="profile-title">chathut</h2>
+                <div className="profile-divider"></div>
               </div>
 
               <div className="user-avatar-container">
-                <div className="avatar-brain-center">
-                  <Avatar className="main-avatar">
-                    <AvatarImage
-                      src={
-                        profile?.username
-                          ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`
-                          : undefined
-                      }
-                      alt={profile?.username || "User"}
-                    />
-                    <AvatarFallback className="avatar-fallback">
-                      <Terminal size={48} className="avatar-terminal" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="neural-pulse"></div>
-                </div>
+                <Avatar className="main-avatar">
+                  <AvatarImage
+                    src={
+                      profile?.username
+                        ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`
+                        : undefined
+                    }
+                    alt={profile?.username || "User"}
+                  />
+                  <AvatarFallback className="avatar-fallback">
+                    <User size={48} />
+                  </AvatarFallback>
+                </Avatar>
 
                 <motion.div
                   className="user-status-badge"
@@ -439,7 +404,7 @@ const Profile: React.FC = () => {
                   transition={{ delay: 0.5 }}
                 >
                   <Activity className="pulse-icon" />
-                  <span className="font-rajdhani">ONLINE</span>
+                  <span>{t("profile.status.online")}</span>
                 </motion.div>
               </div>
 
@@ -447,8 +412,8 @@ const Profile: React.FC = () => {
                 <div className="info-item primary">
                   <User className="info-icon" />
                   <div className="info-content">
-                    <span className="info-label font-rajdhani">IDENTITY</span>
-                    <span className="info-value font-orbitron">
+                    <span className="info-label">{t("profile.identity")}</span>
+                    <span className="info-value">
                       {profile?.username || "Anonymous"}
                     </span>
                   </div>
@@ -457,9 +422,9 @@ const Profile: React.FC = () => {
                 <div className="info-item">
                   <Mail className="info-icon" />
                   <div className="info-content">
-                    <span className="info-label font-rajdhani">CHANNEL</span>
-                    <span className="info-value font-rajdhani">
-                      {profile?.email || "No channel"}
+                    <span className="info-label">{t("profile.email")}</span>
+                    <span className="info-value">
+                      {profile?.email || "No email"}
                     </span>
                   </div>
                 </div>
@@ -467,10 +432,10 @@ const Profile: React.FC = () => {
                 <div className="info-item">
                   <Network className="info-icon" />
                   <div className="info-content">
-                    <span className="info-label font-rajdhani">
-                      ACTIVE LINKS
+                    <span className="info-label">
+                      {t("profile.activeLinks")}
                     </span>
-                    <span className="info-value font-rajdhani">
+                    <span className="info-value">
                       {profile?.connected_accounts.filter(
                         (acc) => acc.is_active
                       ).length || 0}
@@ -481,10 +446,10 @@ const Profile: React.FC = () => {
                 <div className="info-item">
                   <Shield className="info-icon" />
                   <div className="info-content">
-                    <span className="info-label font-rajdhani">SECURITY</span>
-                    <span className="info-value font-rajdhani">
+                    <span className="info-label">{t("profile.security")}</span>
+                    <span className="info-value">
                       <CheckCircle className="security-check" />
-                      ENCRYPTED
+                      {t("profile.encrypted")}
                     </span>
                   </div>
                 </div>
@@ -492,18 +457,18 @@ const Profile: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Side - Neural Interfaces */}
-          <div className="neural-interfaces-section">
-            <div className="interfaces-header">
-              <GlitchText className="interfaces-title font-orbitron">
-                NEURAL INTERFACES
-              </GlitchText>
-              <div className="neural-divider"></div>
+          {/* Right Side - Connected Platforms */}
+          <div className="connected-platforms-section">
+            <div className="platforms-header">
+              <h2 className="platforms-title">
+                {t("profile.connectedPlatforms")}
+              </h2>
+              <div className="platforms-divider"></div>
             </div>
 
             <motion.div
               ref={cardsRef}
-              className="interfaces-grid"
+              className="platforms-grid"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
@@ -520,10 +485,10 @@ const Profile: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.2 }}
         >
-          <div className="control-glass-card">
+          <div className="control-card">
             <div className="control-header">
-              <Cpu className="control-icon" />
-              <span className="font-orbitron">SYSTEM CONTROL</span>
+              <Settings className="control-icon" />
+              <span>{t("profile.system")}</span>
             </div>
             <div className="control-actions">
               <Button
@@ -531,14 +496,14 @@ const Profile: React.FC = () => {
                 onClick={() => navigate("/home")}
               >
                 <Home className="action-icon" />
-                <span className="font-rajdhani">HOME</span>
+                <span>{t("profile.action.home")}</span>
               </Button>
               <Button
                 className="control-action-btn settings-btn"
                 onClick={() => navigate("/settings")}
               >
                 <Settings className="action-icon" />
-                <span className="font-rajdhani">CONFIGURE</span>
+                <span>{t("profile.action.settings")}</span>
               </Button>
               <Button
                 className="control-action-btn disconnect-btn"
@@ -549,7 +514,7 @@ const Profile: React.FC = () => {
                 }}
               >
                 <Power className="action-icon" />
-                <span className="font-rajdhani">DISCONNECT</span>
+                <span>{t("profile.action.logout")}</span>
               </Button>
             </div>
           </div>

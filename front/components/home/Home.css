@@ -1,199 +1,228 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
-/* Cyberpunk Custom Animations */
-@keyframes glitch-1 {
-  0%, 100% { transform: translate(0); }
-  20% { transform: translate(-2px, 2px); }
-  40% { transform: translate(-2px, -2px); }
-  60% { transform: translate(2px, 2px); }
-  80% { transform: translate(2px, -2px); }
-}
-
-@keyframes glitch-2 {
-  0%, 100% { transform: translate(0); }
-  20% { transform: translate(2px, -2px); }
-  40% { transform: translate(2px, 2px); }
-  60% { transform: translate(-2px, -2px); }
-  80% { transform: translate(-2px, 2px); }
-}
-
-@keyframes neon-flicker {
-  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
-    text-shadow: 
-      0 0 5px #00ffff,
-      0 0 10px #00ffff,
-      0 0 15px #00ffff,
-      0 0 20px #00ffff,
-      0 0 35px #00ffff,
-      0 0 40px #00ffff;
+/* Messaging Theme Animations */
+@keyframes message-float {
+  0%, 100% { 
+    transform: translateY(0px) rotate(0deg); 
+    opacity: 0.8;
   }
-  20%, 24%, 55% {
-    text-shadow: none;
+  50% { 
+    transform: translateY(-10px) rotate(1deg); 
+    opacity: 1;
   }
 }
 
-@keyframes neon-pulse {
+@keyframes typing-dots {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  30% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+}
+
+@keyframes notification-pulse {
   0%, 100% {
-    text-shadow: 
-      0 0 5px #00ffff,
-      0 0 10px #00ffff,
-      0 0 15px #00ffff,
-      0 0 20px #00ffff;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
   }
   50% {
-    text-shadow: 
-      0 0 2px #00ffff,
-      0 0 5px #00ffff,
-      0 0 8px #00ffff,
-      0 0 12px #00ffff;
+    transform: scale(1.02);
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
   }
 }
 
-@keyframes hologram-scan {
-  0% { transform: translateY(-100%); opacity: 0; }
-  50% { opacity: 1; }
-  100% { transform: translateY(100vh); opacity: 0; }
+@keyframes chat-bubble-appear {
+  0% {
+    transform: scale(0.8) translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 
-@keyframes matrix-rain {
-  0% { transform: translateY(-100vh); }
-  100% { transform: translateY(100vh); }
+@keyframes connection-line {
+  0% { 
+    stroke-dashoffset: 100; 
+    opacity: 0.3;
+  }
+  50% { 
+    opacity: 1; 
+  }
+  100% { 
+    stroke-dashoffset: 0; 
+    opacity: 0.7;
+  }
 }
 
-@keyframes cyberpunk-border {
+@keyframes gradient-shift {
   0%, 100% {
-    border-color: #00ffff;
-    box-shadow: 0 0 10px #00ffff;
-  }
-  25% {
-    border-color: #ff00ff;
-    box-shadow: 0 0 10px #ff00ff;
+    background-position: 0% 50%;
   }
   50% {
-    border-color: #ffff00;
-    box-shadow: 0 0 10px #ffff00;
-  }
-  75% {
-    border-color: #00ff00;
-    box-shadow: 0 0 10px #00ff00;
+    background-position: 100% 50%;
   }
 }
 
-/* Custom Utility Classes */
-.font-orbitron {
-  font-family: 'Orbitron', monospace;
+/* Custom Font Classes */
+.font-inter {
+  font-family: 'Inter', sans-serif;
 }
 
-.font-rajdhani {
-  font-family: 'Rajdhani', sans-serif;
+.font-space-grotesk {
+  font-family: 'Space Grotesk', sans-serif;
 }
 
-.text-shadow-neon {
-  text-shadow: 
-    0 0 5px currentColor,
-    0 0 10px currentColor,
-    0 0 15px currentColor,
-    0 0 20px currentColor;
-}
-
-.text-shadow-glow {
-  text-shadow: 
-    0 0 10px #00ffff,
-    0 0 20px #00ffff,
-    0 0 30px #00ffff,
-    0 0 40px #00ffff;
-}
-
-.neon-border {
-  position: relative;
-  border: 1px solid #00ffff;
+/* Messaging Theme Utilities */
+.chat-shadow {
   box-shadow: 
-    inset 0 0 10px rgba(0, 255, 255, 0.2),
-    0 0 10px rgba(0, 255, 255, 0.4);
+    0 4px 20px rgba(0, 0, 0, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.neon-border::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  border: 1px solid rgba(0, 255, 255, 0.5);
-  animation: cyberpunk-border 3s infinite;
-  z-index: -1;
+.chat-shadow-lg {
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.2),
+    0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
-.hologram-effect {
-  position: relative;
-  overflow: hidden;
+.message-glow {
+  box-shadow: 
+    0 0 20px rgba(59, 130, 246, 0.3),
+    0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-.hologram-effect::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, #00ffff, transparent);
-  animation: hologram-scan 3s infinite;
-  z-index: 10;
+.message-glow-green {
+  box-shadow: 
+    0 0 20px rgba(34, 197, 94, 0.3),
+    0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-.cyberpunk-grid {
+.message-glow-orange {
+  box-shadow: 
+    0 0 20px rgba(251, 146, 60, 0.3),
+    0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Chat Card Animations */
+.chat-card {
+  animation: chat-bubble-appear 0.6s ease-out;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-card:hover {
+  animation: message-float 2s ease-in-out infinite;
+}
+
+.notification-card {
+  animation: notification-pulse 2s ease-in-out infinite;
+}
+
+/* Typing Indicator Styles */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.typing-dot {
+  animation: typing-dots 1.4s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Message Background Patterns */
+.message-pattern {
   background-image: 
-    linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
-  background-size: 50px 50px;
+    radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(34, 197, 94, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(251, 146, 60, 0.1) 0%, transparent 50%);
 }
 
-.matrix-bg {
-  position: relative;
-  overflow: hidden;
+/* Platform Color Variables */
+:root {
+  --telegram-blue: #0088cc;
+  --whatsapp-green: #25d366;
+  --ai-orange: #ff6b35;
+  --general-purple: #6366f1;
+  --chat-bg: rgba(17, 24, 39, 0.8);
+  --chat-border: rgba(255, 255, 255, 0.1);
 }
 
-.matrix-bg::before {
-  content: '';
-  position: absolute;
-  top: -100vh;
-  left: 0;
-  right: 0;
-  height: 200vh;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(0, 255, 0, 0.03) 50%,
-    transparent 100%
-  );
-  animation: matrix-rain 10s linear infinite;
-  pointer-events: none;
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6, #f59e0b);
+  background-size: 300% 300%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 6s ease infinite;
 }
 
-/* Glitch Text Effects */
-.glitch-text {
-  position: relative;
-  animation: neon-pulse 2s infinite alternate;
+/* Connection Lines Animation */
+.connection-line {
+  stroke-dasharray: 10, 5;
+  animation: connection-line 3s ease-in-out infinite;
 }
 
-.glitch-text:hover {
-  animation: neon-flicker 0.3s infinite;
+/* Floating Elements */
+.floating-message {
+  animation: message-float 4s ease-in-out infinite;
 }
 
-/* Particle Effects */
-.particle-container {
-  position: relative;
-  overflow: hidden;
+.floating-message:nth-child(even) {
+  animation-delay: -2s;
+  animation-direction: reverse;
 }
 
-.particle {
-  position: absolute;
-  background: #00ffff;
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  opacity: 0.7;
-  animation: matrix-rain 5s linear infinite;
+/* Backdrop Blur Enhancements */
+.backdrop-blur-strong {
+  backdrop-filter: blur(20px) saturate(180%);
+}
+
+.backdrop-blur-subtle {
+  backdrop-filter: blur(8px) saturate(120%);
+}
+
+/* Hover Effects */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* Platform Specific Styles */
+.platform-telegram {
+  border-color: var(--telegram-blue);
+  background: linear-gradient(135deg, rgba(0, 136, 204, 0.1), rgba(0, 136, 204, 0.05));
+}
+
+.platform-whatsapp {
+  border-color: var(--whatsapp-green);
+  background: linear-gradient(135deg, rgba(37, 211, 102, 0.1), rgba(37, 211, 102, 0.05));
+}
+
+.platform-ai {
+  border-color: var(--ai-orange);
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 107, 53, 0.05));
+}
+
+.platform-general {
+  border-color: var(--general-purple);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(99, 102, 241, 0.05));
 }
 
 /* Custom Scrollbar */
@@ -202,86 +231,110 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #000;
+  background: rgba(17, 24, 39, 0.5);
+  border-radius: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #00ffff, #ff00ff);
-  border-radius: 4px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 8px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #ff00ff, #00ffff);
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
 }
 
-/* Selection Color */
+/* Selection Colors */
 ::selection {
-  background: rgba(0, 255, 255, 0.3);
-  color: #ffffff;
+  background: rgba(59, 130, 246, 0.3);
+  color: white;
 }
 
 ::-moz-selection {
-  background: rgba(0, 255, 255, 0.3);
-  color: #ffffff;
+  background: rgba(59, 130, 246, 0.3);
+  color: white;
 }
 
-/* Cyberpunk Button Effects */
-.cyberpunk-btn {
+/* Button Enhancements */
+.chat-button {
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
 }
 
-.cyberpunk-btn::before {
+.chat-button::before {
   content: '';
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-  transition: left 0.5s;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
 }
 
-.cyberpunk-btn:hover::before {
+.chat-button:hover::before {
   left: 100%;
 }
 
-/* Responsive Adjustments */
+/* Mobile Responsive */
 @media (max-width: 768px) {
-  .text-shadow-glow {
-    text-shadow: 
-      0 0 5px #00ffff,
-      0 0 10px #00ffff,
-      0 0 15px #00ffff;
+  .gradient-text {
+    background-size: 200% 200%;
   }
   
-  .cyberpunk-grid {
-    background-size: 30px 30px;
+  .message-glow,
+  .message-glow-green,
+  .message-glow-orange {
+    box-shadow: 
+      0 0 10px rgba(59, 130, 246, 0.2),
+      0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .chat-shadow-lg {
+    box-shadow: 
+      0 6px 24px rgba(0, 0, 0, 0.15),
+      0 2px 8px rgba(0, 0, 0, 0.1);
   }
 }
 
-/* Animation Performance Optimizations */
+/* Hardware Acceleration */
 .transform-gpu {
   transform: translateZ(0);
-  backface-visibility: hidden;
-  perspective: 1000px;
+  will-change: transform;
 }
 
-/* Loading Animation */
-@keyframes cyber-loading {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+/* Loading Animation for Chat Elements */
+@keyframes chat-loading {
+  0% { 
+    opacity: 0.4; 
+    transform: scale(0.95);
+  }
+  50% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  100% { 
+    opacity: 0.4; 
+    transform: scale(0.95);
+  }
 }
 
-.cyber-loader {
-  border: 3px solid rgba(0, 255, 255, 0.3);
-  border-top: 3px solid #00ffff;
-  border-radius: 50%;
-  animation: cyber-loading 1s linear infinite;
+.chat-loader {
+  animation: chat-loading 1.5s ease-in-out infinite;
+}
+
+/* Message Status Indicators */
+.message-sent {
+  position: relative;
+}
+
+.message-sent::after {
+  content: '✓✓';
+  position: absolute;
+  bottom: 4px;
+  right: 8px;
+  font-size: 10px;
+  color: var(--telegram-blue);
+  opacity: 0.7;
 } 

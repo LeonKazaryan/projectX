@@ -12,6 +12,7 @@ import WhatsAppClient from "../components/whatsapp/WhatsAppClient";
 import Security from "../components/security/Security";
 import { useEffect } from "react";
 import { useMessagingStore } from "../components/messaging/MessagingStore";
+import { LanguageProvider } from "../components/i18n/LanguageContext";
 
 const AppLayout = () => {
   // Initialize messaging providers once
@@ -50,9 +51,11 @@ const AppLayout = () => {
 
 function App() {
   return (
-    <Router>
-      <AppLayout />
-    </Router>
+    <LanguageProvider>
+      <Router>
+        <AppLayout />
+      </Router>
+    </LanguageProvider>
   );
 }
 
