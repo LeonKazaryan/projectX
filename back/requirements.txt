@@ -13,7 +13,7 @@ google-generativeai==0.8.5
 langchain==0.3.8
 langchain-community==0.3.8
 langchain-core==0.3.21  # pinned to satisfy langsmith <0.2 requirement
-langsmith==0.1.191      # compatible with langchain 0.3.x
+langsmith==0.1.146      # real version <0.2 and >0.1.125 compatible
 qdrant-client==1.12.1
 # Vector database and embeddings
 sentence-transformers==3.3.1
