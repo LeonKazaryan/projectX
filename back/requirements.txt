@@ -16,6 +16,7 @@ langchain-core==0.3.21  # pinned to satisfy langsmith <0.2 requirement
 langsmith==0.1.146      # real version <0.2 and >0.1.125 compatible
 qdrant-client==1.12.1
 # Vector database and embeddings
+torch==1.13.1        # CPU-only; avoids heavy CUDA + Triton libs
 sentence-transformers==3.3.1
 tiktoken>=0.5.0
 # Additional AI tools
@@ -39,6 +40,5 @@ llama-index
 beautifulsoup4
 requests
 fastapi-cors
-numpy<2.0.0
 gunicorn
 aiohttp>=3.8.0 
