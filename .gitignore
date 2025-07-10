@@ -13,6 +13,7 @@ keys/
 .env.test
 back/envcopy.txt
 back/env_example.txt
+.env*
 
 # Python
 __pycache__/

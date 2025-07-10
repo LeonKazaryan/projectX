@@ -4,33 +4,33 @@ This guide explains how to set up and use the AI-powered message suggestions fea
 
 ## Prerequisites
 
-1. **OpenAI API Key** - You need an OpenAI API account and key
-2. **Python Dependencies** - Make sure `openai>=1.0.0` is installed
+1. **Google Gemini API Key** - You need a Google Gemini API key
+2. **Python Dependencies** - Make sure `google-generativeai>=0.8.0` is installed
 3. **Environment Configuration** - Properly configured environment variables
 
 ## Setup Steps
 
-### 1. Get OpenAI API Key
+### 1. Get Google Gemini API Key
 
-1. Go to [OpenAI Platform](https://platform.openai.com/)
-2. Sign up or log in to your account
+1. Go to [Google AI Studio](https://aistudio.google.com/)
+2. Sign up or log in to your Google account
 3. Navigate to API Keys section
 4. Create a new API key
-5. Copy the key (starts with `sk-`)
+5. Copy the key (starts with `AIzaSy`)
 
 ### 2. Configure Environment
 
-Add your OpenAI API key to your environment file:
+Add your Gemini API key to your environment file:
 
 ```bash
 # In back/.env file
-OPENAI_API_KEY=sk-your-actual-api-key-here
+GEMINI_API_KEY=AIzaSy-your-actual-api-key-here
 ```
 
 Or copy from the example:
 
 ```bash
-cp back/env_example.txt back/.env
+cp back/envcopy.txt back/.env
 ```
 
 Then edit the `.env` file with your actual API key.

@@ -21,6 +21,7 @@ import {
 import { RAGService } from "../utils/ragService";
 import { motion, AnimatePresence } from "framer-motion";
 import { API_BASE_URL } from "../../services/authService";
+import AIPanel from "../../messaging/AIPanel";
 
 interface Message {
   id: number;
@@ -112,6 +113,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const [similarContext, setSimilarContext] = useState<string[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -678,6 +680,19 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
               </div>
             </div>
           </div>
+
+          {/* AI Chat Button */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAIPanelOpen(true)}
+              className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-all"
+            >
+              <Bot className="h-4 w-4" />
+              <span className="text-sm font-medium">AI</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -982,6 +997,17 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
           </Button>
         </div>
       </div>
+
+      {/* AI Panel */}
+      <AIPanel
+        isOpen={isAIPanelOpen}
+        onClose={() => setIsAIPanelOpen(false)}
+        chatId={chatId.toString()}
+        chatName={chatName}
+        source="telegram"
+        sessionId={sessionId}
+        currentMessages={messages}
+      />
     </div>
   );
 };

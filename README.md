@@ -1,21 +1,21 @@
 ### Versions
 
-#0.1
+# 0.1
 
 -Landing Page created
 
-#0.2
+# 0.2
 
 -Telegram Login Feature added
 -Added fully functional Telegram Client will the users chats and ability to send messages
 
-#0.3
+# 0.3
 
 - Implemented real-time messaging using WebSockets, so new messages appear instantly.
 - The chat list now updates in real-time with the latest message and unread counts.
 - Added connection status indicators to the UI to show if the real-time connection is active.
 
-#0.4
+# 0.4
 
 - Added chat filtering functionality to hide archived chats and read-only channels by default.
 - Implemented Settings modal with toggles for "Show Archived Chats" and "Show Read-Only Channels".
@@ -23,7 +23,7 @@
 - Settings are automatically saved to localStorage and persist between sessions.
 - Enhanced backend API to support filtering parameters for better chat management.
 
-#0.4.1
+# 0.4.1
 
 - Implemented "Show Group Chats" in the Settings.
 - Group chats can now be filtered in/out based on user preference through the settings panel.
@@ -32,7 +32,7 @@
 - Both incoming and outgoing messages trigger chat reordering for better UX.
 - Chat list now behaves like modern messaging apps with recent conversations at the top.
 
-#0.5
+# 0.5
 
 - 🤖 **AI Message Suggestions** - Added OpenAI-powered smart message suggestions
 - AI analyzes conversation context and your writing style to suggest relevant responses
@@ -45,7 +45,7 @@
 - Privacy-focused: messages are only processed for suggestions, not permanently stored
 - Easy AI settings management through the Settings panel
 
-#0.5.1
+# 0.5.1
 
 - 🎨 **Major UI/UX Improvements** - Completely redesigned Settings and AI Settings interfaces
 - **Sticky Headers**: Settings modals now have fixed headers that stay visible while scrolling
@@ -57,7 +57,7 @@
 - **Better Error Handling**: Enhanced error messages and loading states for AI settings
 - **Visual Indicators**: Added emojis and better typography for clearer section identification
 
-#0.5.2
+# 0.5.2
 
 - 🔧 **UI Fixes** - Fixed dark text on dark background in settings information sections
 - **Placeholder Fix**: Resolved placeholder text overlapping with AI suggestions in message input
@@ -67,7 +67,7 @@
 - **Visual Feedback**: Different icons (🔄 for restore, 🤖✨ for new) to indicate button function
 - **Improved UX**: Enhanced message input experience with better AI suggestion handling
 
-#0.5.3
+# 0.5.3
 
 - ✨ **Natural Input Control** - Users can now type directly without pressing TAB first
 - **Smart Dismissal**: AI suggestions automatically disappear when user starts typing (no forced acceptance)
@@ -84,7 +84,7 @@
 - **Hover Preview**: Disabled AI button shows green preview on hover to indicate toggle availability
 - **Seamless Integration**: All AI-related UI elements respond instantly to the toggle state
 
-#0.5.4
+# 0.5.4
 
 - **Transition from simple CSS to Shadcn** - all the CSS files were removed and
   Shadcn UI was implemented. Absolutely new version of design.
@@ -93,7 +93,7 @@
 - **Enhanced Keyboard Controls**: Added intuitive keyboard shortcuts for AI suggestions (`Tab` to accept, `Esc` to dismiss, `F1`/`Ctrl+Space` to regenerate/restore).
 - **Better Chat Switching**: AI suggestion state is now properly reset when switching between chats, preventing irrelevant suggestions from appearing.
 
-#0.5.5
+# 0.5.5
 
 - 🧠 **Major AI Intelligence Upgrade** - Completely overhauled AI system to be smarter and more helpful
 - **Proactive AI**: AI suggests conversation starters and follow-ups when chats go quiet
@@ -112,12 +112,12 @@
 - **Automatic Mode**: Toggle to auto-suggest responses when you receive messages (like the old behavior)
 - **Manual Mode**: Use the robot button (🤖) to request suggestions only when you want them
 
-#0.5.6
+# 0.5.6
 
 - Pre Version of implementing NEW AI
 - Small bug fixes
 
-#0.6
+# 0.6.0
 
 - 🧠 **RAG (Retrieval-Augmented Generation) System Implementation** - Complete AI overhaul with vector-based memory
 - **Vector Storage**: Implemented Qdrant vector database for intelligent message storage and retrieval
@@ -162,7 +162,7 @@
   - Privacy-protected search results
 - 📊 **Enhanced Monitoring**: New stats endpoints showing storage metrics without exposing sensitive data
 
-#0.6.1
+# 0.6.1
 
 - 🤖 **Advanced RAG Pipeline for Smart Suggestions** - Complete RAG-enhanced AI suggestion system
 - **LangChain Integration**: Implemented professional RAG pipeline architecture for enterprise-grade AI suggestions
@@ -188,17 +188,17 @@
   - Enhanced `/ai/suggest` with automatic RAG integration
   - Updated suggestion responses include RAG metadata and confidence scores
 
-  #0.6.2
+# 0.6.2
 
-  - Bug fixes
-  - Fixed error with posting new messages
+- Bug fixes
+- Fixed error with posting new messages
 
-  #0.6.3
+# 0.6.3
 
 - MultiAgent System Release
 - Significant AI upgrade
 
-#0.6.4
+# 0.6.4
 
 - 📱 **WhatsApp Integration** - Complete WhatsApp Web integration with real-time messaging
 - **WhatsApp Web Client**: Full integration with whatsapp-web.js for seamless messaging
@@ -216,29 +216,12 @@
 - **Loading States**: Proper loading indicators and error handling throughout
 - **Cross-platform Support**: Works on both desktop and mobile browsers
 
-#0.7.3
-
-- 🎨 **Complete Profile Page Cyberpunk Overhaul** - Transformed boring profile page into cyberpunk masterpiece
-- **Particle Background System**: Added animated particle system with cyber grid overlay
-- **Holographic User Cards**: Implemented 4-card grid with Identity, Comm Channel, Connections, and Security stats
-- **Hexagonal Avatar Design**: Terminal icon in animated hexagon with pulsing status indicator
-- **Redesigned Messenger Cards**: Hexagonal icons with detailed connection status and cyber stats
-- **Advanced Loading States**: Animated "ACCESSING NEURAL INTERFACE" with cyber loading spinner
-- **Error State Design**: Cyberpunk-styled error screens with "SYSTEM ERROR" glitch text
-- **GSAP Animation System**: Staggered reveal animations with 3D transforms and smooth transitions
-- **Neural Interface Terminology**: "Connected Messengers" → "Neural Interfaces", modern cyber language
-- **Control Panel Design**: System control interface with cyberpunk styling
-- **Full Responsive Support**: Mobile-optimized layout with proper scaling and touch interactions
-- **Neon Visual Effects**: Cyan/magenta/green color scheme with glowing borders and hover effects
-- **Typography Enhancement**: Orbitron/Rajdhani fonts throughout with proper letter spacing
-- **Status Indicators**: "ONLINE", "ENCRYPTED", "ACTIVE" badges with pulsing animations
-
-#0.6.4
+# 0.6.4
 
 - Landing Redesign
 - Enhaced animations
 
-#0.6.5
+# 0.6.5
 
 - 🧠 **Smart Context Break Detection** - Fixed AI giving inappropriate suggestions for greetings after long conversations
 - **Time-Aware AI**: AI now detects when someone sends a greeting after a long pause (2+ hours) and treats it as a fresh conversation start - **Greeting Pattern Recognition**: System recognizes common greeting patterns ("привет", "как дела", "hi", "hey", etc.) to identify conversation restarts
@@ -281,11 +264,11 @@
   -- Connected Messangers (for now only Telegram)
 - Thousands of small bugs fixed
 
-#0.6.9
+# 0.6.9
 
 - Now Telegram session is storing within the account
 
-#0.7.0
+# 0.7.0
 
 - Nav Redesign in telegram Client
   -- Cyberpunk Nav design
@@ -296,24 +279,26 @@
 - Domain chathut.net bought!
 - Deployed to Digital Ocean
 
-#0.7.1
+# 0.7.1
 
-- Hardcoding deleted
-- Preparations for professional development
+- Switched from OpenAI to Google Gemini for AI features
+- Updated AI message suggestions to use Gemini API
+- Updated documentation and setup instructions for Gemini
+- Improved embedding generation with Gemini's embedding model
 
-#0.7.2
+# 0.7.2
 
 - Fixed bugs with input focus
 - Fixed bugs with scroll
 - 🛡️ **Security & Transparency Page** - Added comprehensive "How It Works" page accessible from the landing page
 
-#0.7.2a
+# 0.7.2a
 
 - Bugs fixed
 - Profile page slightly changed
 - NavBar Redisgned
 
-#0.7.2b
+# 0.7.2b
 
 - **Improved Navigation UX**: Enhanced navigation bar with better user experience
   - Removed redundant home button (logo now serves as home button)
@@ -322,7 +307,7 @@
   - Improved platform switcher button placement
   - Enhanced mobile responsiveness with compact dropdown
 
-#0.7.3
+# 0.7.3
 
 - 🚀 **WhatsApp Integration** - Complete WhatsApp Web integration with unified messaging architecture
 - **Unified Messaging System**: Created abstract messaging provider interface supporting both Telegram and WhatsApp
@@ -336,7 +321,7 @@
 - **Session Management**: Secure session handling for both messaging platforms
 - **Future-Ready**: Architecture prepared for merging Telegram and WhatsApp into single client view
 
-#0.7.4
+# 0.7.4
 
 - 📱 **WhatsApp UX Enhancement** - Upgraded WhatsApp interface to match Telegram UX patterns
 - **Auto-Focus Input**: Input field automatically focuses when opening chats, like in Telegram
@@ -354,7 +339,7 @@
 - **Keyboard Navigation**: Full keyboard support for sending messages (Enter to send, Shift+Enter for new line)
 - **Visual Polish**: Improved spacing, borders, and visual hierarchy throughout WhatsApp interface
 
-#0.7.5
+# 0.7.5
 
 - Working version of Whatsapp available
 - Whatsapp session stores in the profile
@@ -389,3 +374,28 @@
   - Enhanced responsive design for better mobile experience
   - Improved loading and error states with consistent styling
 - NavBar UX Changed
+
+# 0.7.9
+
+- OpenAI was replaced with Gemini AI
+- New feature - AI Chat Panel
+- Universal AI Assistant - Dedicated AI panel that opens on the right side of any chat (Telegram/WhatsApp)
+- **Context-Aware Analysis**: AI understands the entire conversation context and can answer specific questions about it
+- **Smart Query Interface**: Ask AI anything about the current chat:
+  - "О чём мы говорили вчера?" - Conversation timeline analysis
+  - "Сделай краткий пересказ переписки" - Smart summarization
+  - "Найди упоминания адреса или встречи" - Information extraction
+  - "Как лучше ответить на это сообщение?" - Response suggestions
+- **Quick Suggestions**: Pre-built question templates for common analysis tasks
+- **Beautiful UI**: Smooth animations, typing indicators, and modern chat bubble design
+- **Multi-Platform Support**: Works seamlessly in both Telegram and WhatsApp conversations
+- 🛠️ **Technical Implementation**:
+  - **Universal AIPanel Component**: Reusable across all messaging platforms
+  - **New API Endpoint**: `/ai/chat-context` for contextual conversation analysis
+  - **RAG Integration**: Uses existing RAG system for enhanced context understanding
+  - **Real-time Context**: Automatically includes last 15 messages for accurate analysis
+  - **Session Isolation**: Each chat conversation has its own AI context and memory
+- Privacy & Performance enhanced
+  - **Contextual Processing**: Only processes current chat messages, maintains conversation privacy
+  - **Secure Context Passing**: Messages sent securely to AI for analysis without permanent storage
+    - **Smart Memory**: Automatically limits context to prevent overwhelming AI with too much data

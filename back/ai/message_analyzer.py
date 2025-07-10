@@ -1,10 +1,12 @@
 import os
 import asyncio
 from typing import List, Dict, Optional, Any
-from openai import AsyncOpenAI
 from datetime import datetime, timedelta
 import json
 import logging
+
+# Import our Gemini client instead of OpenAI
+from .gemini_client import gemini_client
 
 from .prompts import (
     MAIN_SYSTEM_PROMPT, 
@@ -18,17 +20,18 @@ logger = logging.getLogger(__name__)
 
 class MessageAnalyzer:
     def __init__(self):
-        self.api_key = os.getenv("OPENAI_API_KEY")
+        self.api_key = os.getenv("GEMINI_API_KEY")
         self.client = None
         if self.api_key:
-            try:
-                self.client = AsyncOpenAI(api_key=self.api_key)
-                logger.info("OpenAI client initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize OpenAI client: {e}")
+            # Use our gemini_client singleton
+            self.client = gemini_client
+            if self.client.client:
+                logger.info("Gemini client initialized successfully")
+            else:
+                logger.error("Failed to initialize Gemini client")
                 self.client = None
         else:
-            logger.warning("OPENAI_API_KEY not found. AI suggestions will be disabled.")
+            logger.warning("GEMINI_API_KEY not found. AI suggestions will be disabled.")
         
         self.user_styles: Dict[str, Dict] = {}  # Cache user writing styles
         self.conversation_contexts: Dict[str, List[Dict]] = {}  # Store conversation contexts
@@ -129,8 +132,8 @@ class MessageAnalyzer:
                 "punctuation_style": "standard"
             }
         
-        # Check if OpenAI client is available
-        if not self.client:
+        # Check if Gemini client is available
+        if not self.client or not self.client.client:
             return self._get_heuristic_style_analysis(user_messages)
         
         # Build prompt for style analysis
@@ -138,29 +141,36 @@ class MessageAnalyzer:
         user_text_sample = "\n".join(user_texts)
         
         try:
-            response = await self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": STYLE_ANALYSIS_PROMPT},
-                    {"role": "user", "content": f"Analyze this user's writing style:\n\n{user_text_sample}\n\nRespond with JSON format containing: formality (casual/neutral/formal), avg_length (number), uses_emojis (boolean), uses_slang (boolean), punctuation_style (minimal/standard/formal)"}
-                ],
-                max_tokens=200,
-                temperature=0.1
-            )
+            # Use Gemini client to analyze user style
+            prompt = f"{STYLE_ANALYSIS_PROMPT}\n\nAnalyze this user's writing style:\n\n{user_text_sample}\n\nRespond with JSON format containing: formality (casual/neutral/formal), avg_length (number), uses_emojis (boolean), uses_slang (boolean), punctuation_style (minimal/standard/formal)"
             
-            style_analysis = json.loads(response.choices[0].message.content)
+            response_text = await self.client.generate_text(prompt, temperature=0.1)
+            if not response_text:
+                return self._get_heuristic_style_analysis(user_messages)
             
-            # Cache the analysis
-            user_key = f"{session_id}:{user_id}"
-            self.user_styles[user_key] = {
-                **style_analysis,
-                "last_updated": datetime.now().isoformat()
-            }
+            # Extract JSON from the response
+            # Find JSON content between curly braces
+            json_start = response_text.find('{')
+            json_end = response_text.rfind('}') + 1
             
-            return style_analysis
+            if json_start >= 0 and json_end > json_start:
+                json_content = response_text[json_start:json_end]
+                style_analysis = json.loads(json_content)
+                
+                # Cache the analysis
+                user_key = f"{session_id}:{user_id}"
+                self.user_styles[user_key] = {
+                    **style_analysis,
+                    "last_updated": datetime.now().isoformat()
+                }
+                
+                return style_analysis
+            else:
+                logger.warning("Could not extract JSON from Gemini response")
+                return self._get_heuristic_style_analysis(user_messages)
             
         except Exception as e:
-            logger.error(f"Error analyzing user style: {e}")
+            logger.error(f"Error analyzing user style with Gemini: {e}")
             # Return basic analysis based on heuristics
             return self._get_heuristic_style_analysis(user_messages)
     
@@ -186,8 +196,8 @@ class MessageAnalyzer:
     async def suggest_response(self, session_id: str, chat_id: int, user_id: int, memory_limit: int = 20, force_suggestion: bool = False) -> Optional[str]:
         """Generate AI response suggestion based on conversation context and user style"""
         try:
-            # Check if OpenAI client is available
-            if not self.client:
+            # Check if Gemini client is available
+            if not self.client or not self.client.client:
                 return self._get_fallback_suggestion()
             
             # Get conversation context
@@ -407,20 +417,16 @@ Keep it natural and authentic to how this user typically communicates.
 Return ONLY the suggested message text, no explanations or additional formatting.
 """
 
-        response = await self.client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"The contact just said: \"{last_message.get('text', '')}\"\n\nSuggest a response:"}
-            ],
-            max_tokens=150,
-            temperature=0.7,
-            presence_penalty=0.1,
-            frequency_penalty=0.1
+        prompt = f"{system_prompt}\n\nThe contact just said: \"{last_message.get('text', '')}\"\n\nSuggest a response:"
+        suggestion = await self.client.generate_text(
+            prompt=prompt,
+            temperature=0.7
         )
         
-        suggestion = response.choices[0].message.content.strip()
-        return self._clean_suggestion(suggestion)
+        if suggestion:
+            return self._clean_suggestion(suggestion)
+        else:
+            return None
     
     async def _generate_conversation_starter(self, messages: List[Dict], user_style: Dict, memory_limit: int) -> Optional[str]:
         """Generate a conversation starter when there's no conversation history"""
@@ -440,18 +446,16 @@ Generate a natural greeting or conversation starter that feels authentic to this
 Return ONLY the suggested message text, no explanations or additional formatting.
 """
 
-        response = await self.client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": "Generate a conversation starter:"}
-            ],
-            max_tokens=100,
+        prompt = f"{system_prompt}\n\nGenerate a conversation starter:"
+        suggestion = await self.client.generate_text(
+            prompt=prompt,
             temperature=0.8
         )
         
-        suggestion = response.choices[0].message.content.strip()
-        return self._clean_suggestion(suggestion)
+        if suggestion:
+            return self._clean_suggestion(suggestion)
+        else:
+            return None
     
     async def _generate_proactive_suggestion(self, messages: List[Dict], user_style: Dict, memory_limit: int) -> Optional[str]:
         """Generate a proactive message suggestion when the conversation has stalled"""
@@ -479,18 +483,16 @@ Keep it casual and don't be pushy. Match the user's communication style.
 Return ONLY the suggested message text, no explanations or additional formatting.
 """
 
-        response = await self.client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": "Suggest a follow-up message to continue the conversation:"}
-            ],
-            max_tokens=120,
+        prompt = f"{system_prompt}\n\nSuggest a follow-up message to continue the conversation:"
+        suggestion = await self.client.generate_text(
+            prompt=prompt,
             temperature=0.8
         )
         
-        suggestion = response.choices[0].message.content.strip()
-        return self._clean_suggestion(suggestion)
+        if suggestion:
+            return self._clean_suggestion(suggestion)
+        else:
+            return None
     
     def _clean_suggestion(self, suggestion: str) -> str:
         """Clean up the AI suggestion by removing quotes and formatting"""
@@ -519,7 +521,7 @@ Return ONLY the suggested message text, no explanations or additional formatting
         return suggestion.strip()
     
     def _get_fallback_suggestion(self) -> Optional[str]:
-        """Return a fallback suggestion when OpenAI is not available"""
+        """Return a fallback suggestion when Gemini is not available"""
         fallback_suggestions = [
             "Hey! How's it going?",
             "What's up?",

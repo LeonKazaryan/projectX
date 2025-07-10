@@ -15,11 +15,20 @@ class WriterAgent(Agent):
         persona = state.get('persona_profile', 'A neutral and helpful assistant.')
         context = state.get('context', 'No specific context provided.')
         query = state.get('query', 'Could you help me?')
+        
+        # Format persona to handle both string and dict formats
+        formatted_persona = persona
+        if isinstance(persona, dict):
+            try:
+                formatted_persona = "\n".join([f"{k}: {v}" for k, v in persona.items()])
+            except Exception as e:
+                logger.error(f"WriterAgent: Error formatting persona: {e}")
+                formatted_persona = str(persona)
 
         prompt = f"""
 Persona Profile:
 ---
-{persona}
+{formatted_persona}
 ---
 
 Conversation Context:
@@ -30,6 +39,7 @@ Conversation Context:
 User's Request: "{query}"
 
 Based on the persona and context, please draft a response to the user's request.
+Respond directly as if you are the user's contact. Do not include any explanations or meta-commentary.
 """
         
         try:
@@ -38,14 +48,39 @@ Based on the persona and context, please draft a response to the user's request.
                 messages=[
                     {"role": "system", "content": WRITER_AGENT_PROMPT},
                     {"role": "user", "content": prompt}
-                ]
+                ],
+                temperature=0.7
             )
-            draft_response = response.choices[0].message.content
-            logger.info("WriterAgent: Successfully drafted a response.")
-            state['draft_response'] = draft_response
+            
+            try:
+                draft_response = response.choices[0].message.content.strip()
+                
+                # Clean up common Gemini artifacts
+                prefixes_to_remove = [
+                    "Here's a draft response:",
+                    "Draft response:",
+                    "Response:",
+                    "Here is a response:"
+                ]
+                
+                for prefix in prefixes_to_remove:
+                    if draft_response.startswith(prefix):
+                        draft_response = draft_response[len(prefix):].strip()
+                
+                # Remove quotes if present
+                if (draft_response.startswith('"') and draft_response.endswith('"')) or \
+                   (draft_response.startswith("'") and draft_response.endswith("'")):
+                    draft_response = draft_response[1:-1].strip()
+                
+                logger.info("WriterAgent: Successfully drafted a response.")
+                state['draft_response'] = draft_response
+                
+            except Exception as e:
+                logger.error(f"WriterAgent: Error processing response: {e}")
+                state['draft_response'] = "Sorry, I'm having trouble generating a response right now."
 
         except Exception as e:
             logger.error(f"WriterAgent: Failed to draft a response. Error: {e}")
-            state['draft_response'] = f"Error drafting response: {e}"
+            state['draft_response'] = "Sorry, I'm having trouble generating a response right now."
 
         return state 

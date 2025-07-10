@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { RAGService } from "../../telegram/utils/ragService";
 import { API_BASE_URL } from "../../services/authService";
+import AIPanel from "../../messaging/AIPanel";
 
 interface WhatsAppMessageAreaProps {
   chatId: string;
@@ -94,6 +95,7 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   const [aiSuggestion, setAiSuggestion] = useState("");
   const [showAiSuggestion, setShowAiSuggestion] = useState(false);
   const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
 
   // Refs – (reserved for future enhancements)
 
@@ -335,17 +337,34 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b border-border bg-card">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-green-100 dark:bg-green-900 text-green-600">
-              {chatName.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h2 className="text-lg font-medium text-foreground">{chatName}</h2>
-            <p className="text-xs text-muted-foreground">
-              {isTyping ? "печатает..." : "WhatsApp"}
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-green-100 dark:bg-green-900 text-green-600">
+                {chatName.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="text-lg font-medium text-foreground">
+                {chatName}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {isTyping ? "печатает..." : "WhatsApp"}
+              </p>
+            </div>
+          </div>
+
+          {/* AI Chat Button */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAIPanelOpen(true)}
+              className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-all"
+            >
+              <Bot className="h-4 w-4" />
+              <span className="text-sm font-medium">AI</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -545,6 +564,17 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* AI Panel */}
+      <AIPanel
+        isOpen={isAIPanelOpen}
+        onClose={() => setIsAIPanelOpen(false)}
+        chatId={chatId}
+        chatName={chatName}
+        source="whatsapp"
+        sessionId={whatsappSessionId}
+        currentMessages={messages}
+      />
     </div>
   );
 };

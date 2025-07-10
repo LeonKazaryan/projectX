@@ -1,2 +1,3 @@
-2025/07/09-09:52:26.658 27203 Creating DB /Users/leonkazaran/Documents/nFac/project/back/whatsapp-service/.wwebjs_auth/session-whatsapp_ebb1eb53-ced8-4148-8499-db15a66c0a20_578gumhgcew/Default/shared_proto_db/metadata since it was missing.
-2025/07/09-09:52:26.668 27203 Reusing MANIFEST /Users/leonkazaran/Documents/nFac/project/back/whatsapp-service/.wwebjs_auth/session-whatsapp_ebb1eb53-ced8-4148-8499-db15a66c0a20_578gumhgcew/Default/shared_proto_db/metadata/MANIFEST-000001
+2025/07/10-10:57:12.009 21d07 Reusing MANIFEST /Users/leonkazaran/Documents/nFac/project/back/whatsapp-service/.wwebjs_auth/session-whatsapp_ebb1eb53-ced8-4148-8499-db15a66c0a20_578gumhgcew/Default/shared_proto_db/metadata/MANIFEST-000001
+2025/07/10-10:57:12.010 21d07 Recovering log #3
+2025/07/10-10:57:12.018 21d07 Reusing old log /Users/leonkazaran/Documents/nFac/project/back/whatsapp-service/.wwebjs_auth/session-whatsapp_ebb1eb53-ced8-4148-8499-db15a66c0a20_578gumhgcew/Default/shared_proto_db/metadata/000003.log 

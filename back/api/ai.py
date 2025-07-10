@@ -1,13 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, Body
 from pydantic import BaseModel
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Union
 import os
 import logging
 
 from back.globals import get_telegram_manager
 from back.telegram.telegram_client import TelegramClientManager
 from back.agents.chief_agent import ChiefAgent
-import openai
+from back.ai.gemini_client import gemini_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -58,14 +58,14 @@ async def update_ai_settings(
 
 @router.get("/health")
 async def ai_health_check():
-    """Check AI system health (e.g., connection to OpenAI)."""
-    # Check if OpenAI API key is configured
-    is_configured = bool(os.getenv("OPENAI_API_KEY"))
+    """Check AI system health (e.g., connection to Gemini)."""
+    # Check if Gemini API key is configured
+    is_configured = bool(os.getenv("GEMINI_API_KEY"))
     return {
         "status": "ok" if is_configured else "degraded",
-        "details": "OpenAI API key is configured." if is_configured else "OpenAI API key not set.",
+        "details": "Gemini API key is configured." if is_configured else "Gemini API key not set.",
         "components": {
-            "openai": "configured" if is_configured else "not_configured"
+            "gemini": "configured" if is_configured else "not_configured"
         }
     }
 
@@ -85,13 +85,11 @@ async def generate_agent_response(
     to generate a human-like, personalized response.
     """
     try:
-        # We need an OpenAI client instance. 
-        # Assuming it's configured somewhere globally or we create it here.
-        # For this example, let's assume it's available.
-        # In a real app, this should be managed properly (e.g., dependency injection).
-        llm_client = openai.AsyncOpenAI()
+        # Use our gemini_client singleton
+        if not gemini_client.client:
+            raise HTTPException(status_code=500, detail="Gemini client not initialized")
 
-        chief_agent = ChiefAgent(llm_client=llm_client, telegram_manager=manager)
+        chief_agent = ChiefAgent(llm_client=gemini_client, telegram_manager=manager)
         
         # Prepare last_message for agents expecting it
         last_message = {
@@ -126,3 +124,63 @@ async def generate_agent_response(
     except Exception as e:
         logger.error(f"Error in agent response generation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+class AIChatContextRequest(BaseModel):
+    query: str
+    session_id: str
+    chat_id: Union[int, str]
+    source: str = "telegram"  # telegram or whatsapp
+    chat_name: str = ""
+    context_messages: List[Dict] = []
+
+@router.post("/chat-context")
+async def ai_chat_with_context(
+    request: AIChatContextRequest,
+    manager: TelegramClientManager = Depends(get_telegram_manager)
+):
+    """
+    AI chat that can answer questions about the conversation context.
+    Uses RAG to find relevant information and provides intelligent responses.
+    """
+    try:
+        if not gemini_client.client:
+            raise HTTPException(status_code=500, detail="AI service not available")
+
+        # Build smart RAG context
+        from back.ai.rag_pipeline import build_context_for_ai
+
+        if request.source == "whatsapp":
+            # WhatsApp: simple prompt using provided recent messages only
+            lines = []
+            for msg in request.context_messages[-50:]:
+                who = "Вы" if msg.get("isOutgoing") else "Контакт"
+                text = msg.get("text", "")
+                lines.append(f"{who}: {text}")
+            recent_block = "\n".join(lines)
+            prompt = f"Контекст WhatsApp:\n{recent_block}\n\nВопрос: {request.query}\nОтвет:"
+            ctx_meta = {"recent": len(lines)}
+            tokens_cnt = len(prompt)//4
+        else:
+            ctx_info = await build_context_for_ai(request.session_id, int(request.chat_id), request.query, recent_limit=50, provided_recent=request.context_messages)
+            prompt = ctx_info["prompt"]
+            ctx_meta = ctx_info["sections"]
+            tokens_cnt = ctx_info["tokens"]
+
+        # Generate response
+        response = await gemini_client.generate_text(prompt=prompt, max_tokens=400, temperature=0.7)
+        if not response:
+            raise HTTPException(status_code=500, detail="Failed to generate AI response")
+
+        return {
+            "success": True,
+            "response": response.strip(),
+            "context_meta": ctx_meta,
+            "prompt_tokens": tokens_cnt,
+            "source": request.source
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in AI chat context: {e}")
+        raise HTTPException(status_code=500, detail=f"AI chat failed: {str(e)}")
