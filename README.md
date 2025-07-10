@@ -396,6 +396,13 @@
   - **Real-time Context**: Automatically includes last 15 messages for accurate analysis
   - **Session Isolation**: Each chat conversation has its own AI context and memory
 - Privacy & Performance enhanced
+
   - **Contextual Processing**: Only processes current chat messages, maintains conversation privacy
   - **Secure Context Passing**: Messages sent securely to AI for analysis without permanent storage
     - **Smart Memory**: Automatically limits context to prevent overwhelming AI with too much data
+
+  ## 0.7.9a
+
+  - Removed the useless variables
+  - Import type was added in serveral files (fixed TS)
+  - Useless functions and buttons were deleted

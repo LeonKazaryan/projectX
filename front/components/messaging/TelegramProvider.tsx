@@ -140,6 +140,7 @@ export class TelegramProvider implements IMessagingProvider {
   }
 
   async loadHistory(chatId: string, cursor?: string): Promise<Message[]> {
+    void cursor; // suppress unused parameter warning
     if (!this.sessionId) return [];
 
     try {

@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { useLanguage, Language } from "./LanguageContext";
+import { useLanguage } from "./LanguageContext";
+import type { Language } from "./LanguageContext";
 import { Globe } from "lucide-react";
 
 interface LanguageSwitcherProps {

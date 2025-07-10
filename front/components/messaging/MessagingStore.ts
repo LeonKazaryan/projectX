@@ -154,7 +154,7 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
       } else {
         // Load from all connected providers
         const allChats: Chat[] = [];
-        for (const [sourceKey, provider] of Object.entries(providers)) {
+        for (const [, provider] of Object.entries(providers)) {
           if (provider.isConnected()) {
             const chats = await provider.getChats();
             allChats.push(...chats);

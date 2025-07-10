@@ -15,7 +15,6 @@ import {
   Activity,
   Settings,
   Power,
-  Terminal,
   Network,
   CheckCircle,
   XCircle,
@@ -199,7 +198,7 @@ const Profile: React.FC = () => {
     const details = providerDetails[account.provider];
     if (!details) return null;
 
-    const { icon: Icon, color, gradient, name, themeColor } = details;
+    const { icon: Icon, gradient, name } = details;
     // Combine backend status and local provider status
     const isConnected =
       account.is_active ||
