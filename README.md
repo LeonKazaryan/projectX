@@ -406,3 +406,7 @@
   - Removed the useless variables
   - Import type was added in serveral files (fixed TS)
   - Useless functions and buttons were deleted
+
+  ## 0.7.9b
+
+  - Removed disconnectProvider

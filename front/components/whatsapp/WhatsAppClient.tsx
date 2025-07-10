@@ -18,7 +18,6 @@ const WhatsAppClient: React.FC = () => {
   const navigate = useNavigate();
   const {
     connectProvider,
-    disconnectProvider,
     error,
     isLoading,
     selectedChat,
