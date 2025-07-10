@@ -9,8 +9,11 @@ httpx==0.25.2
 websockets==14.1
 google-generativeai==0.8.5
 # RAG and AI dependencies
+# Align LangChain package family to consistent versions
 langchain==0.3.8
 langchain-community==0.3.8
+langchain-core==0.3.21  # pinned to satisfy langsmith <0.2 requirement
+langsmith==0.1.191      # compatible with langchain 0.3.x
 qdrant-client==1.12.1
 # Vector database and embeddings
 sentence-transformers==3.3.1

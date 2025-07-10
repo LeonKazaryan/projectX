@@ -410,3 +410,7 @@
   ## 0.7.9b
 
   - Removed disconnectProvider
+
+  ## 0.7.9c
+
+  - Fixed error with LangChain conflict compatability
