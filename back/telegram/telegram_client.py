@@ -60,6 +60,18 @@ class TelegramClientManager:
             return None
 
         return client
+
+    async def _ensure_entity(self, client: TelegramClient, dialog_id: int):
+        """Guarantee that the entity for dialog_id is cached inside the client.
+
+        Telethon иногда бросает ValueError("Could not find the input entity") если объект ещё
+        не закеширован. Однократный вызов `client.get_entity` решает проблему.
+        """
+        try:
+            await client.get_entity(dialog_id)
+        except Exception:
+            # Ignore – если не получилось, дальнейшие попытки тоже упадут и мы вернём ошибку
+            pass
     
     async def authenticate_with_phone(self, phone: str, session_id: str) -> dict:
         """Начать процесс аутентификации по номеру телефона"""
@@ -251,6 +263,13 @@ class TelegramClientManager:
                 return {"success": False, "error": "Клиент не найден"}
             
             messages = await client.get_messages(dialog_id, limit=limit, offset_id=offset_id)
+        except ValueError as ve:
+            if "input entity" in str(ve):
+                # Попробуем подгрузить entity и повторить один раз
+                await self._ensure_entity(client, dialog_id)
+                messages = await client.get_messages(dialog_id, limit=limit, offset_id=offset_id)
+            else:
+                raise
             
             messages_data = []
             for message in messages:
@@ -280,6 +299,12 @@ class TelegramClientManager:
                 return {"success": False, "error": "Клиент не найден"}
             
             message = await client.send_message(dialog_id, text)
+        except ValueError as ve:
+            if "input entity" in str(ve):
+                await self._ensure_entity(client, dialog_id)
+                message = await client.send_message(dialog_id, text)
+            else:
+                raise
             
             # Manually broadcast the sent message via WebSocket
             if session_id in self.websockets:

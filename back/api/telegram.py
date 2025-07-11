@@ -100,4 +100,15 @@ async def restore_telegram_session(
     return {
         "session_string": connection.session_data,
         "telegram_username": connection.telegram_username
-    } 
+    }
+
+# Compatibility: some frontend code still sends POST to this endpoint. Provide thin
+# wrapper that simply proxies to the GET handler above.
+
+@router.post("/restore-session", status_code=status.HTTP_200_OK)
+async def restore_telegram_session_post(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """POST wrapper for restore-session to avoid 405 errors from legacy clients."""
+    return await restore_telegram_session(current_user=current_user, db=db) 

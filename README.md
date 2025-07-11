@@ -418,4 +418,4 @@
   ## 0.7.9d
 
   - Websocket problem resolved (probably)
-  - Reanimation of the client automatically added
+  - Reanimation of the client automatically

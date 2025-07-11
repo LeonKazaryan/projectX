@@ -155,16 +155,37 @@ class GeminiClient:
             if len(text) > 8000:
                 text = text[:8000]
             
-            # Create embedding
-            embedding_model = self.client.get_embedding_model(self.embedding_model)
-            result = embedding_model.embed_content(text)
-            
-            # Return the embedding values
+            # Newer versions of `google-generativeai` deprecate get_embedding_model.
+            # Try the old way first and gracefully fall back to embed_content()
+            result = None
+            if hasattr(self.client, "get_embedding_model"):
+                try:
+                    embedding_model = self.client.get_embedding_model(self.embedding_model)
+                    result = embedding_model.embed_content(text)
+                except Exception:
+                    result = None
+
+            # If old path didn't work or attribute missing – use new helper
+            if result is None and hasattr(self.client, "embed_content"):
+                # According to v0.8.x the model id must be prefixed with "models/"
+                try:
+                    result = self.client.embed_content(model=f"models/{self.embedding_model}", content=text)
+                except Exception as e:
+                    logger.error(f"embed_content failed: {e}")
+                    result = None
+
+            # Extract embedding vector
+            if result is None:
+                logger.warning("Gemini embedding creation failed entirely")
+                return None
+
+            if isinstance(result, dict) and "embedding" in result:
+                return result["embedding"]
             if hasattr(result, "embedding"):
                 return result.embedding
-            else:
-                logger.warning("No embedding returned from Gemini API")
-                return None
+
+            logger.warning("Gemini returned response without embedding field")
+            return None
                 
         except Exception as e:
             logger.error(f"Error creating embedding with Gemini: {e}")
