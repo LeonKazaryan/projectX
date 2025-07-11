@@ -138,7 +138,10 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
       const wsProtocol = API_BASE_URL.startsWith("https") ? "wss" : "ws";
       const wsHost = API_BASE_URL.split("//")[1].split("/api")[0];
       // Use unified /api/ws path for proxy compatibility
-      const wsUrl = `${wsProtocol}://${wsHost}/api/ws/${sessionId}`;
+      const token = localStorage.getItem("chathut_access_token");
+      const wsUrl = `${wsProtocol}://${wsHost}/api/ws/${sessionId}?token=${encodeURIComponent(
+        token || ""
+      )}`;
 
       const ws = new WebSocket(wsUrl);
 

@@ -163,6 +163,17 @@ class TokenHandler:
         return None
 
 
+def decode_access_token(token: str) -> Dict[str, Any]:
+    """Decode access token and return payload"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "access":
+            raise JWTError("Not an access token")
+        return payload
+    except JWTError as e:
+        raise Exception(f"Invalid token: {e}")
+
+
 # Security utilities
 def generate_secure_token(length: int = 32) -> str:
     """Generate secure random token"""

@@ -217,8 +217,11 @@ export class TelegramProvider implements IMessagingProvider {
     // Build dynamic WS URL based on current origin / API base
     const baseHost = API_BASE_URL.split("//")[1].split("/api")[0];
     const wsProtocol = API_BASE_URL.startsWith("https") ? "wss" : "ws";
+    const token = localStorage.getItem("chathut_access_token");
     this.websocket = new WebSocket(
-      `${wsProtocol}://${baseHost}/api/ws/${this.sessionId}`
+      `${wsProtocol}://${baseHost}/api/ws/${
+        this.sessionId
+      }?token=${encodeURIComponent(token || "")}`
     );
 
     this.websocket.onmessage = (event) => {

@@ -426,3 +426,9 @@
   - Implemented proper session persistence across container restarts
   - Added comprehensive error recovery for Telegram client disconnections
   - Added user-friendly error handling and retry mechanisms in frontend
+
+  ## 0.7.9f
+
+  - Global Mapping added
+  - WebSocket now requires JWT in query params
+  - Session_id issues fixed

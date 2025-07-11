@@ -118,32 +118,54 @@ async def health_check():
 # Primary WebSocket endpoint (root-level)
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
-    await websocket.accept()
-    ws_monitor.log_connection(session_id, "CONNECTED", "WebSocket accepted")
+    # Extract and validate JWT token from query params
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=4001, reason="Missing authentication token")
+        return
     
     try:
-        # Add to telegram manager
-        await telegram_manager.add_websocket(session_id, websocket)
-        ws_monitor.log_connection(session_id, "REGISTERED", "Added to telegram manager")
+        from back.auth.jwt_handler import decode_access_token
+        from back.globals import set_session_user_mapping
         
-        while True:
-            # Keep connection alive and listen for ping/pong
-            try:
-                await asyncio.sleep(30)  # Send heartbeat every 30 seconds
-                await websocket.send_text('{"type": "ping"}')
-                ws_monitor.log_message_sent(session_id, "ping", True)
-            except Exception:
-                ws_monitor.log_connection(session_id, "HEARTBEAT_FAILED", "Ping failed, breaking loop")
-                break
+        payload = decode_access_token(token)
+        user_id = payload.get("sub")
+        if not user_id:
+            await websocket.close(code=4002, reason="Invalid token")
+            return
+        
+        # Set up session mapping
+        set_session_user_mapping(session_id, int(user_id))
+        
+        await websocket.accept()
+        ws_monitor.log_connection(session_id, "CONNECTED", f"WebSocket accepted for user {user_id}")
+        
+        try:
+            # Add to telegram manager
+            await telegram_manager.add_websocket(session_id, websocket)
+            ws_monitor.log_connection(session_id, "REGISTERED", "Added to telegram manager")
             
-    except WebSocketDisconnect:
-        ws_monitor.log_connection(session_id, "DISCONNECTED", "Client disconnected")
-        await telegram_manager.remove_websocket_connection(session_id, websocket)
-        ws_monitor.cleanup_session(session_id)
+            while True:
+                # Keep connection alive and listen for ping/pong
+                try:
+                    await asyncio.sleep(30)  # Send heartbeat every 30 seconds
+                    await websocket.send_text('{"type": "ping"}')
+                    ws_monitor.log_message_sent(session_id, "ping", True)
+                except Exception:
+                    ws_monitor.log_connection(session_id, "HEARTBEAT_FAILED", "Ping failed, breaking loop")
+                    break
+                
+        except WebSocketDisconnect:
+            ws_monitor.log_connection(session_id, "DISCONNECTED", "Client disconnected")
+            await telegram_manager.remove_websocket_connection(session_id, websocket)
+            ws_monitor.cleanup_session(session_id)
+        except Exception as e:
+            ws_monitor.log_connection(session_id, "ERROR", f"Exception: {str(e)}")
+            await telegram_manager.remove_websocket_connection(session_id, websocket)
+            ws_monitor.cleanup_session(session_id)
     except Exception as e:
-        ws_monitor.log_connection(session_id, "ERROR", f"Exception: {str(e)}")
-        await telegram_manager.remove_websocket_connection(session_id, websocket)
-        ws_monitor.cleanup_session(session_id)
+        await websocket.close(code=4003, reason=f"Authentication failed: {str(e)}")
+        return
 
 # Compatibility endpoint behind /api prefix (e.g., when reverse proxy forwards only /api/*)
 

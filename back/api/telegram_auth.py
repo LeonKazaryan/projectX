@@ -3,9 +3,15 @@ from pydantic import BaseModel
 import uuid
 from back.globals import get_telegram_manager
 from back.telegram.telegram_client import TelegramClientManager
+from back.globals import set_session_user_mapping
+from back.auth.jwt_handler import decode_access_token
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from back.models.database import User
 
 # New router for Telegram authentication
 telegram_auth_router = APIRouter(tags=["Telegram Authentication"])
+
+security = HTTPBearer()
 
 class PhoneRequest(BaseModel):
     phone: str
@@ -94,10 +100,26 @@ async def verify_password(
 @telegram_auth_router.post("/restore-session")
 async def restore_session(
     request: RestoreSessionRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     manager: TelegramClientManager = Depends(get_telegram_manager)
 ):
     """Restores a Telegram session from a session string."""
-    session_id = str(uuid.uuid4())
+    
+    # Get user info from JWT token
+    try:
+        payload = decode_access_token(credentials.credentials)
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    # Create user-specific session ID
+    session_id = f"user_{user_id}_{str(uuid.uuid4())[:8]}"
+    
+    # Set up session mapping
+    set_session_user_mapping(session_id, int(user_id))
+    
     try:
         result = await manager.restore_session(request.session_string, session_id)
         if result["success"]:

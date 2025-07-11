@@ -31,23 +31,19 @@ class TelegramClientManager:
     async def _get_client_from_db(self, session_id: str) -> Optional[TelegramClient]:
         """
         Получить клиент из базы данных и создать новое соединение.
-        Это делает систему stateless - каждый запрос создает свежее соединение.
+        Использует глобальный маппинг session_id -> user_id.
         """
         try:
             # Import here to avoid circular imports
             from back.database.config import get_async_db_direct
             from back.models.database import TelegramConnection
+            from back.globals import get_user_id_from_session
             from sqlalchemy import select
             
-            # Extract user_id from session_id pattern: user_{user_id}_*
-            if not session_id.startswith("user_") or "_" not in session_id[5:]:
-                logger.warning(f"Invalid session_id format: {session_id}")
-                return None
-                
-            try:
-                user_id = int(session_id.split("_")[1])
-            except (IndexError, ValueError):
-                logger.warning(f"Could not extract user_id from session_id: {session_id}")
+            # Get user_id from session mapping
+            user_id = get_user_id_from_session(session_id)
+            if not user_id:
+                logger.warning(f"No user mapping found for session_id: {session_id}")
                 return None
             
             # Get session from database
