@@ -12,6 +12,7 @@ import asyncpg
 import logging
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+import asyncio
 
 load_dotenv()
 
@@ -31,16 +32,37 @@ if "ondigitalocean.com" in DATABASE_URL:
 else:
     ASYNC_DATABASE_URL = DATABASE_URL
 
-# SQLAlchemy engines
-async_engine = create_async_engine(ASYNC_DATABASE_URL.replace("postgresql", "postgresql+asyncpg"), echo=False)
+# Connection pool settings for production stability
+POOL_SIZE = 5  # Number of persistent connections to maintain
+MAX_OVERFLOW = 10  # Additional connections allowed during peak load
+POOL_TIMEOUT = 30  # Seconds to wait for connection from pool
+POOL_RECYCLE = 3600  # Recycle connections after 1 hour
+POOL_PRE_PING = True  # Validate connections before use
+
+# SQLAlchemy engines with proper connection pooling
+async_engine = create_async_engine(
+    ASYNC_DATABASE_URL.replace("postgresql", "postgresql+asyncpg"), 
+    echo=False,
+    pool_size=POOL_SIZE,
+    max_overflow=MAX_OVERFLOW,
+    pool_timeout=POOL_TIMEOUT,
+    pool_recycle=POOL_RECYCLE,
+    pool_pre_ping=POOL_PRE_PING,
+    # Additional asyncpg-specific settings
+    connect_args={
+        "server_settings": {
+            "application_name": "chathut_backend",
+        }
+    }
+)
 sync_engine = None
 
 # Session makers
 SessionLocal = None
 AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
-# Database instance for direct queries
-database = Database(ASYNC_DATABASE_URL)
+# Database instance for direct queries with connection limits
+database = Database(ASYNC_DATABASE_URL, min_size=2, max_size=POOL_SIZE)
 
 
 def get_db() -> Session:
@@ -59,8 +81,21 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
 @asynccontextmanager
 async def get_async_db_direct():
     """Get async database session for direct access (without dependency injection)"""
-    async with AsyncSessionLocal() as session:
-        yield session
+    max_retries = 3
+    retry_delay = 1
+    
+    for attempt in range(max_retries):
+        try:
+            async with AsyncSessionLocal() as session:
+                yield session
+                return
+        except Exception as e:
+            if attempt == max_retries - 1:
+                print(f"🚨 Database connection failed after {max_retries} attempts: {e}")
+                raise
+            print(f"⚠️ Database connection attempt {attempt + 1} failed, retrying in {retry_delay}s: {e}")
+            await asyncio.sleep(retry_delay)
+            retry_delay *= 2  # Exponential backoff
 
 
 async def connect_database():

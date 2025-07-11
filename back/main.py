@@ -109,7 +109,6 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "active_sessions": len(telegram_manager.active_clients),
         "websocket_sessions": len(telegram_manager.websockets),
         "total_websocket_connections": total_websockets,
         "websocket_stats": ws_monitor.get_stats()
@@ -118,31 +117,44 @@ async def health_check():
 # Primary WebSocket endpoint (root-level)
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
+    print(f"🔌 WebSocket connection attempt for session: {session_id}")
+    
     # Extract and validate JWT token from query params
     token = websocket.query_params.get("token")
     if not token:
+        print(f"❌ WebSocket rejected: No token provided for session {session_id}")
         await websocket.close(code=4001, reason="Missing authentication token")
         return
+    
+    print(f"🔑 Token received for session {session_id}: {token[:50]}...")
     
     try:
         from back.auth.jwt_handler import decode_access_token
         from back.globals import set_session_user_mapping
         
         payload = decode_access_token(token)
-        user_id = payload.get("sub")
+        print(f"📋 JWT payload decoded for session {session_id}: {payload}")
+        
+        user_id = payload.get("sub") or payload.get("user_id")  # Try both standard 'sub' and our 'user_id'
         if not user_id:
-            await websocket.close(code=4002, reason="Invalid token")
+            print(f"❌ WebSocket rejected: No user_id in token for session {session_id}")
+            await websocket.close(code=4002, reason="Invalid token - no user ID")
             return
+        
+        print(f"👤 User ID extracted: {user_id} for session {session_id}")
         
         # Set up session mapping
         set_session_user_mapping(session_id, int(user_id))
+        print(f"🔗 Session mapping set: {session_id} -> {user_id}")
         
         await websocket.accept()
+        print(f"✅ WebSocket accepted for session {session_id}, user {user_id}")
         ws_monitor.log_connection(session_id, "CONNECTED", f"WebSocket accepted for user {user_id}")
         
         try:
             # Add to telegram manager
             await telegram_manager.add_websocket(session_id, websocket)
+            print(f"📡 Added to telegram manager: {session_id}")
             ws_monitor.log_connection(session_id, "REGISTERED", "Added to telegram manager")
             
             while True:
@@ -151,19 +163,23 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                     await asyncio.sleep(30)  # Send heartbeat every 30 seconds
                     await websocket.send_text('{"type": "ping"}')
                     ws_monitor.log_message_sent(session_id, "ping", True)
-                except Exception:
-                    ws_monitor.log_connection(session_id, "HEARTBEAT_FAILED", "Ping failed, breaking loop")
+                except Exception as e:
+                    print(f"💔 Heartbeat failed for {session_id}: {e}")
+                    ws_monitor.log_connection(session_id, "HEARTBEAT_FAILED", f"Ping failed: {e}")
                     break
                 
         except WebSocketDisconnect:
+            print(f"🔌 Client disconnected: {session_id}")
             ws_monitor.log_connection(session_id, "DISCONNECTED", "Client disconnected")
             await telegram_manager.remove_websocket_connection(session_id, websocket)
             ws_monitor.cleanup_session(session_id)
         except Exception as e:
+            print(f"❌ WebSocket error for {session_id}: {e}")
             ws_monitor.log_connection(session_id, "ERROR", f"Exception: {str(e)}")
             await telegram_manager.remove_websocket_connection(session_id, websocket)
             ws_monitor.cleanup_session(session_id)
     except Exception as e:
+        print(f"❌ WebSocket authentication failed for {session_id}: {e}")
         await websocket.close(code=4003, reason=f"Authentication failed: {str(e)}")
         return
 
@@ -171,6 +187,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 
 @app.websocket("/api/ws/{session_id}")
 async def websocket_endpoint_api(websocket: WebSocket, session_id: str):
+    print(f"🔌 API WebSocket connection attempt for session: {session_id}")
     # Re-use the same handler
     await websocket_endpoint(websocket, session_id)
 
@@ -181,7 +198,6 @@ async def monitor_websockets():
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "active_sessions": len(telegram_manager.active_clients),
         "websocket_sessions": len(telegram_manager.websockets),
         "total_websocket_connections": total_websockets,
         "websocket_stats": ws_monitor.get_stats()
