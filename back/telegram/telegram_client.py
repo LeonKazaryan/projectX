@@ -7,11 +7,15 @@ from telethon.tl.types import Message, Dialog, User, Chat, Channel
 from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
 import json
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 class TelegramClientManager:
     def __init__(self):
-        self.active_clients: Dict[str, TelegramClient] = {}
-        self.websockets: Dict[str, List[any]] = {}  # Changed to support multiple connections per session
+        # Remove in-memory storage - everything goes to database
+        self.temp_clients: Dict[str, TelegramClient] = {}  # Only for auth process
+        self.websockets: Dict[str, List[any]] = {}  # WebSocket connections per session
         self.api_id = int(os.getenv('TELEGRAM_API_ID', ''))
         self.api_hash = os.getenv('TELEGRAM_API_HASH', '')
         
@@ -24,55 +28,70 @@ class TelegramClientManager:
         client = TelegramClient(session, self.api_id, self.api_hash)
         return client
 
-    async def _get_active_client(self, session_id: str) -> Optional[TelegramClient]:
-        """Возвращает активный клиент, автоматически восстанавливая соединение при необходимости.
-
-        Эта вспомогательная функция предназначена для повышенной надёжности в production-среде,
-        где сетевые подключения WebSocket к серверам Telegram могут время от времени рваться.
-
-        1. Пытаемся получить клиент из словаря active_clients.
-        2. Если клиент найден, но соединение разорвано – повторно вызываем `connect()`.
-        3. Если после reconnection клиент всё ещё не авторизован, считаем, что сессия протухла
-           и удаляем её из active_clients, возвращая `None`. Это позволит фронту инициировать
-           повторную авторизацию.
+    async def _get_client_from_db(self, session_id: str) -> Optional[TelegramClient]:
         """
-        client = self.active_clients.get(session_id)
-        if not client:
-            return None
-
+        Получить клиент из базы данных и создать новое соединение.
+        Это делает систему stateless - каждый запрос создает свежее соединение.
+        """
         try:
-            if not client.is_connected():
-                await client.connect()
-
-            # Дополнительная проверка: вдруг Telegram выкинул нас из-за таймаута.
-            if not await client.is_user_authorized():
-                # Сессия больше невалидна – удаляем клиент, пусть фронт восстановит.
-                await client.disconnect()
-                del self.active_clients[session_id]
+            # Import here to avoid circular imports
+            from back.database.config import get_async_db_direct
+            from back.models.database import TelegramConnection
+            from sqlalchemy import select
+            
+            # Extract user_id from session_id pattern: user_{user_id}_*
+            if not session_id.startswith("user_") or "_" not in session_id[5:]:
+                logger.warning(f"Invalid session_id format: {session_id}")
                 return None
-        except Exception:
-            # Любая ошибка при попытке реконнекта – зачистим клиента, чтобы не держать зомби-ссылку.
+                
             try:
-                await client.disconnect()
-            except Exception:
-                pass
-            self.active_clients.pop(session_id, None)
+                user_id = int(session_id.split("_")[1])
+            except (IndexError, ValueError):
+                logger.warning(f"Could not extract user_id from session_id: {session_id}")
+                return None
+            
+            # Get session from database
+            async with get_async_db_direct() as db:
+                result = await db.execute(
+                    select(TelegramConnection).filter(
+                        TelegramConnection.user_id == user_id,
+                        TelegramConnection.is_active == True
+                    )
+                )
+                connection = result.scalars().first()
+                
+                if not connection or not connection.session_data:
+                    logger.info(f"No active Telegram session found for user {user_id}")
+                    return None
+                
+                # Create client with session from DB
+                client = await self.create_client(connection.session_data)
+                await client.connect()
+                
+                # Verify session is still valid
+                if await client.is_user_authorized():
+                    logger.info(f"Successfully restored Telegram client for user {user_id}")
+                    return client
+                else:
+                    logger.warning(f"Telegram session expired for user {user_id}")
+                    # Mark session as inactive in DB
+                    connection.is_active = False
+                    await db.commit()
+                    await client.disconnect()
+                    return None
+                    
+        except Exception as e:
+            logger.error(f"Error getting client from DB for session {session_id}: {e}")
             return None
-
-        return client
 
     async def _ensure_entity(self, client: TelegramClient, dialog_id: int):
-        """Guarantee that the entity for dialog_id is cached inside the client.
-
-        Telethon иногда бросает ValueError("Could not find the input entity") если объект ещё
-        не закеширован. Однократный вызов `client.get_entity` решает проблему.
-        """
+        """Guarantee that the entity for dialog_id is cached inside the client."""
         try:
             await client.get_entity(dialog_id)
         except Exception:
             # Ignore – если не получилось, дальнейшие попытки тоже упадут и мы вернём ошибку
             pass
-    
+
     async def authenticate_with_phone(self, phone: str, session_id: str) -> dict:
         """Начать процесс аутентификации по номеру телефона"""
         try:
@@ -82,8 +101,8 @@ class TelegramClientManager:
             # Отправить код
             code_request = await client.send_code_request(phone)
             
-            # Сохранить клиент временно
-            self.active_clients[f"temp_{session_id}"] = client
+            # Сохранить клиент временно (только для процесса авторизации)
+            self.temp_clients[f"temp_{session_id}"] = client
             
             return {
                 "success": True,
@@ -100,7 +119,7 @@ class TelegramClientManager:
     async def verify_phone_code(self, phone: str, code: str, phone_code_hash: str, session_id: str) -> dict:
         """Проверить код подтверждения"""
         try:
-            client = self.active_clients.get(f"temp_{session_id}")
+            client = self.temp_clients.get(f"temp_{session_id}")
             if not client:
                 return {"success": False, "error": "Сессия не найдена"}
             
@@ -111,12 +130,9 @@ class TelegramClientManager:
                 # Получить сессию
                 session_string = client.session.save()
                 
-                # Переместить клиент в активные
-                self.active_clients[session_id] = client
-                del self.active_clients[f"temp_{session_id}"]
-                
-                # Настроить обработчики событий
-                await self._setup_event_handlers(client, session_id)
+                # Cleanup temp client
+                del self.temp_clients[f"temp_{session_id}"]
+                await client.disconnect()
                 
                 return {
                     "success": True,
@@ -139,7 +155,7 @@ class TelegramClientManager:
     async def verify_2fa_password(self, password: str, session_id: str) -> dict:
         """Проверить пароль 2FA"""
         try:
-            client = self.active_clients.get(f"temp_{session_id}")
+            client = self.temp_clients.get(f"temp_{session_id}")
             if not client:
                 return {"success": False, "error": "Сессия не найдена"}
             
@@ -148,12 +164,9 @@ class TelegramClientManager:
             # Получить сессию
             session_string = client.session.save()
             
-            # Переместить клиент в активные
-            self.active_clients[session_id] = client
-            del self.active_clients[f"temp_{session_id}"]
-            
-            # Настроить обработчики событий
-            await self._setup_event_handlers(client, session_id)
+            # Cleanup temp client
+            del self.temp_clients[f"temp_{session_id}"]
+            await client.disconnect()
             
             return {
                 "success": True,
@@ -171,14 +184,15 @@ class TelegramClientManager:
             await client.connect()
             
             if await client.is_user_authorized():
-                self.active_clients[session_id] = client
-                await self._setup_event_handlers(client, session_id)
+                # Don't store client in memory - just verify it works
+                await client.disconnect()
                 
                 return {
                     "success": True,
                     "message": "Сессия восстановлена"
                 }
             else:
+                await client.disconnect()
                 return {
                     "success": False,
                     "error": "Сессия недействительна"
@@ -189,10 +203,11 @@ class TelegramClientManager:
     
     async def get_dialogs(self, session_id: str, limit: int = 50, include_archived: bool = False, include_readonly: bool = True, include_groups: bool = True) -> dict:
         """Получить список диалогов"""
+        client = None
         try:
-            client = await self._get_active_client(session_id)
+            client = await self._get_client_from_db(session_id)
             if not client:
-                return {"success": False, "error": "Клиент не найден"}
+                return {"success": False, "error": "Клиент не найден или сессия недействительна"}
             
             dialogs = await client.get_dialogs(limit=limit, archived=False)
             
@@ -226,7 +241,6 @@ class TelegramClientManager:
                     continue
                 
                 # Skip ALL types of groups if include_groups is False
-                # This includes basic groups (Chat) and supergroups (Channel with megagroup=True)
                 if not include_groups and (is_basic_group or is_supergroup):
                     continue
                 
@@ -234,8 +248,8 @@ class TelegramClientManager:
                     "id": dialog.id,
                     "name": dialog.name,
                     "is_user": is_user,
-                    "is_group": is_basic_group or is_supergroup,  # Both basic groups and supergroups are considered "groups"
-                    "is_channel": is_broadcast_channel,  # Only broadcast channels are considered "channels"
+                    "is_group": is_basic_group or is_supergroup,
+                    "is_channel": is_broadcast_channel,
                     "can_send_messages": can_send_messages,
                     "is_archived": dialog.archived,
                     "unread_count": dialog.unread_count,
@@ -253,14 +267,23 @@ class TelegramClientManager:
             }
             
         except Exception as e:
+            logger.error(f"Error getting dialogs for session {session_id}: {e}")
             return {"success": False, "error": str(e)}
+        finally:
+            # Always disconnect after operation
+            if client:
+                try:
+                    await client.disconnect()
+                except:
+                    pass
     
     async def get_messages(self, session_id: str, dialog_id: int, limit: int = 50, offset_id: int = 0) -> dict:
         """Получить сообщения из диалога"""
+        client = None
         try:
-            client = await self._get_active_client(session_id)
+            client = await self._get_client_from_db(session_id)
             if not client:
-                return {"success": False, "error": "Клиент не найден"}
+                return {"success": False, "error": "Клиент не найден или сессия недействительна"}
 
             try:
                 messages = await client.get_messages(dialog_id, limit=limit, offset_id=offset_id)
@@ -285,14 +308,23 @@ class TelegramClientManager:
             return {"success": True, "messages": messages_data}
 
         except Exception as e:
+            logger.error(f"Error getting messages for session {session_id}, dialog {dialog_id}: {e}")
             return {"success": False, "error": str(e)}
+        finally:
+            # Always disconnect after operation
+            if client:
+                try:
+                    await client.disconnect()
+                except:
+                    pass
     
     async def send_message(self, session_id: str, dialog_id: int, text: str) -> dict:
         """Отправить сообщение"""
+        client = None
         try:
-            client = await self._get_active_client(session_id)
+            client = await self._get_client_from_db(session_id)
             if not client:
-                return {"success": False, "error": "Клиент не найден"}
+                return {"success": False, "error": "Клиент не найден или сессия недействительна"}
 
             try:
                 message = await client.send_message(dialog_id, text)
@@ -324,15 +356,15 @@ class TelegramClientManager:
                     try:
                         await websocket.send_text(json.dumps(message_data))
                     except Exception as e:
-                        print(f"Error sending outgoing message websocket notification to session {session_id}, connection {i}: {e}")
+                        logger.warning(f"Error sending outgoing message websocket notification to session {session_id}, connection {i}: {e}")
                         broken_connections.append(websocket)
                 
                 # Remove broken connections
                 for broken_ws in broken_connections:
                     await self.remove_websocket_connection(session_id, broken_ws)
                 
-                if websockets_list:  # Only log if there are still active connections
-                    print(f"Sent outgoing message notification to {len(websockets_list)} connections for session {session_id}: {text[:50]}...")
+                if websockets_list:
+                    logger.info(f"Sent outgoing message notification to {len(websockets_list)} connections for session {session_id}")
             
             return {
                 "success": True,
@@ -344,84 +376,56 @@ class TelegramClientManager:
             }
 
         except Exception as e:
+            logger.error(f"Error sending message for session {session_id}, dialog {dialog_id}: {e}")
             return {"success": False, "error": str(e)}
-    
-    async def _setup_event_handlers(self, client: TelegramClient, session_id: str):
-        """Настроить обработчики событий для клиента"""
-        @client.on(events.NewMessage)
-        async def new_message_handler(event):
-            if session_id in self.websockets:
-                websockets_list = self.websockets[session_id]
-                message_data = {
-                    "type": "new_message",
-                    "data": {
-                        "id": event.message.id,
-                        "text": event.message.message or "",
-                        "date": event.message.date.isoformat(),
-                        "sender_id": event.message.sender_id,
-                        "chat_id": event.chat_id,
-                        "is_outgoing": event.message.out
-                    }
-                }
-                
-                # Send to all connected websockets for this session
-                broken_connections = []
-                for i, websocket in enumerate(websockets_list):
-                    try:
-                        await websocket.send_text(json.dumps(message_data))
-                    except Exception as e:
-                        print(f"Error sending websocket message to session {session_id}, connection {i}: {e}")
-                        broken_connections.append(websocket)
-                
-                # Remove broken connections
-                for broken_ws in broken_connections:
-                    await self.remove_websocket_connection(session_id, broken_ws)
-                
-                if websockets_list:  # Only log if there are still active connections
-                    print(f"Sent new message notification to {len(websockets_list)} connections for session {session_id}: {event.message.message[:50] if event.message.message else 'No text'}...")
-    
+        finally:
+            # Always disconnect after operation
+            if client:
+                try:
+                    await client.disconnect()
+                except:
+                    pass
+
+    # WebSocket management (kept in memory for performance)
     async def add_websocket(self, session_id: str, websocket):
         """Добавить WebSocket соединение"""
         if session_id not in self.websockets:
             self.websockets[session_id] = []
         self.websockets[session_id].append(websocket)
-        print(f"Added WebSocket connection for session {session_id}. Total connections: {len(self.websockets[session_id])}")
+        logger.info(f"Added WebSocket connection for session {session_id}. Total connections: {len(self.websockets[session_id])}")
 
     async def remove_websocket_connection(self, session_id: str, websocket):
         """Удалить конкретное WebSocket соединение"""
         if session_id in self.websockets:
             try:
                 self.websockets[session_id].remove(websocket)
-                print(f"Removed WebSocket connection for session {session_id}. Remaining connections: {len(self.websockets[session_id])}")
+                logger.info(f"Removed WebSocket connection for session {session_id}. Remaining connections: {len(self.websockets[session_id])}")
                 
                 # If no more connections, remove the session entirely
                 if not self.websockets[session_id]:
                     del self.websockets[session_id]
-                    print(f"No more WebSocket connections for session {session_id}, removed session")
+                    logger.info(f"No more WebSocket connections for session {session_id}, removed session")
             except ValueError:
-                print(f"WebSocket connection not found in session {session_id}")
+                logger.warning(f"WebSocket connection not found in session {session_id}")
 
     async def remove_websocket(self, session_id: str):
         """Удалить все WebSocket соединения для сессии"""
         if session_id in self.websockets:
             del self.websockets[session_id]
-            print(f"Removed all WebSocket connections for session {session_id}")
+            logger.info(f"Removed all WebSocket connections for session {session_id}")
     
     async def get_user_info(self, session_id: str) -> dict:
         """Получить информацию о пользователе Telegram"""
+        client = None
         try:
-            client = self.active_clients.get(session_id)
+            client = await self._get_client_from_db(session_id)
             if not client:
-                return {"success": False, "error": "Клиент не найден"}
+                return {"success": False, "error": "Клиент не найден или сессия недействительна"}
 
             me = await client.get_me()
             if not me:
                 return {"success": False, "error": "Не удалось получить информацию о пользователе"}
             
-            print("--- TELEGRAM USER OBJECT ---")
-            print(me.to_json(indent=4))
-            print("--------------------------")
-
             return {
                 "success": True,
                 "id": me.id,
@@ -432,14 +436,18 @@ class TelegramClientManager:
             }
 
         except Exception as e:
-            print(f"Error in get_user_info: {e}")
+            logger.error(f"Error in get_user_info for session {session_id}: {e}")
             return {"success": False, "error": str(e)}
+        finally:
+            # Always disconnect after operation
+            if client:
+                try:
+                    await client.disconnect()
+                except:
+                    pass
 
     async def disconnect_client(self, session_id: str):
         """Отключить клиент"""
-        if session_id in self.active_clients:
-            client = self.active_clients[session_id]
-            await client.disconnect()
-            del self.active_clients[session_id]
-        
+        # Remove WebSocket connections
         await self.remove_websocket(session_id)
+        logger.info(f"Disconnected client for session {session_id}")

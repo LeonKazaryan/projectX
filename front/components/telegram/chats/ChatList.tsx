@@ -181,31 +181,74 @@ const ChatList: React.FC<ChatListProps> = ({
   }, [searchTerm, dialogs]);
 
   const fetchDialogs = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        session_id: sessionId,
-        limit: "200",
-        include_archived: includeArchived.toString(),
-        include_readonly: includeReadonly.toString(),
-        include_groups: includeGroups.toString(),
-      });
+    const maxRetries = 3;
+    let retryCount = 0;
 
-      const response = await fetch(`${API_BASE_URL}/chats/dialogs?${params}`);
-      const data = await response.json();
+    const attemptFetch = async (): Promise<void> => {
+      try {
+        setLoading(true);
+        const params = new URLSearchParams({
+          session_id: sessionId,
+          limit: "200",
+          include_archived: includeArchived.toString(),
+          include_readonly: includeReadonly.toString(),
+          include_groups: includeGroups.toString(),
+        });
 
-      if (data.success) {
-        setDialogs(data.dialogs);
-        setFilteredDialogs(data.dialogs);
-        setError("");
-      } else {
-        setError(data.error || "Ошибка загрузки чатов");
+        const response = await fetch(`${API_BASE_URL}/chats/dialogs?${params}`);
+
+        if (!response.ok) {
+          if (response.status === 400 && retryCount < maxRetries) {
+            retryCount++;
+            console.log(
+              `Retrying dialogs fetch (${retryCount}/${maxRetries}) due to ${response.status}`
+            );
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1000 * retryCount)
+            );
+            return attemptFetch();
+          }
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          setDialogs(data.dialogs);
+          setFilteredDialogs(data.dialogs);
+          setError("");
+        } else {
+          if (retryCount < maxRetries && data.error?.includes("не найден")) {
+            retryCount++;
+            console.log(
+              `Retrying dialogs fetch (${retryCount}/${maxRetries}) due to client error`
+            );
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1000 * retryCount)
+            );
+            return attemptFetch();
+          }
+          setError(data.error || "Ошибка загрузки чатов");
+        }
+      } catch (error) {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          console.log(
+            `Retrying dialogs fetch (${retryCount}/${maxRetries}) due to network error:`,
+            error
+          );
+          await new Promise((resolve) =>
+            setTimeout(resolve, 1000 * retryCount)
+          );
+          return attemptFetch();
+        }
+        setError("Не удалось загрузить чаты. Попробуйте обновить страницу.");
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      setError("Ошибка соединения с сервером");
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    await attemptFetch();
   };
 
   const formatTime = (dateString: string | null) => {

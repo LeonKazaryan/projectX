@@ -419,3 +419,10 @@
 
   - Websocket problem resolved (probably)
   - Reanimation of the client automatically
+
+  ## 0.7.9e
+
+  - Fixed production WebSocket and API instability
+  - Implemented proper session persistence across container restarts
+  - Added comprehensive error recovery for Telegram client disconnections
+  - Added user-friendly error handling and retry mechanisms in frontend

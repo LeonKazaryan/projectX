@@ -8,6 +8,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import sessionmaker, Session
 from databases import Database
+import asyncpg
+import logging
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -52,6 +55,12 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
             yield session
         finally:
             await session.close()
+
+@asynccontextmanager
+async def get_async_db_direct():
+    """Get async database session for direct access (without dependency injection)"""
+    async with AsyncSessionLocal() as session:
+        yield session
 
 
 async def connect_database():

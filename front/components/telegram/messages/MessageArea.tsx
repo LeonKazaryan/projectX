@@ -341,30 +341,74 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const fetchMessages = async () => {
     if (!chatId || !sessionId) return;
 
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/messages/history?session_id=${sessionId}&dialog_id=${chatId}&limit=200`
-      );
-      const data = await response.json();
+    const maxRetries = 3;
+    let retryCount = 0;
 
-      if (data.success) {
-        const sortedMessages = (data.messages || []).sort(
-          (a: Message, b: Message) => {
-            // Sort by ID (or date if needed)
-            return a.id - b.id;
-          }
+    const attemptFetch = async (): Promise<void> => {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          `${API_BASE_URL}/messages/history?session_id=${sessionId}&dialog_id=${chatId}&limit=200`
         );
-        setMessages(sortedMessages);
-        setError("");
-      } else {
-        setError(data.error || "Ошибка загрузки сообщений");
+
+        if (!response.ok) {
+          if (response.status === 400 && retryCount < maxRetries) {
+            retryCount++;
+            console.log(
+              `Retrying message fetch (${retryCount}/${maxRetries}) due to ${response.status}`
+            );
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1000 * retryCount)
+            ); // Exponential backoff
+            return attemptFetch();
+          }
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          const sortedMessages = (data.messages || []).sort(
+            (a: Message, b: Message) => {
+              return a.id - b.id;
+            }
+          );
+          setMessages(sortedMessages);
+          setError("");
+        } else {
+          if (retryCount < maxRetries && data.error?.includes("не найден")) {
+            retryCount++;
+            console.log(
+              `Retrying message fetch (${retryCount}/${maxRetries}) due to client error`
+            );
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1000 * retryCount)
+            );
+            return attemptFetch();
+          }
+          setError(data.error || "Ошибка загрузки сообщений");
+        }
+      } catch (error) {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          console.log(
+            `Retrying message fetch (${retryCount}/${maxRetries}) due to network error:`,
+            error
+          );
+          await new Promise((resolve) =>
+            setTimeout(resolve, 1000 * retryCount)
+          );
+          return attemptFetch();
+        }
+        setError(
+          "Не удалось загрузить сообщения. Попробуйте обновить страницу."
+        );
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      setError("Ошибка соединения с сервером");
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    await attemptFetch();
   };
 
   const fetchMoreMessages = async () => {
@@ -415,48 +459,88 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const sendMessage = async () => {
     if (!newMessage.trim() || !sessionId || !chatId || sendingMessage) return;
 
-    try {
-      setSendingMessage(true);
-      setHasSuggestion(false);
-      setSuggestionDismissed(true);
+    const maxRetries = 2;
+    let retryCount = 0;
 
-      const response = await fetch(`${API_BASE_URL}/messages/send`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          session_id: sessionId,
-          dialog_id: chatId,
-          text: newMessage.trim(),
-        }),
-      });
+    const attemptSend = async (): Promise<void> => {
+      try {
+        setSendingMessage(true);
+        setHasSuggestion(false);
+        setSuggestionDismissed(true);
 
-      const data = await response.json();
-      if (data.success) {
-        setNewMessage("");
-        justSentMessageRef.current = true;
-        if (textareaRef.current) {
-          textareaRef.current.style.height = "auto";
-        }
-        // Keep focus on the input after sending message - use setTimeout to ensure it happens after re-renders
-        setTimeout(() => {
-          if (textareaRef.current && justSentMessageRef.current) {
-            textareaRef.current.focus();
-            justSentMessageRef.current = false;
+        const response = await fetch(`${API_BASE_URL}/messages/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            session_id: sessionId,
+            dialog_id: chatId,
+            text: newMessage.trim(),
+          }),
+        });
+
+        if (!response.ok) {
+          if (response.status === 400 && retryCount < maxRetries) {
+            retryCount++;
+            console.log(
+              `Retrying message send (${retryCount}/${maxRetries}) due to ${response.status}`
+            );
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1000 * retryCount)
+            );
+            return attemptSend();
           }
-        }, 100);
-        // Force scroll to bottom after sending your own message
-        setIsNearBottom(true);
-        setTimeout(() => scrollToBottom(true), 150);
-      } else {
-        setError(data.error || "Ошибка отправки сообщения");
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          setNewMessage("");
+          justSentMessageRef.current = true;
+          if (textareaRef.current) {
+            textareaRef.current.style.height = "auto";
+          }
+          setTimeout(() => {
+            if (textareaRef.current && justSentMessageRef.current) {
+              textareaRef.current.focus();
+              justSentMessageRef.current = false;
+            }
+          }, 100);
+          setIsNearBottom(true);
+          setTimeout(() => scrollToBottom(true), 100);
+        } else {
+          if (retryCount < maxRetries && data.error?.includes("не найден")) {
+            retryCount++;
+            console.log(
+              `Retrying message send (${retryCount}/${maxRetries}) due to client error`
+            );
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1000 * retryCount)
+            );
+            return attemptSend();
+          }
+          alert(data.error || "Ошибка отправки сообщения");
+        }
+      } catch (error) {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          console.log(
+            `Retrying message send (${retryCount}/${maxRetries}) due to network error:`,
+            error
+          );
+          await new Promise((resolve) =>
+            setTimeout(resolve, 1000 * retryCount)
+          );
+          return attemptSend();
+        }
+        alert("Не удалось отправить сообщение. Попробуйте ещё раз.");
+      } finally {
+        setSendingMessage(false);
       }
-    } catch (error) {
-      setError("Ошибка соединения с сервером");
-    } finally {
-      setSendingMessage(false);
-    }
+    };
+
+    await attemptSend();
   };
 
   const scrollToBottom = (smooth = false) => {
