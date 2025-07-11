@@ -261,33 +261,29 @@ class TelegramClientManager:
             client = await self._get_active_client(session_id)
             if not client:
                 return {"success": False, "error": "Клиент не найден"}
-            
-            messages = await client.get_messages(dialog_id, limit=limit, offset_id=offset_id)
-        except ValueError as ve:
-            if "input entity" in str(ve):
-                # Попробуем подгрузить entity и повторить один раз
-                await self._ensure_entity(client, dialog_id)
+
+            try:
                 messages = await client.get_messages(dialog_id, limit=limit, offset_id=offset_id)
-            else:
-                raise
-            
+            except ValueError as ve:
+                if "input entity" in str(ve):
+                    await self._ensure_entity(client, dialog_id)
+                    messages = await client.get_messages(dialog_id, limit=limit, offset_id=offset_id)
+                else:
+                    raise
+
             messages_data = []
             for message in messages:
                 if isinstance(message, Message):
-                    message_data = {
+                    messages_data.append({
                         "id": message.id,
                         "text": message.message,
                         "date": message.date.isoformat(),
                         "sender_id": message.sender_id,
                         "is_outgoing": message.out
-                    }
-                    messages_data.append(message_data)
-            
-            return {
-                "success": True,
-                "messages": messages_data
-            }
-            
+                    })
+
+            return {"success": True, "messages": messages_data}
+
         except Exception as e:
             return {"success": False, "error": str(e)}
     
@@ -297,15 +293,16 @@ class TelegramClientManager:
             client = await self._get_active_client(session_id)
             if not client:
                 return {"success": False, "error": "Клиент не найден"}
-            
-            message = await client.send_message(dialog_id, text)
-        except ValueError as ve:
-            if "input entity" in str(ve):
-                await self._ensure_entity(client, dialog_id)
+
+            try:
                 message = await client.send_message(dialog_id, text)
-            else:
-                raise
-            
+            except ValueError as ve:
+                if "input entity" in str(ve):
+                    await self._ensure_entity(client, dialog_id)
+                    message = await client.send_message(dialog_id, text)
+                else:
+                    raise
+
             # Manually broadcast the sent message via WebSocket
             if session_id in self.websockets:
                 websockets_list = self.websockets[session_id]
@@ -345,7 +342,7 @@ class TelegramClientManager:
                     "date": message.date.isoformat()
                 }
             }
-            
+
         except Exception as e:
             return {"success": False, "error": str(e)}
     

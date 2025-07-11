@@ -115,7 +115,7 @@ async def health_check():
         "websocket_stats": ws_monitor.get_stats()
     }
 
-# WebSocket для real-time обновлений
+# Primary WebSocket endpoint (root-level)
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await websocket.accept()
@@ -145,7 +145,14 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         await telegram_manager.remove_websocket_connection(session_id, websocket)
         ws_monitor.cleanup_session(session_id)
 
-# Monitoring endpoint
+# Compatibility endpoint behind /api prefix (e.g., when reverse proxy forwards only /api/*)
+
+@app.websocket("/api/ws/{session_id}")
+async def websocket_endpoint_api(websocket: WebSocket, session_id: str):
+    # Re-use the same handler
+    await websocket_endpoint(websocket, session_id)
+
+
 @app.get("/api/monitor")
 async def monitor_websockets():
     total_websockets = sum(len(ws_list) for ws_list in telegram_manager.websockets.values())

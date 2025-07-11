@@ -66,7 +66,8 @@ const ChatList: React.FC<ChatListProps> = ({
 
       const wsProtocol = API_BASE_URL.startsWith("https") ? "wss" : "ws";
       const wsHost = API_BASE_URL.split("//")[1].split("/api")[0];
-      const wsUrl = `${wsProtocol}://${wsHost}/ws/${sessionId}`;
+      // Use /api/ws path – works both locally (no proxy) and behind Nginx where only /api/* is routed
+      const wsUrl = `${wsProtocol}://${wsHost}/api/ws/${sessionId}`;
 
       const ws = new WebSocket(wsUrl);
 

@@ -214,8 +214,11 @@ export class TelegramProvider implements IMessagingProvider {
   private setupWebSocket(): void {
     if (!this.sessionId) return;
 
+    // Build dynamic WS URL based on current origin / API base
+    const baseHost = API_BASE_URL.split("//")[1].split("/api")[0];
+    const wsProtocol = API_BASE_URL.startsWith("https") ? "wss" : "ws";
     this.websocket = new WebSocket(
-      `ws://localhost:8000/ws/telegram/${this.sessionId}`
+      `${wsProtocol}://${baseHost}/api/ws/${this.sessionId}`
     );
 
     this.websocket.onmessage = (event) => {

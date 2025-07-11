@@ -119,7 +119,7 @@ class AuthService {
 
   async logout(): Promise<void> {
     try {
-      await fetch("http://localhost:8000/auth/logout", {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

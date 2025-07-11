@@ -137,7 +137,8 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
 
       const wsProtocol = API_BASE_URL.startsWith("https") ? "wss" : "ws";
       const wsHost = API_BASE_URL.split("//")[1].split("/api")[0];
-      const wsUrl = `${wsProtocol}://${wsHost}/ws/${sessionId}`;
+      // Use unified /api/ws path for proxy compatibility
+      const wsUrl = `${wsProtocol}://${wsHost}/api/ws/${sessionId}`;
 
       const ws = new WebSocket(wsUrl);
 
