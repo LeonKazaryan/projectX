@@ -23,6 +23,43 @@ class TelegramClientManager:
         session = StringSession(session_string)
         client = TelegramClient(session, self.api_id, self.api_hash)
         return client
+
+    async def _get_active_client(self, session_id: str) -> Optional[TelegramClient]:
+        """Возвращает активный клиент, автоматически восстанавливая соединение при необходимости.
+
+        Эта вспомогательная функция предназначена для повышенной надёжности в production-среде,
+        где сетевые подключения WebSocket к серверам Telegram могут время от времени рваться.
+
+        1. Пытаемся получить клиент из словаря active_clients.
+        2. Если клиент найден, но соединение разорвано – повторно вызываем `connect()`.
+        3. Если после reconnection клиент всё ещё не авторизован, считаем, что сессия протухла
+           и удаляем её из active_clients, возвращая `None`. Это позволит фронту инициировать
+           повторную авторизацию.
+        """
+        client = self.active_clients.get(session_id)
+        if not client:
+            return None
+
+        try:
+            if not client.is_connected():
+                await client.connect()
+
+            # Дополнительная проверка: вдруг Telegram выкинул нас из-за таймаута.
+            if not await client.is_user_authorized():
+                # Сессия больше невалидна – удаляем клиент, пусть фронт восстановит.
+                await client.disconnect()
+                del self.active_clients[session_id]
+                return None
+        except Exception:
+            # Любая ошибка при попытке реконнекта – зачистим клиента, чтобы не держать зомби-ссылку.
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
+            self.active_clients.pop(session_id, None)
+            return None
+
+        return client
     
     async def authenticate_with_phone(self, phone: str, session_id: str) -> dict:
         """Начать процесс аутентификации по номеру телефона"""
@@ -141,7 +178,7 @@ class TelegramClientManager:
     async def get_dialogs(self, session_id: str, limit: int = 50, include_archived: bool = False, include_readonly: bool = True, include_groups: bool = True) -> dict:
         """Получить список диалогов"""
         try:
-            client = self.active_clients.get(session_id)
+            client = await self._get_active_client(session_id)
             if not client:
                 return {"success": False, "error": "Клиент не найден"}
             
@@ -209,7 +246,7 @@ class TelegramClientManager:
     async def get_messages(self, session_id: str, dialog_id: int, limit: int = 50, offset_id: int = 0) -> dict:
         """Получить сообщения из диалога"""
         try:
-            client = self.active_clients.get(session_id)
+            client = await self._get_active_client(session_id)
             if not client:
                 return {"success": False, "error": "Клиент не найден"}
             
@@ -238,7 +275,7 @@ class TelegramClientManager:
     async def send_message(self, session_id: str, dialog_id: int, text: str) -> dict:
         """Отправить сообщение"""
         try:
-            client = self.active_clients.get(session_id)
+            client = await self._get_active_client(session_id)
             if not client:
                 return {"success": False, "error": "Клиент не найден"}
             

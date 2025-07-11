@@ -1,0 +1,9 @@
+2025/07/11-02:12:14.030 b303 Reusing MANIFEST /Users/leonkazaran/Documents/nFac/project/back/whatsapp-service/.wwebjs_auth/session-whatsapp_ebb1eb53-ced8-4148-8499-db15a66c0a20_578gumhgcew/Default/Local Storage/leveldb/MANIFEST-000001
+2025/07/11-02:12:14.030 b303 Recovering log #12
+2025/07/11-02:12:14.031 b303 Reusing old log /Users/leonkazaran/Documents/nFac/project/back/whatsapp-service/.wwebjs_auth/session-whatsapp_ebb1eb53-ced8-4148-8499-db15a66c0a20_578gumhgcew/Default/Local Storage/leveldb/000012.log 
+2025/07/11-02:14:16.089 1cc13 Level-0 table #17: started
+2025/07/11-02:14:16.099 1cc13 Level-0 table #17: 18371 bytes OK
+2025/07/11-02:14:16.109 1cc13 Delete type=0 #12
+2025/07/11-06:39:10.296 2920f Level-0 table #19: started
+2025/07/11-06:39:10.307 2920f Level-0 table #19: 14036 bytes OK
+2025/07/11-06:39:10.325 2920f Delete type=0 #16

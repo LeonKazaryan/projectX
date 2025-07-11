@@ -414,3 +414,8 @@
   ## 0.7.9c
 
   - Fixed error with LangChain conflict compatability
+
+  ## 0.7.9d
+
+  - Websocket problem resolved (probably)
+  - Reanimation of the client automatically added
