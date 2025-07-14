@@ -422,3 +422,7 @@
 
 - Deleted unneccessary dependencies
 - Left only cloud AI dependencies
+
+## 0.8.0f
+
+- Logs added

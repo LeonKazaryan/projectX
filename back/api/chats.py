@@ -3,8 +3,10 @@ from pydantic import BaseModel
 from typing import List, Optional
 from back.globals import get_telegram_manager
 from back.telegram.telegram_client import TelegramClientManager
+import logging
 
 chats_router = APIRouter()
+logger = logging.getLogger("chathut.chats")
 
 class Dialog(BaseModel):
     id: int
@@ -32,12 +34,18 @@ async def get_dialogs(
     manager = Depends(get_telegram_manager)
 ):
     """Получить список диалогов (чатов)"""
-    result = await manager.get_dialogs(session_id, limit, include_archived, include_readonly, include_groups)
-    
-    if result["success"]:
-        return DialogsResponse(
-            success=True,
-            dialogs=result["dialogs"]
-        )
-    else:
-        raise HTTPException(status_code=400, detail=result["error"]) 
+    logger.info(f"[get_dialogs] session_id={session_id} limit={limit} archived={include_archived} readonly={include_readonly} groups={include_groups}")
+    try:
+        result = await manager.get_dialogs(session_id, limit, include_archived, include_readonly, include_groups)
+        logger.info(f"[get_dialogs] manager.get_dialogs result: {result}")
+        if result["success"]:
+            return DialogsResponse(
+                success=True,
+                dialogs=result["dialogs"]
+            )
+        else:
+            logger.error(f"[get_dialogs] ERROR: {result.get('error')} (session_id={session_id})")
+            raise HTTPException(status_code=400, detail=result["error"])
+    except Exception as e:
+        logger.exception(f"[get_dialogs] EXCEPTION: {e} (session_id={session_id})")
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}") 
