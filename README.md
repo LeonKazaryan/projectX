@@ -426,3 +426,7 @@
 ## 0.8.0f
 
 - Logs added
+
+## 0.8.0g
+
+- Telegram session fix

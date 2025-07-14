@@ -155,6 +155,7 @@ const TelegramClient: React.FC = () => {
     name: string;
   } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [forceLogout, setForceLogout] = useState(false);
   const navigate = useNavigate();
 
   // Restore provider state on component mount
@@ -169,6 +170,13 @@ const TelegramClient: React.FC = () => {
     restoreState();
   }, []);
 
+  // Функция сброса Telegram-сессии
+  const handleSessionExpired = () => {
+    localStorage.removeItem("telegram_session_id");
+    localStorage.removeItem("telegram_session_string");
+    setForceLogout(true);
+  };
+
   if (isRestoring) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -177,7 +185,7 @@ const TelegramClient: React.FC = () => {
     );
   }
 
-  if (!isAuthenticated) {
+  if (forceLogout || !isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <div className="w-full max-w-md">
@@ -204,15 +212,19 @@ const TelegramClient: React.FC = () => {
   return (
     <>
       <div className="w-full flex flex-col bg-background text-foreground h-full">
-        <ResizablePanelGroup direction="horizontal" className="flex-grow">
-          <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
-            {sessionId && (
-              <ChatList
-                sessionId={sessionId}
-                onChatSelect={(id, name) => setSelectedChat({ id, name })}
-                selectedChatId={selectedChat?.id}
-              />
-            )}
+        <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+          <ResizablePanel
+            defaultSize={30}
+            minSize={20}
+            maxSize={40}
+            className="border-r"
+          >
+            <ChatList
+              sessionId={sessionId!}
+              onChatSelect={(id, name) => setSelectedChat({ id, name })}
+              selectedChatId={selectedChat?.id}
+              onSessionExpired={handleSessionExpired}
+            />
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel defaultSize={75}>

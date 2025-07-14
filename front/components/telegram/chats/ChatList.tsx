@@ -38,7 +38,7 @@ interface ChatListProps {
   syncTrigger?: number;
 }
 
-const ChatList: React.FC<ChatListProps> = ({
+const ChatList: React.FC<ChatListProps & { onSessionExpired?: () => void }> = ({
   sessionId,
   onChatSelect,
   selectedChatId,
@@ -46,6 +46,7 @@ const ChatList: React.FC<ChatListProps> = ({
   includeReadonly = false,
   includeGroups = true,
   syncTrigger = 0,
+  onSessionExpired,
 }) => {
   const [dialogs, setDialogs] = useState<Dialog[]>([]);
   const [filteredDialogs, setFilteredDialogs] = useState<Dialog[]>([]);
@@ -54,10 +55,13 @@ const ChatList: React.FC<ChatListProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const connectWebSocket = useCallback(async () => {
-    if (!sessionId) {
-      console.log("No session ID, skipping WebSocket connection");
+    if (!sessionId || sessionExpired) {
+      console.log(
+        "No session ID or session expired, skipping WebSocket connection"
+      );
       return;
     }
 
@@ -128,7 +132,7 @@ const ChatList: React.FC<ChatListProps> = ({
     } catch (error) {
       console.error("Failed to create ChatList WebSocket connection:", error);
     }
-  }, [sessionId, selectedChatId]);
+  }, [sessionId, selectedChatId, sessionExpired]);
 
   const disconnectWebSocket = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -147,14 +151,14 @@ const ChatList: React.FC<ChatListProps> = ({
   }, [sessionId, includeArchived, includeReadonly, includeGroups, syncTrigger]);
 
   useEffect(() => {
-    if (sessionId) {
+    if (sessionId && !sessionExpired) {
       connectWebSocket();
     }
 
     return () => {
       disconnectWebSocket();
     };
-  }, [sessionId, connectWebSocket, disconnectWebSocket]);
+  }, [sessionId, connectWebSocket, disconnectWebSocket, sessionExpired]);
 
   useEffect(() => {
     if (selectedChatId) {
@@ -182,6 +186,7 @@ const ChatList: React.FC<ChatListProps> = ({
   const fetchDialogs = async () => {
     try {
       setLoading(true);
+      setSessionExpired(false);
       const params = new URLSearchParams({
         session_id: sessionId,
         limit: "200",
@@ -189,10 +194,27 @@ const ChatList: React.FC<ChatListProps> = ({
         include_readonly: includeReadonly.toString(),
         include_groups: includeGroups.toString(),
       });
-
       const response = await fetch(`${API_BASE_URL}/chats/dialogs?${params}`);
+      if (response.status === 400) {
+        const data = await response.json();
+        if (
+          data.detail &&
+          (data.detail.includes("Клиент не найден") ||
+            data.detail.includes("client not found"))
+        ) {
+          // Сбросить session_id/session_string и показать ошибку
+          localStorage.removeItem("telegram_session_id");
+          localStorage.removeItem("telegram_session_string");
+          setSessionExpired(true);
+          setError(
+            "Сессия Telegram устарела или недействительна. Войдите заново."
+          );
+          if (onSessionExpired) onSessionExpired();
+          setLoading(false);
+          return;
+        }
+      }
       const data = await response.json();
-
       if (data.success) {
         setDialogs(data.dialogs);
         setFilteredDialogs(data.dialogs);
@@ -281,6 +303,32 @@ const ChatList: React.FC<ChatListProps> = ({
               Повторить
             </Button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (sessionExpired) {
+    return (
+      <div className="flex flex-col h-full bg-card border-r items-center justify-center p-8">
+        <div className="text-center space-y-4">
+          <p className="text-lg text-destructive font-semibold">
+            Сессия Telegram устарела или недействительна
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Пожалуйста, войдите в Telegram заново, чтобы продолжить пользоваться
+            чатами.
+          </p>
+          <Button
+            variant="default"
+            size="lg"
+            onClick={() => {
+              if (onSessionExpired) onSessionExpired();
+              // Можно также сделать window.location.reload() или вызвать глобальный logout Telegram
+            }}
+          >
+            Войти заново
+          </Button>
         </div>
       </div>
     );
