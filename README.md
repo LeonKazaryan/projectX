@@ -430,3 +430,5 @@
 ## 0.8.0g
 
 - Telegram session fix
+
+чето хуй его знает
