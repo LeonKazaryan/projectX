@@ -407,3 +407,7 @@
 ## 0.8.0a
 
 - Some bugs fixed, unused variables deleted
+
+## 0.8.0c
+
+- localstorate websocket fix

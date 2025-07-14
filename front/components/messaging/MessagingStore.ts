@@ -47,6 +47,23 @@ interface MessagingState {
   restoreProviderStates: () => Promise<void>;
 }
 
+// LocalStorage helpers for message caching
+function getCachedMessages(chatId: string): Message[] {
+  try {
+    const raw = localStorage.getItem(`chathut_messages_${chatId}`);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function setCachedMessages(chatId: string, messages: Message[]) {
+  try {
+    localStorage.setItem(`chathut_messages_${chatId}` , JSON.stringify(messages));
+  } catch {}
+}
+
 export const useMessagingStore = create<MessagingState>((set, get) => ({
   // Initial state
   providers: {},
@@ -172,33 +189,40 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
   // Load messages for a specific chat
   loadMessages: async (chatId: string) => {
     const { providers, chats, messages } = get();
-    
-    // Don't reload if messages already exist for this chat
-    if (messages[chatId] && messages[chatId].length > 0) {
-      console.log(`Messages already loaded for ${chatId}, skipping`);
-      return;
-    }
-    
-    const chat = chats.find(c => c.id === chatId);
-    if (!chat) return;
 
-    const provider = providers[chat.source];
-    if (!provider) return;
-
-    console.log(`Loading messages for chat: ${chatId}`);
-    set({ isLoading: true });
-
-    try {
-      const messages = await provider.loadHistory(chatId);
+    // 1. Показать кэшированные сообщения сразу
+    const cached = getCachedMessages(chatId);
+    if (cached.length > 0) {
       set((state) => ({
         messages: {
           ...state.messages,
-          [chatId]: messages
-        }
+          [chatId]: cached,
+        },
       }));
-      console.log(`Loaded ${messages.length} messages for ${chatId}`);
+    }
+
+    // 2. Не грузить с сервера, если уже есть актуальные сообщения
+    if (messages[chatId] && messages[chatId].length > 0) {
+      return;
+    }
+
+    const chat = chats.find((c) => c.id === chatId);
+    if (!chat) return;
+    const provider = providers[chat.source];
+    if (!provider) return;
+
+    set({ isLoading: true });
+    try {
+      const freshMessages = await provider.loadHistory(chatId);
+      set((state) => ({
+        messages: {
+          ...state.messages,
+          [chatId]: freshMessages,
+        },
+      }));
+      // 3. Обновить кэш
+      setCachedMessages(chatId, freshMessages);
     } catch (error) {
-      console.error(`Failed to load messages for ${chatId}:`, error);
       set({ error: `Failed to load messages: ${error}` });
     } finally {
       set({ isLoading: false });
@@ -265,15 +289,18 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
         console.log('Handling new message event:', newMessage);
         
         // Add message to messages
-        set((state) => ({
-          messages: {
+        set((state) => {
+          const updated = {
             ...state.messages,
             [newMessage.chatId]: [
               ...(state.messages[newMessage.chatId] || []),
-              newMessage
-            ]
-          }
-        }));
+              newMessage,
+            ],
+          };
+          // Обновить кэш
+          setCachedMessages(newMessage.chatId, updated[newMessage.chatId]);
+          return { messages: updated };
+        });
         
         // Update chat list immediately for better UX
         set((state) => {
