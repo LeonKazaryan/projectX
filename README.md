@@ -417,3 +417,8 @@
 - Handle error 400 added
 - Some logs added for debugging
 - Chatid validation added
+
+## 0.8.0e
+
+- Deleted unneccessary dependencies
+- Left only cloud AI dependencies

@@ -1,4 +1,3 @@
-telethon==1.32.1
 fastapi==0.115.6
 uvicorn==0.34.0
 python-multipart==0.0.20
@@ -11,9 +10,12 @@ google-generativeai==0.8.5
 # RAG and AI dependencies
 langchain==0.2.0
 qdrant-client==1.12.1
-# Vector database and embeddings
-sentence-transformers==3.3.1
+# tiktoken нужен для токенизации, он лёгкий
 tiktoken>=0.5.0
+# google-generativeai нужен для Gemini API
+google-generativeai==0.8.5
+# УБРАНО: sentence-transformers, llama-index, torch
+# Vector database and embeddings
 # Additional AI tools
 llama-index==0.12.48
 numpy>=1.26.2,<2.0.0
