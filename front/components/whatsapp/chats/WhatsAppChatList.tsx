@@ -6,14 +6,7 @@ import { Button } from "../../../src/components/ui/button";
 import { Input } from "../../../src/components/ui/input";
 import { ScrollArea } from "../../../src/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "../../../src/components/ui/avatar";
-import {
-  MessageCircle,
-  Users,
-  User,
-  Search,
-  Loader2,
-  RotateCcw,
-} from "lucide-react";
+import { MessageCircle, Search, Loader2, RotateCcw } from "lucide-react";
 import { cn } from "../../../src/lib/utils";
 
 interface WhatsAppChatListProps {

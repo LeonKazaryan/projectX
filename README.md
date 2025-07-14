@@ -404,6 +404,6 @@
 
 - Google Analytics Added
 
-# 0.8.1
+## 0.8.0a
 
 - Some bugs fixed, unused variables deleted

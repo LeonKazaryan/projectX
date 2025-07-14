@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import WhatsAppAuth from "./auth/WhatsAppAuth";
 import WhatsAppChatList from "./chats/WhatsAppChatList";
 import WhatsAppMessageArea from "./messages/WhatsAppMessageArea";
-import { useMessagingStore } from "../messaging/MessagingStore";
+import { useMessagingStore, selectChat } from "../messaging/MessagingStore";
 import type { Chat } from "../messaging/types";
 import { WhatsAppProvider } from "../messaging/WhatsAppProvider";
 
@@ -18,7 +18,6 @@ const WhatsAppClient: React.FC = () => {
   const navigate = useNavigate();
   const {
     connectProvider,
-    disconnectProvider,
     error,
     isLoading,
     selectedChat,
