@@ -411,3 +411,9 @@
 ## 0.8.0c
 
 - localstorate websocket fix
+
+## 0.8.0d
+
+- Handle error 400 added
+- Some logs added for debugging
+- Chatid validation added

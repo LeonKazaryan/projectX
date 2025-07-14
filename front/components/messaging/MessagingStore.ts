@@ -190,6 +190,29 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
   loadMessages: async (chatId: string) => {
     const { providers, chats, messages } = get();
 
+    // 0. Валидация chatId
+    if (!chatId || typeof chatId !== 'string') {
+      console.warn('Invalid chatId for loadMessages:', chatId);
+      return;
+    }
+    const chat = chats.find((c) => c.id === chatId);
+    if (!chat) {
+      console.warn('Chat not found in store for chatId:', chatId);
+      // Чистим кэш если чат не найден
+      localStorage.removeItem(`chathut_messages_${chatId}`);
+      set((state) => {
+        const newMessages = { ...state.messages };
+        delete newMessages[chatId];
+        return { messages: newMessages };
+      });
+      return;
+    }
+    const provider = providers[chat.source];
+    if (!provider) {
+      console.warn('Provider not found for chat:', chat);
+      return;
+    }
+
     // 1. Показать кэшированные сообщения сразу
     const cached = getCachedMessages(chatId);
     if (cached.length > 0) {
@@ -206,11 +229,6 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
       return;
     }
 
-    const chat = chats.find((c) => c.id === chatId);
-    if (!chat) return;
-    const provider = providers[chat.source];
-    if (!provider) return;
-
     set({ isLoading: true });
     try {
       const freshMessages = await provider.loadHistory(chatId);
@@ -222,7 +240,21 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
       }));
       // 3. Обновить кэш
       setCachedMessages(chatId, freshMessages);
-    } catch (error) {
+    } catch (error: any) {
+      // Если сервер вернул 400 — чистим кэш и удаляем чат
+      if (error?.response?.status === 400 || (error + '').includes('400')) {
+        console.warn('Server returned 400 for chatId:', chatId, ' — removing cache and hiding chat');
+        localStorage.removeItem(`chathut_messages_${chatId}`);
+        set((state) => {
+          const newMessages = { ...state.messages };
+          delete newMessages[chatId];
+          return { messages: newMessages };
+        });
+        // Можно также скрыть чат из списка, если нужно:
+        set((state) => ({
+          chats: state.chats.filter((c) => c.id !== chatId),
+        }));
+      }
       set({ error: `Failed to load messages: ${error}` });
     } finally {
       set({ isLoading: false });
