@@ -22,7 +22,10 @@ class AnalystAgent(Agent):
 
         # Format the message history for the prompt
         formatted_history = "\n".join(
-            [f"{msg['sender']}: {msg['text']}" for msg in message_history]
+            [
+                f"Вы: {msg['text']}" if msg.get('role') == 'Вы' else f"Собеседник: {msg['text']}"
+                for msg in message_history
+            ]
         )
 
         try:

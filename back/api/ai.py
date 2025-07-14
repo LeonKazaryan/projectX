@@ -75,6 +75,31 @@ class AgentResponseRequest(BaseModel):
     query: str
     message_history: List[Dict] # e.g. {"sender": "user", "text": "Hello"}
 
+def normalize_message_history(message_history: List[Dict], user_id: Union[str, int, None] = None) -> List[Dict]:
+    """
+    Преобразует историю сообщений так, чтобы у каждого сообщения была роль:
+    - 'Вы' если исходящее (is_outgoing == True или sender == 'user')
+    - 'Собеседник' если входящее
+    """
+    normalized = []
+    for msg in message_history:
+        # Определяем, кто автор
+        is_out = msg.get('is_outgoing') or msg.get('isOutgoing')
+        sender = msg.get('sender', '')
+        # Если явно указано outgoing
+        if is_out:
+            role = 'Вы'
+        # Если sender явно user
+        elif sender == 'user' or sender == user_id:
+            role = 'Вы'
+        else:
+            role = 'Собеседник'
+        normalized.append({
+            **msg,
+            'role': role
+        })
+    return normalized
+
 @router.post("/generate-agent-response")
 async def generate_agent_response(
     request: AgentResponseRequest,
@@ -97,11 +122,14 @@ async def generate_agent_response(
             "text": request.query
         }
 
+        # Нормализуем историю сообщений
+        normalized_history = normalize_message_history(request.message_history)
+
         initial_state = {
             "session_id": request.session_id,
             "chat_id": request.chat_id,
             "query": request.query,
-            "message_history": request.message_history,
+            "message_history": normalized_history,
             "last_message": last_message,
         }
 
