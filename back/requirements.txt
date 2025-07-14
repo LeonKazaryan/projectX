@@ -12,10 +12,9 @@ google-generativeai==0.8.5
 langchain==0.2.0
 qdrant-client==1.12.1
 # Vector database and embeddings
-sentence-transformers==3.3.1
-tiktoken>=0.5.0
+# tiktoken>=0.5.0
 # Additional AI tools
-transformers>=4.30.0
+# transformers>=4.30.0
 numpy>=1.26.2,<2.0.0
 sqlalchemy>=1.4,<2.0.36
 alembic==1.14.0
@@ -30,7 +29,6 @@ PyJWT==2.10.1
 psycopg2-binary==2.9.10
 telegram==0.0.1
 python-telegram-bot==20.8
-llama-index==0.12.48
 beautifulsoup4==4.13.4
 requests==2.32.4
 fastapi-cors==0.0.6
