@@ -403,3 +403,7 @@
 # 0.8.0
 
 - Google Analytics Added
+
+# 0.8.1
+
+- Some bugs fixed, unused variables deleted

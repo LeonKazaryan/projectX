@@ -123,16 +123,6 @@ const WhatsAppClient: React.FC = () => {
     }
   };
 
-  const handleDisconnect = async () => {
-    await disconnectProvider("whatsapp");
-    setIsAuthenticated(false);
-    selectChat(null);
-    setShowQr(false);
-    setQrCode(null);
-    setSessionId(null);
-    setIsReady(false);
-  };
-
   const handleChatSelect = (chat: Chat) => {
     selectChat(chat);
   };

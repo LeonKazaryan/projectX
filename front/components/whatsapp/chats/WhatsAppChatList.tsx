@@ -86,13 +86,6 @@ const WhatsAppChatList: React.FC<WhatsAppChatListProps> = ({
     }
   };
 
-  const getChatIcon = (chat: Chat) => {
-    if (chat.isGroup) {
-      return <Users className="h-4 w-4" />;
-    }
-    return <User className="h-4 w-4" />;
-  };
-
   if (isLoading) {
     return (
       <div className="flex flex-col h-full bg-card border-r">

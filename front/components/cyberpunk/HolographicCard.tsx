@@ -17,8 +17,6 @@ const HolographicCard = ({
     const handleMouseMove = (e: MouseEvent) => {
       // Rotation effects removed - keeping the function for potential future effects
       const rect = card.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
 
       // Simple glow effect instead of rotation
       gsap.to(card, {

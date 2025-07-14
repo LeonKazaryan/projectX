@@ -153,14 +153,6 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
     }
   }, [messages]);
 
-  const handleLoadMessages = () => {
-    if (chatId) {
-      console.log("Manual reload messages for chatId:", chatId);
-      loadMessages(chatId);
-      setLoadedChatId(chatId);
-    }
-  };
-
   const handleSendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
 

@@ -229,7 +229,7 @@ export class WhatsAppProvider implements IMessagingProvider {
     this.subscribers = this.subscribers.filter((sub) => sub !== callback);
   }
 
-  async loadHistory(chatId: string, cursor?: string): Promise<Message[]> {
+  async loadHistory(chatId: string): Promise<Message[]> {
     if (!this.sessionId) return [];
 
     try {

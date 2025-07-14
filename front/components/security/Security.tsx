@@ -18,7 +18,6 @@ import {
   Key,
   Home,
   Send,
-  Globe,
 } from "lucide-react";
 import { Button } from "../../src/components/ui/button";
 import { authService } from "../services/authService";
