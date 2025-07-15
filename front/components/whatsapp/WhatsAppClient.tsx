@@ -14,6 +14,9 @@ import { useMessagingStore } from "../messaging/MessagingStore";
 import type { Chat } from "../messaging/types";
 import { WhatsAppProvider } from "../messaging/WhatsAppProvider";
 
+const WHATSAPP_API_URL =
+  (import.meta as any).env?.VITE_WHATSAPP_API_URL || "http://localhost:3000";
+
 const WhatsAppClient: React.FC = () => {
   const navigate = useNavigate();
   const {
@@ -74,7 +77,7 @@ const WhatsAppClient: React.FC = () => {
       const poll = setInterval(async () => {
         try {
           const res = await fetch(
-            `http://localhost:3000/whatsapp/status?sessionId=${sessionId}`
+            `${WHATSAPP_API_URL}/whatsapp/status?sessionId=${sessionId}`
           );
           const data = await res.json();
           if (data.success && data.isReady) {

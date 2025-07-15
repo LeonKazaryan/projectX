@@ -432,3 +432,7 @@
 - Telegram session fix
 
 чето хуй его знает
+
+# 0.8.1
+
+- Whatsapp adapted for the production

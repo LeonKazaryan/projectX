@@ -7,6 +7,10 @@ import type {
 import { io, Socket } from "socket.io-client";
 import authService from "../services/authService";
 
+// Удалить кастомный интерфейс ImportMeta, использовать стандартный import.meta.env
+const WHATSAPP_API_URL =
+  import.meta.env.VITE_WHATSAPP_API_URL || "http://localhost:3000";
+
 export class WhatsAppProvider implements IMessagingProvider {
   private isConnectedState: boolean = false;
   private subscribers: ((event: MessagingEvent) => void)[] = [];
@@ -68,7 +72,7 @@ export class WhatsAppProvider implements IMessagingProvider {
 
     try {
       const res = await fetch(
-        `http://localhost:3000/whatsapp/status?sessionId=${storedId}`
+        `${WHATSAPP_API_URL}/whatsapp/status?sessionId=${storedId}`
       );
       const data = await res.json();
 
@@ -113,7 +117,7 @@ export class WhatsAppProvider implements IMessagingProvider {
       if (sessionId) {
         try {
           const statusRes = await fetch(
-            `http://localhost:3000/whatsapp/status?sessionId=${sessionId}`
+            `${WHATSAPP_API_URL}/whatsapp/status?sessionId=${sessionId}`
           );
           const statusData = await statusRes.json();
           if (statusData.success && statusData.isReady) {
@@ -141,7 +145,7 @@ export class WhatsAppProvider implements IMessagingProvider {
         );
       }
 
-      const response = await fetch("http://localhost:3000/whatsapp/connect", {
+      const response = await fetch(`${WHATSAPP_API_URL}/whatsapp/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
@@ -172,7 +176,7 @@ export class WhatsAppProvider implements IMessagingProvider {
 
     if (this.sessionId) {
       try {
-        await fetch(`http://localhost:3000/whatsapp/disconnect`, {
+        await fetch(`${WHATSAPP_API_URL}/whatsapp/disconnect`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionId: this.sessionId }),
@@ -199,7 +203,7 @@ export class WhatsAppProvider implements IMessagingProvider {
     }
 
     try {
-      const response = await fetch("http://localhost:3000/whatsapp/send", {
+      const response = await fetch(`${WHATSAPP_API_URL}/whatsapp/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -234,7 +238,7 @@ export class WhatsAppProvider implements IMessagingProvider {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/whatsapp/messages?sessionId=${this.sessionId}&chatId=${chatId}&limit=50`
+        `${WHATSAPP_API_URL}/whatsapp/messages?sessionId=${this.sessionId}&chatId=${chatId}&limit=50`
       );
       const data = await response.json();
 
@@ -261,7 +265,7 @@ export class WhatsAppProvider implements IMessagingProvider {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/whatsapp/chats?sessionId=${this.sessionId}`
+        `${WHATSAPP_API_URL}/whatsapp/chats?sessionId=${this.sessionId}`
       );
       const data = await response.json();
 
@@ -317,7 +321,7 @@ export class WhatsAppProvider implements IMessagingProvider {
       console.log("Setting up Socket.IO connection for WhatsApp...");
 
       // Connect to Socket.IO server
-      this.socket = io("http://localhost:3000", {
+      this.socket = io(WHATSAPP_API_URL, {
         autoConnect: true,
         reconnection: true,
         reconnectionAttempts: 5,
