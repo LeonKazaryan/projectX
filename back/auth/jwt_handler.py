@@ -171,44 +171,14 @@ def generate_secure_token(length: int = 32) -> str:
 
 
 def validate_password_strength(password: str) -> Dict[str, Any]:
-    """Validate password strength with cyberpunk requirements"""
+    """Validate password strength: only minimum 6 characters required"""
     errors = []
     score = 0
-    
-    if len(password) < 8:
-        errors.append("Password must be at least 8 characters long")
+    if len(password) < 6:
+        errors.append("Password must be at least 6 characters long")
     else:
         score += 1
-    
-    if not any(c.isupper() for c in password):
-        errors.append("Password must contain at least one uppercase letter")
-    else:
-        score += 1
-    
-    if not any(c.islower() for c in password):
-        errors.append("Password must contain at least one lowercase letter")
-    else:
-        score += 1
-    
-    if not any(c.isdigit() for c in password):
-        errors.append("Password must contain at least one digit")
-    else:
-        score += 1
-    
-    if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
-        errors.append("Password should contain at least one special character")
-    else:
-        score += 1
-    
-    if len(password) >= 12:
-        score += 1
-    
-    strength = "weak"
-    if score >= 5:
-        strength = "strong"
-    elif score >= 3:
-        strength = "medium"
-    
+    strength = "weak" if score == 0 else "ok"
     return {
         "valid": len(errors) == 0,
         "errors": errors,

@@ -24,8 +24,10 @@ import {
   CheckCircle,
 } from "lucide-react";
 import "./AuthModal.css";
-import GlitchText from "../cyberpunk/GlitchText";
-import HolographicCard from "../cyberpunk/HolographicCard";
+import { useLanguage } from "../i18n/LanguageContext";
+import LanguageSwitcher from "../i18n/LanguageSwitcher";
+import MessagingBackground from "../home/MessagingBackground";
+import TypingIndicator from "../home/TypingIndicator";
 
 // Validation schemas
 const loginSchema = z.object({
@@ -49,12 +51,7 @@ const registerSchema = z
       .string()
       .min(1, "Display name is required")
       .max(100, "Display name too long"),
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-      .regex(/[0-9]/, "Password must contain at least one number"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string(),
     languagePreference: z.string().default("en"),
     themePreference: z.string().default("cyberpunk"),
@@ -151,6 +148,58 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const { t, language } = useLanguage();
+
+  const AUTH_TRANSLATIONS = {
+    loginTitle: { ru: "Вход в аккаунт", en: "Sign In" },
+    loginSubtitle: {
+      ru: "Войдите в свой уютный дом сообщений",
+      en: "Log in to your cozy messaging home",
+    },
+    registerTitle: { ru: "Регистрация", en: "Sign Up" },
+    registerSubtitle: {
+      ru: "Создайте свой аккаунт chathut",
+      en: "Create your chathut account",
+    },
+    emailOrUsername: {
+      ru: "Почта или имя пользователя",
+      en: "Email or Username",
+    },
+    emailOrUsernamePlaceholder: {
+      ru: "Введите почту или имя пользователя",
+      en: "Enter email or username",
+    },
+    password: { ru: "Пароль", en: "Password" },
+    passwordPlaceholder: { ru: "Введите пароль", en: "Enter your password" },
+    rememberMe: { ru: "Запомнить меня", en: "Remember me" },
+    username: { ru: "Имя пользователя", en: "Username" },
+    usernamePlaceholder: { ru: "Придумайте имя", en: "Choose a username" },
+    displayName: { ru: "Отображаемое имя", en: "Display Name" },
+    displayNamePlaceholder: {
+      ru: "Как вас называть?",
+      en: "How should we call you?",
+    },
+    email: { ru: "Почта", en: "Email" },
+    emailPlaceholder: { ru: "Введите почту", en: "Enter your email" },
+    confirmPassword: { ru: "Повторите пароль", en: "Confirm Password" },
+    confirmPasswordPlaceholder: {
+      ru: "Повторите пароль",
+      en: "Repeat your password",
+    },
+    loginBtn: { ru: "Войти", en: "Sign In" },
+    registerBtn: { ru: "Зарегистрироваться", en: "Sign Up" },
+    needAccount: {
+      ru: "Нет аккаунта? Зарегистрируйтесь",
+      en: "No account? Register",
+    },
+    haveAccount: {
+      ru: "Уже есть аккаунт? Войти",
+      en: "Already have an account? Sign In",
+    },
+  };
+
+  const tr = (key: string) =>
+    t(key) !== key ? t(key) : AUTH_TRANSLATIONS[key]?.[language] || key;
 
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -248,251 +297,229 @@ const AuthModal: React.FC<AuthModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
-        <motion.div
-          ref={modalRef}
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.8, opacity: 0 }}
-          className="w-full max-w-md"
-        >
-          <HolographicCard className="relative overflow-hidden rounded-lg">
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-purple-500/5" />
-
-            {/* Close button */}
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"
-            >
-              <X className="w-6 h-6" />
-            </button>
-
-            <CardContent className="p-8 relative">
-              {/* Header */}
-              <div className="text-center mb-8">
-                <div className="flex items-center justify-center mb-4">
-                  <div
-                    className="w-16 h-16 rounded-full flex items-center justify-center"
-                    style={{
-                      background:
-                        "linear-gradient(145deg, #00ffff20, #ff00ff20)",
-                      border: "1px solid #00ffff60",
-                    }}
-                  >
-                    <Terminal className="w-8 h-8 text-cyan-400" />
-                  </div>
-                </div>
-                <GlitchText className="text-2xl font-bold font-orbitron text-cyan-300">
-                  {mode === "login" ? "Neural Link" : "Initialize User"}
-                </GlitchText>
-                <p className="text-gray-400 mt-2 font-rajdhani">
+        <div className="relative w-full max-w-md">
+          <MessagingBackground color="general" density={16} />
+          <Card className="relative z-10 shadow-2xl rounded-3xl bg-white/80 dark:bg-zinc-900/80 border-0 backdrop-blur-xl">
+            <CardContent className="p-10 md:p-12">
+              <div className="flex justify-between items-center mb-8">
+                <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent select-none">
+                  chathut
+                </span>
+                <button
+                  onClick={onClose}
+                  className="ml-2 text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="mb-10 text-center">
+                <h2 className="text-3xl font-extrabold text-zinc-800 dark:text-white mb-2 tracking-tight">
+                  {mode === "login" ? tr("loginTitle") : tr("registerTitle")}
+                </h2>
+                <p className="text-lg text-zinc-500 dark:text-zinc-300">
                   {mode === "login"
-                    ? "Connect to the ChartHut matrix"
-                    : "Create your cyberpunk identity"}
+                    ? tr("loginSubtitle")
+                    : tr("registerSubtitle")}
                 </p>
               </div>
-
-              {/* Server Error Display */}
               {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-500/10 border border-red-500/30 text-red-300 p-3 rounded-lg mb-6 flex items-center"
-                >
-                  <AlertCircle className="w-5 h-5 mr-3" />
-                  <span className="font-rajdhani">{error}</span>
-                </motion.div>
+                <div className="bg-red-100 border border-red-300 text-red-600 rounded-lg px-4 py-2 mb-6 text-sm flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  {error}
+                </div>
               )}
-
-              {/* Forms */}
               <form
                 onSubmit={
                   mode === "login"
                     ? loginForm.handleSubmit(handleSubmit)
                     : registerForm.handleSubmit(handleSubmit)
                 }
-                className="space-y-6"
+                className="space-y-7"
               >
                 {mode === "login" ? (
                   <>
-                    <div>
-                      <Label className="text-cyan-300 font-rajdhani">
-                        Email or Username
-                      </Label>
-                      <CyberpunkInput
-                        icon={User}
-                        placeholder="Enter your credentials..."
-                        {...loginForm.register("emailOrUsername")}
-                        error={
-                          loginForm.formState.errors.emailOrUsername?.message
-                        }
-                      />
+                    <div className="space-y-2">
+                      <Label>{tr("emailOrUsername")}</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400 w-5 h-5" />
+                        <Input
+                          type="text"
+                          placeholder={tr("emailOrUsernamePlaceholder")}
+                          {...loginForm.register("emailOrUsername")}
+                          aria-invalid={
+                            !!loginForm.formState.errors.emailOrUsername
+                          }
+                          className="pl-10 bg-white/90 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200 placeholder:text-zinc-400 text-base h-12"
+                        />
+                      </div>
+                      {loginForm.formState.errors.emailOrUsername && (
+                        <div className="text-xs text-red-500 mt-1">
+                          {loginForm.formState.errors.emailOrUsername.message}
+                        </div>
+                      )}
                     </div>
-
-                    <div>
-                      <Label className="text-cyan-300 font-rajdhani">
-                        Password
-                      </Label>
-                      <CyberpunkInput
-                        icon={Lock}
-                        type="password"
-                        placeholder="Neural access key..."
-                        {...loginForm.register("password")}
-                        error={loginForm.formState.errors.password?.message}
-                      />
+                    <div className="space-y-2">
+                      <Label>{tr("password")}</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400 w-5 h-5" />
+                        <Input
+                          type="password"
+                          placeholder={tr("passwordPlaceholder")}
+                          {...loginForm.register("password")}
+                          aria-invalid={!!loginForm.formState.errors.password}
+                          className="pl-10 bg-white/90 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-all duration-200 placeholder:text-zinc-400 text-base h-12"
+                        />
+                      </div>
+                      {loginForm.formState.errors.password && (
+                        <div className="text-xs text-red-500 mt-1">
+                          {loginForm.formState.errors.password.message}
+                        </div>
+                      )}
                     </div>
-
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-2 mt-2">
                       <input
                         type="checkbox"
                         id="rememberMe"
-                        className="cyberpunk-checkbox"
+                        className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
                         {...loginForm.register("rememberMe")}
                       />
-                      <Label
-                        htmlFor="rememberMe"
-                        className="text-gray-300 font-rajdhani"
-                      >
-                        Remember neural link
+                      <Label htmlFor="rememberMe" className="text-sm">
+                        {tr("rememberMe")}
                       </Label>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-cyan-300 font-rajdhani">
-                          Username
-                        </Label>
-                        <CyberpunkInput
-                          icon={User}
-                          placeholder="cyber_user"
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label>{tr("username")}</Label>
+                        <Input
+                          type="text"
+                          placeholder={tr("usernamePlaceholder")}
                           {...registerForm.register("username")}
-                          error={
-                            registerForm.formState.errors.username?.message
+                          aria-invalid={
+                            !!registerForm.formState.errors.username
                           }
+                          className="bg-white/90 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200 placeholder:text-zinc-400 text-base h-12"
                         />
+                        {registerForm.formState.errors.username && (
+                          <div className="text-xs text-red-500 mt-1">
+                            {registerForm.formState.errors.username.message}
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <Label className="text-cyan-300 font-rajdhani">
-                          Display Name
-                        </Label>
-                        <CyberpunkInput
-                          icon={Terminal}
-                          placeholder="Neo Anderson"
+                      <div className="space-y-2">
+                        <Label>{tr("displayName")}</Label>
+                        <Input
+                          type="text"
+                          placeholder={tr("displayNamePlaceholder")}
                           {...registerForm.register("displayName")}
-                          error={
-                            registerForm.formState.errors.displayName?.message
+                          aria-invalid={
+                            !!registerForm.formState.errors.displayName
                           }
+                          className="bg-white/90 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-all duration-200 placeholder:text-zinc-400 text-base h-12"
                         />
+                        {registerForm.formState.errors.displayName && (
+                          <div className="text-xs text-red-500 mt-1">
+                            {registerForm.formState.errors.displayName.message}
+                          </div>
+                        )}
                       </div>
                     </div>
-
-                    <div>
-                      <Label className="text-cyan-300 font-rajdhani">
-                        Email
-                      </Label>
-                      <CyberpunkInput
-                        icon={Mail}
+                    <div className="space-y-2">
+                      <Label>{tr("email")}</Label>
+                      <Input
                         type="email"
-                        placeholder="agent@matrix.net"
+                        placeholder={tr("emailPlaceholder")}
                         {...registerForm.register("email")}
-                        error={registerForm.formState.errors.email?.message}
+                        aria-invalid={!!registerForm.formState.errors.email}
+                        className="bg-white/90 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200 placeholder:text-zinc-400 text-base h-12"
                       />
+                      {registerForm.formState.errors.email && (
+                        <div className="text-xs text-red-500 mt-1">
+                          {registerForm.formState.errors.email.message}
+                        </div>
+                      )}
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-cyan-300 font-rajdhani">
-                          Password
-                        </Label>
-                        <CyberpunkInput
-                          icon={Lock}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label>{tr("password")}</Label>
+                        <Input
                           type="password"
-                          placeholder="Neural key..."
+                          placeholder={tr("passwordPlaceholder")}
                           {...registerForm.register("password")}
-                          error={
-                            registerForm.formState.errors.password?.message
+                          aria-invalid={
+                            !!registerForm.formState.errors.password
                           }
+                          className="bg-white/90 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-all duration-200 placeholder:text-zinc-400 text-base h-12"
                         />
+                        {registerForm.formState.errors.password && (
+                          <div className="text-xs text-red-500 mt-1">
+                            {registerForm.formState.errors.password.message}
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <Label className="text-cyan-300 font-rajdhani">
-                          Confirm
-                        </Label>
-                        <CyberpunkInput
-                          icon={Shield}
+                      <div className="space-y-2">
+                        <Label>{tr("confirmPassword")}</Label>
+                        <Input
                           type="password"
-                          placeholder="Verify key..."
+                          placeholder={tr("confirmPasswordPlaceholder")}
                           {...registerForm.register("confirmPassword")}
-                          error={
-                            registerForm.formState.errors.confirmPassword
-                              ?.message
+                          aria-invalid={
+                            !!registerForm.formState.errors.confirmPassword
                           }
+                          className="bg-white/90 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-all duration-200 placeholder:text-zinc-400 text-base h-12"
                         />
+                        {registerForm.formState.errors.confirmPassword && (
+                          <div className="text-xs text-red-500 mt-1">
+                            {
+                              registerForm.formState.errors.confirmPassword
+                                .message
+                            }
+                          </div>
+                        )}
                       </div>
                     </div>
                   </>
                 )}
-
-                {/* Submit Button */}
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
+                <div className="mt-8">
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold py-3 cyberpunk-btn font-rajdhani"
+                    className="w-full h-14 text-lg font-bold bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white rounded-2xl shadow-lg transform-gpu transition-all duration-200 focus:ring-4 focus:ring-blue-300/40 focus:outline-none hover:scale-105 hover:shadow-2xl"
                   >
                     {isLoading ? (
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{
-                          duration: 1,
-                          repeat: Infinity,
-                          ease: "linear",
-                        }}
-                      >
-                        <Cpu className="w-5 h-5" />
-                      </motion.div>
+                      <TypingIndicator
+                        size="sm"
+                        platform="ai"
+                        className="mx-auto"
+                      />
                     ) : (
                       <>
-                        <Zap className="w-5 h-5 mr-2" />
-                        {mode === "login"
-                          ? "Connect to Matrix"
-                          : "Initialize Neural Link"}
+                        {mode === "login" ? tr("loginBtn") : tr("registerBtn")}
                       </>
                     )}
                   </Button>
-                </motion.div>
-
-                {/* Switch Mode */}
-                <div className="text-center">
+                </div>
+                <div className="text-center mt-6">
                   <button
                     type="button"
-                    onClick={switchMode}
-                    className="text-cyan-400 hover:text-cyan-300 transition-colors font-rajdhani"
+                    onClick={() =>
+                      setMode(mode === "login" ? "register" : "login")
+                    }
+                    className="text-blue-500 hover:underline text-base font-medium"
                   >
-                    {mode === "login" ? (
-                      <>
-                        Need neural initialization?{" "}
-                        <span className="underline">Register</span>
-                      </>
-                    ) : (
-                      <>
-                        Already connected?{" "}
-                        <span className="underline">Login</span>
-                      </>
-                    )}
+                    {mode === "login" ? tr("needAccount") : tr("haveAccount")}
                   </button>
                 </div>
               </form>
             </CardContent>
-          </HolographicCard>
-        </motion.div>
+          </Card>
+        </div>
       </motion.div>
     </AnimatePresence>
   );

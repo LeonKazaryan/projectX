@@ -439,6 +439,12 @@
 - Send WhatsApp messages fixed
 - Nginx introduced
 
-# 0.8.1a
+## 0.8.1a
 
 - Logs added to fix Telegram Code issue
+
+# 0.8.2
+
+- Finally deleted Cyberpunk UI
+- New Registration & Login UI/UX
+- Now password needs only 6 symbols and no speciall characters needed for registration

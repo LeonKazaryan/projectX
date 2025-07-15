@@ -48,25 +48,19 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """User creation model"""
-    password: str = Field(..., min_length=8, max_length=128)
+    password: str = Field(..., min_length=6, max_length=128)
     confirm_password: str
-    
+
     @validator('confirm_password')
     def passwords_match(cls, v, values):
         if 'password' in values and v != values['password']:
             raise ValueError('Passwords do not match')
         return v
-    
+
     @validator('password')
     def validate_password(cls, v):
-        if len(v) < 8:
-            raise ValueError('Password must be at least 8 characters long')
-        if not any(c.isupper() for c in v):
-            raise ValueError('Password must contain at least one uppercase letter')
-        if not any(c.islower() for c in v):
-            raise ValueError('Password must contain at least one lowercase letter')
-        if not any(c.isdigit() for c in v):
-            raise ValueError('Password must contain at least one digit')
+        if len(v) < 6:
+            raise ValueError('Password must be at least 6 characters long')
         return v
 
 
