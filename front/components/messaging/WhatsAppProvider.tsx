@@ -209,7 +209,7 @@ export class WhatsAppProvider implements IMessagingProvider {
         body: JSON.stringify({
           sessionId: this.sessionId,
           chatId: chatId,
-          message: message,
+          text: message, // исправлено с 'message' на 'text'
         }),
       });
 
