@@ -1,48 +1,64 @@
-version: '3.8'
+version: '3.9'
 
 services:
-  # PostgreSQL Database
-  chathut_db:
-    image: postgres:15-alpine
-    container_name: chathut_postgres
+  backend:
+    build: ./back
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: chathut
-      POSTGRES_USER: chathut_user
-      POSTGRES_PASSWORD: chathut_pass_dev_2024
-      POSTGRES_HOST_AUTH_METHOD: md5
+    env_file: .env.prod
     ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./back/database/init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - chathut_network
-
-  # pgAdmin for database management
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: chathut_pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@chathut.dev
-      PGADMIN_DEFAULT_PASSWORD: admin123
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    ports:
-      - "8080:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - "8000:8000"
     depends_on:
-      - chathut_db
+      - whatsapp
+
+  whatsapp:
+    build: ./back/whatsapp-service
+    restart: unless-stopped
+    env_file: .env.prod
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env.prod
+    ports:
+      - "5173:80"
+
+    umami:
+      image: ghcr.io/umami-software/umami:postgresql-latest
+      container_name: chathut_umami
+      restart: unless-stopped
+      depends_on:
+        - umami_db
+      environment:
+        DATABASE_URL: postgresql://umami:umami@umami_db:5432/umami
+        NODE_ENV: production
+        HASH_SALT: ae73fbd3b3a243c194dcef0a5c3dd9fc
+      ports:
+        - "3310:3000"
+      networks:
+        - chathut_network
+
+
+
+  umami_db:
+    image: postgres:15-alpine
+    container_name: chathut_umami_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: umami
+    volumes:
+      - umami_db_data:/var/lib/postgresql/data
     networks:
       - chathut_network
 
 volumes:
-  postgres_data:
-    driver: local
-  pgadmin_data:
-    driver: local
+  umami_db_data:
 
 networks:
   chathut_network:
-    driver: bridge 
+    driver: bridge

@@ -199,3 +199,35 @@
 2025/07/15-21:00:05.036 2a127 compacted to: files[ 0 0 1 0 0 0 0 ]
 2025/07/15-21:00:05.038 2a127 Delete type=2 #58
 2025/07/15-21:00:05.039 2a127 Delete type=2 #56
+2025/07/15-21:33:13.395 1bc4b Level-0 table #61: started
+2025/07/15-21:33:13.473 1bc4b Level-0 table #61: 944460 bytes OK
+2025/07/15-21:33:13.485 1bc4b Delete type=0 #57
+2025/07/15-21:35:23.478 18c3b Compacting 1@1 + 1@2 files
+2025/07/15-21:35:23.595 18c3b Generated table #62@1: 23516 keys, 3148112 bytes
+2025/07/15-21:35:23.601 18c3b Generated table #63@1: 1828 keys, 49579 bytes
+2025/07/15-21:35:23.601 18c3b Compacted 1@1 + 1@2 files => 3197691 bytes
+2025/07/15-21:35:23.608 18c3b compacted to: files[ 0 0 2 0 0 0 0 ]
+2025/07/15-21:35:23.609 18c3b Delete type=2 #61
+2025/07/15-21:35:23.609 18c3b Delete type=2 #59
+2025/07/15-22:06:32.399 a633 Level-0 table #65: started
+2025/07/15-22:06:32.746 a633 Level-0 table #65: 963169 bytes OK
+2025/07/15-22:06:32.797 a633 Delete type=0 #60
+2025/07/15-22:07:14.420 21793 Compacting 1@1 + 2@2 files
+2025/07/15-22:07:14.820 21793 Generated table #66@1: 24332 keys, 3111391 bytes
+2025/07/15-22:07:15.121 21793 Generated table #67@1: 1887 keys, 485119 bytes
+2025/07/15-22:07:15.124 21793 Compacted 1@1 + 2@2 files => 3596510 bytes
+2025/07/15-22:07:15.445 21793 compacted to: files[ 0 0 2 0 0 0 0 ]
+2025/07/15-22:07:15.460 21793 Delete type=2 #62
+2025/07/15-22:07:15.460 21793 Delete type=2 #63
+2025/07/15-22:07:15.460 21793 Delete type=2 #65
+2025/07/15-22:37:30.522 191b7 Level-0 table #69: started
+2025/07/15-22:37:30.563 191b7 Level-0 table #69: 948753 bytes OK
+2025/07/15-22:37:30.569 191b7 Delete type=0 #64
+2025/07/15-22:40:11.302 191b7 Compacting 1@1 + 2@2 files
+2025/07/15-22:40:11.460 191b7 Generated table #70@1: 25271 keys, 3116461 bytes
+2025/07/15-22:40:11.497 191b7 Generated table #71@1: 1940 keys, 833092 bytes
+2025/07/15-22:40:11.497 191b7 Compacted 1@1 + 2@2 files => 3949553 bytes
+2025/07/15-22:40:11.509 191b7 compacted to: files[ 0 0 2 0 0 0 0 ]
+2025/07/15-22:40:11.510 191b7 Delete type=2 #67
+2025/07/15-22:40:11.510 191b7 Delete type=2 #66
+2025/07/15-22:40:11.510 191b7 Delete type=2 #69

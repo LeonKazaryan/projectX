@@ -1,4 +1,5 @@
 version: '3.9'
+
 services:
   backend:
     build: ./back
@@ -23,4 +24,39 @@ services:
     restart: unless-stopped
     env_file: .env.prod
     ports:
-      - "5173:80" 
+      - "5173:80"
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: chathut_umami
+    restart: unless-stopped
+    depends_on:
+      - umami_db
+    environment:
+      DATABASE_URL: postgresql://umami:umami@umami_db:5432/umami
+      NODE_ENV: production
+      HASH_SALT: ae73fbd3b3a243c194dcef0a5c3dd9fc
+    ports:
+      - "3010:3000"
+    networks:
+      - chathut_network
+
+  umami_db:
+    image: postgres:15-alpine
+    container_name: chathut_umami_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: umami
+    volumes:
+      - umami_db_data:/var/lib/postgresql/data
+    networks:
+      - chathut_network
+
+volumes:
+  umami_db_data:
+
+networks:
+  chathut_network:
+    driver: bridge

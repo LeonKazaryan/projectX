@@ -448,3 +448,7 @@
 - Finally deleted Cyberpunk UI
 - New Registration & Login UI/UX
 - Now password needs only 6 symbols and no speciall characters needed for registration
+
+# 0.8.3
+
+- Umami web-analysis added
