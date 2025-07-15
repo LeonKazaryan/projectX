@@ -30,8 +30,10 @@ async def send_code(
 ):
     """Initiates Telegram login by sending a code to the user's phone."""
     session_id = str(uuid.uuid4())
+    print(f"[TELEGRAM_AUTH] Trying to send code to phone: {request.phone}, session_id: {session_id}")
     try:
         result = await manager.authenticate_with_phone(request.phone, session_id)
+        print(f"[TELEGRAM_AUTH] Telegram send_code result: {result}")
         if result["success"]:
             return {
                 "success": True, 
@@ -39,8 +41,10 @@ async def send_code(
                 "phone_code_hash": result["phone_code_hash"]
             }
         else:
+            print(f"[TELEGRAM_AUTH] Error from Telegram: {result.get('error')}")
             raise HTTPException(status_code=400, detail=result.get("error", "Failed to send code"))
     except Exception as e:
+        print(f"[TELEGRAM_AUTH] Exception in send_code: {e}")
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
 @telegram_auth_router.post("/verify-code")

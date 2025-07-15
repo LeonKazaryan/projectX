@@ -438,3 +438,7 @@
 - Whatsapp adapted for the production
 - Send WhatsApp messages fixed
 - Nginx introduced
+
+# 0.8.1a
+
+- Logs added to fix Telegram Code issue
