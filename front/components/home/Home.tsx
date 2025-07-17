@@ -191,17 +191,18 @@ const Home = () => {
               whileHover={{ scale: 1.05 }}
               className="flex items-center space-x-3"
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <HomeIcon className="w-5 h-5 text-white" />
-              </div>
+              <img
+                src="/chahut.ico"
+                alt="chathut logo"
+                className="w-10 h-10"
+                style={{ borderRadius: "12px" }}
+              />
               <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 chathut
               </span>
             </motion.div>
 
             <div className="flex items-center space-x-4">
-              <LanguageSwitcher variant="nav" />
-
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -228,6 +229,8 @@ const Home = () => {
                   {isAuthenticated ? t("nav.openHut") : t("nav.startChatting")}
                 </Button>
               </motion.div>
+
+              <LanguageSwitcher variant="nav" />
             </div>
           </div>
         </motion.nav>

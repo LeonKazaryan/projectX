@@ -74,6 +74,17 @@ export const Nav: React.FC<NavProps> = ({ onSettingsClick }) => {
         {/* Left side - Brand and Platform Switcher */}
         <div className="nav-left">
           <div className="brand-section" onClick={() => navigate("/")}>
+            <img
+              src="/chahut.ico"
+              alt="chathut logo"
+              className="brand-icon"
+              style={{
+                width: 28,
+                height: 28,
+                marginRight: 8,
+                verticalAlign: "middle",
+              }}
+            />
             <span className="brand-text">chathut</span>
           </div>
 

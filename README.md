@@ -452,3 +452,11 @@
 # 0.8.3
 
 - Umami web-analysis added
+
+# 0.8.4
+
+- Logo added
+- Language button changed
+- Language button location changed (right side)
+- Enhanced interface of ChatList and Messages
+- Small Animations added to the messanger client

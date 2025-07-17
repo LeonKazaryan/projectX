@@ -697,92 +697,73 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 overflow-hidden relative bg-gradient-to-br from-blue-50/60 via-white/80 to-purple-100/60 dark:from-gray-900/80 dark:via-gray-900/90 dark:to-blue-950/80 backdrop-blur-md transition-colors duration-500">
         <div
           ref={scrollContainerRef}
-          className="h-full px-4 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
+          className="h-full px-4 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-200/60 dark:scrollbar-thumb-blue-900/40 scrollbar-track-transparent"
           onScroll={handleScroll}
         >
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center space-y-4">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-                <p className="text-sm text-muted-foreground">
-                  Загрузка сообщений...
-                </p>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center space-y-4">
-                <AlertCircle className="h-8 w-8 text-destructive mx-auto" />
-                <p className="text-sm text-muted-foreground">{error}</p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex justify-center mb-4">
-                {messages.length > 0 && (
-                  <Button
-                    onClick={fetchMoreMessages}
-                    disabled={isHistoryLoading}
-                    variant="outline"
-                    size="sm"
-                  >
-                    {isHistoryLoading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : null}
-                    Загрузить еще
-                  </Button>
-                )}
-              </div>
-              {messages.map((message) => (
+          <AnimatePresence initial={false}>
+            {messages.map((message) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 30, scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className={`flex mb-2 ${
+                  message.is_outgoing ? "justify-end" : "justify-start"
+                }`}
+              >
                 <div
-                  key={message.id}
-                  className={`flex ${
-                    message.is_outgoing ? "justify-end" : "justify-start"
+                  className={`group max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-md transition-all duration-300 border border-transparent ${
+                    message.is_outgoing
+                      ? "bg-gradient-to-br from-blue-400/90 to-blue-600/90 text-white shadow-blue-200/40 dark:shadow-blue-900/30"
+                      : message.sender_name === "AI"
+                      ? "bg-gradient-to-br from-orange-100/90 to-orange-200/90 text-orange-900 border-orange-300/60 shadow-orange-200/40 dark:from-orange-900/80 dark:to-orange-800/80 dark:text-orange-100 dark:border-orange-700/60"
+                      : "bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-gray-100 border-gray-200/60 dark:border-gray-700/60 shadow-gray-200/30 dark:shadow-gray-900/20"
                   }`}
+                  style={{
+                    boxShadow: message.is_outgoing
+                      ? "0 4px 24px 0 rgba(0,136,204,0.10)"
+                      : message.sender_name === "AI"
+                      ? "0 4px 24px 0 rgba(255,107,53,0.10)"
+                      : "0 2px 12px 0 rgba(80,80,120,0.08)",
+                    backdropFilter: "blur(2px)",
+                  }}
                 >
-                  <div
-                    className={`group max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-                      message.is_outgoing
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-foreground"
-                    }`}
-                  >
-                    <div className="space-y-1">
-                      {!message.is_outgoing && message.sender_name && (
-                        <p className="text-xs font-medium text-primary">
-                          {message.sender_name}
-                        </p>
-                      )}
-                      <p className="text-sm whitespace-pre-wrap break-words">
-                        {message.text}
+                  <div className="space-y-1">
+                    {!message.is_outgoing && message.sender_name && (
+                      <p className="text-xs font-semibold text-blue-500 dark:text-blue-300 mb-1">
+                        {message.sender_name}
                       </p>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs opacity-70">
-                          {formatTime(message.date)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-                          onClick={() => copyMessage(message.text, message.id)}
-                        >
-                          {copiedMessageId === message.id ? (
-                            <Check className="h-3 w-3" />
-                          ) : (
-                            <Copy className="h-3 w-3" />
-                          )}
-                        </Button>
-                      </div>
+                    )}
+                    <p className="text-sm whitespace-pre-wrap break-words">
+                      {message.text}
+                    </p>
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <span className="text-xs opacity-70">
+                        {formatTime(message.date)}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                        onClick={() => copyMessage(message.text, message.id)}
+                      >
+                        {copiedMessageId === message.id ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
                     </div>
                   </div>
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          <div ref={messagesEndRef} />
         </div>
 
         <AnimatePresence>
@@ -929,49 +910,19 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
       )}
 
       {/* Input */}
-      <div className="flex-shrink-0 p-4 border-t border-border bg-card">
+      <div className="flex-shrink-0 p-4 border-t border-border bg-gradient-to-br from-white/80 to-blue-50/60 dark:from-gray-900/80 dark:to-blue-950/80 backdrop-blur-md">
         <div className="flex items-end gap-2">
-          {/* Manual AI Suggestion Button - only show when AI is enabled */}
           {aiSettings.enabled && (
             <Button
               variant="outline"
               size="icon"
-              onClick={getManualAISuggestion}
-              className="flex-shrink-0 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 relative group"
-              title="Получить предложение AI"
-              disabled={aiSuggestionLoading}
+              onClick={restoreAISuggestion}
+              className="flex-shrink-0 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 bg-white/60 dark:bg-gray-900/60 border-blue-200 dark:border-blue-800 shadow-md"
+              title="Показать предложение AI"
             >
-              {aiSuggestionLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Bot className="h-4 w-4" />
-              )}
-              <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                {aiSettings.auto_suggest_on_incoming
-                  ? "Ручной запрос AI"
-                  : "Спросить AI"}
-              </span>
+              <Sparkles className="h-4 w-4" />
             </Button>
           )}
-
-          {/* Restore AI Button - only show when AI is enabled */}
-          {aiSettings.enabled &&
-            (hasSuggestion || suggestionDismissed) &&
-            !showAiSuggestion &&
-            !aiSuggestionLoading && (
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={restoreAISuggestion}
-                className="flex-shrink-0 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 relative group"
-                title="Показать предложение AI"
-              >
-                <Sparkles className="h-4 w-4" />
-                <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                  F1 / Ctrl+Space
-                </span>
-              </Button>
-            )}
           <div className="flex-1">
             <Textarea
               ref={textareaRef}
@@ -979,7 +930,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
               onChange={handleTextareaChange}
               onKeyDown={handleKeyPress}
               placeholder="Написать сообщение..."
-              className="min-h-[40px] max-h-[150px] resize-none"
+              className="min-h-[40px] max-h-[150px] resize-none rounded-xl bg-white/70 dark:bg-gray-900/70 shadow-inner border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-400/40 transition-all"
               disabled={sendingMessage}
             />
           </div>
@@ -987,7 +938,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
             onClick={sendMessage}
             disabled={!newMessage.trim() || sendingMessage}
             size="icon"
-            className="flex-shrink-0"
+            className="flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white shadow-lg transform-gpu transition-all duration-200"
           >
             {sendingMessage ? (
               <Loader2 className="h-4 w-4 animate-spin" />

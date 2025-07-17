@@ -11,6 +11,7 @@ import { Input } from "../../../src/components/ui/input";
 import { Loader2, RotateCcw, Search } from "lucide-react";
 import { cn } from "../../../src/lib/utils";
 import { API_BASE_URL } from "../../services/authService";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Dialog {
   id: number;
@@ -335,14 +336,16 @@ const ChatList: React.FC<ChatListProps & { onSessionExpired?: () => void }> = ({
   }
 
   return (
-    <div className="flex flex-col h-full bg-card border-r">
-      <div className="p-4 border-b">
-        <h2 className="text-xl font-semibold tracking-tight">Чаты</h2>
+    <div className="flex flex-col h-full bg-gradient-to-br from-blue-50/60 via-white/80 to-purple-100/60 dark:from-gray-900/80 dark:via-gray-900/90 dark:to-blue-950/80 border-r backdrop-blur-md transition-colors duration-500">
+      <div className="p-4 border-b bg-white/70 dark:bg-gray-900/70 backdrop-blur-md">
+        <h2 className="text-xl font-semibold tracking-tight text-blue-600 dark:text-blue-300">
+          Чаты
+        </h2>
         <div className="relative mt-2">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-400 dark:text-blue-300" />
           <Input
             placeholder="Поиск..."
-            className="pl-8"
+            className="pl-8 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-blue-100 dark:border-blue-800 focus:ring-2 focus:ring-blue-400/40 transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -351,92 +354,63 @@ const ChatList: React.FC<ChatListProps & { onSessionExpired?: () => void }> = ({
       <div className="flex-1 overflow-y-auto">
         <ScrollArea className="h-full">
           <div className="p-2 space-y-1">
-            {loading ? (
-              <div className="flex justify-center items-center h-full p-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : error ? (
-              <div className="p-4 text-center text-sm text-destructive">
-                <Loader2 className="mx-auto h-6 w-6 mb-2" />
-                <p>{error}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={fetchDialogs}
-                  className="mt-2"
+            <AnimatePresence initial={false}>
+              {loading ? (
+                <motion.div
+                  key="loader"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex justify-center items-center h-full p-8"
                 >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Повторить
-                </Button>
-              </div>
-            ) : (
-              filteredDialogs.map((dialog) => (
-                <button
-                  key={dialog.id}
-                  onClick={() => onChatSelect(dialog.id, dialog.name)}
-                  className={cn(
-                    "flex items-start w-full text-left p-2 rounded-lg transition-colors",
-                    selectedChatId === dialog.id
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted"
-                  )}
-                >
-                  <Avatar className="h-10 w-10 mr-3">
-                    <AvatarImage src={dialog.photo} alt={dialog.name} />
-                    <AvatarFallback
-                      className={cn(
-                        "text-sm",
-                        selectedChatId === dialog.id &&
-                          "bg-primary-foreground text-primary"
-                      )}
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+                </motion.div>
+              ) : (
+                filteredDialogs.map((dialog) => (
+                  <motion.div
+                    key={dialog.id}
+                    initial={{ opacity: 0, x: -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -30 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  >
+                    <div
+                      className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group shadow-sm hover:bg-blue-100/60 dark:hover:bg-blue-900/30 ${
+                        selectedChatId === dialog.id
+                          ? "bg-blue-200/80 dark:bg-blue-900/60 border border-blue-400/40"
+                          : ""
+                      }`}
+                      onClick={() => onChatSelect(dialog.id, dialog.name)}
                     >
-                      {dialog.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 overflow-hidden">
-                    <div className="flex justify-between items-center">
-                      <p className="font-semibold truncate pr-2">
-                        {dialog.name}
-                      </p>
-                      <time
-                        className={cn(
-                          "text-xs",
-                          selectedChatId === dialog.id
-                            ? "text-primary-foreground/80"
-                            : "text-muted-foreground"
+                      <Avatar className="h-10 w-10 shadow-md">
+                        {dialog.photo ? (
+                          <AvatarImage src={dialog.photo} alt={dialog.name} />
+                        ) : (
+                          <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-400 text-white font-bold">
+                            {dialog.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
                         )}
-                      >
-                        {formatTime(dialog.last_message?.date)}
-                      </time>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-blue-900 dark:text-blue-200 truncate">
+                            {dialog.name}
+                          </span>
+                          {dialog.unread_count > 0 && (
+                            <Badge className="ml-2 bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs animate-pulse">
+                              {dialog.unread_count}
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {dialog.last_message?.text}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-end">
-                      <p
-                        className={cn(
-                          "text-sm truncate pr-2",
-                          selectedChatId === dialog.id
-                            ? "text-primary-foreground/90"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {dialog.last_message?.text}
-                      </p>
-                      {dialog.unread_count > 0 && (
-                        <Badge
-                          variant={
-                            selectedChatId === dialog.id
-                              ? "secondary"
-                              : "default"
-                          }
-                          className="h-5 px-1.5 text-xs"
-                        >
-                          {dialog.unread_count}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))
-            )}
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
           </div>
         </ScrollArea>
       </div>
