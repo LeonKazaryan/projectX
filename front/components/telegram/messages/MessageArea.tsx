@@ -95,7 +95,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
 
   setIsAIPanelOpen,
 }) => {
-  const { aiSettings } = useAISettings(sessionId);
+  const { aiSettings, loading: aiSettingsLoading } = useAISettings(sessionId);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);

@@ -484,4 +484,4 @@
 
 ## 0.8.5b
 
-- TypeScript compilations fix
+- TypeScript compilations fix: Removed unused imports and fixed variable naming conflicts

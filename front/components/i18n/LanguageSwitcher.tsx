@@ -1,7 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "./LanguageContext";
-import type { Language } from "./LanguageContext";
 
 interface LanguageSwitcherProps {
   className?: string;
