@@ -14,11 +14,6 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
 }) => {
   const { language, setLanguage } = useLanguage();
 
-  const languages = [
-    { code: "ru" as Language, label: "RU", flag: "🇷🇺" },
-    { code: "en" as Language, label: "EN", flag: "🇺🇸" },
-  ];
-
   const toggleLanguage = () => {
     const newLang = language === "ru" ? "en" : "ru";
     setLanguage(newLang);

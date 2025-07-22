@@ -92,7 +92,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   chatId,
   chatName,
   userId,
-  isAIPanelOpen = false,
+
   setIsAIPanelOpen,
 }) => {
   const { aiSettings } = useAISettings(sessionId);
@@ -101,6 +101,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const [sendingMessage, setSendingMessage] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
+
   const [connectionStatus, setConnectionStatus] = useState<
     "connected" | "connecting" | "disconnected"
   >("disconnected");
@@ -114,7 +115,6 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const [ragEnabled, setRagEnabled] = useState(true);
   const [ragEnhanced, setRagEnhanced] = useState(false);
   const [similarContext, setSimilarContext] = useState<string[]>([]);
-  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
 
   const wsRef = useRef<WebSocket | null>(null);
