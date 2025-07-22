@@ -2,7 +2,6 @@ import React from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "./LanguageContext";
 import type { Language } from "./LanguageContext";
-import { Globe } from "lucide-react";
 
 interface LanguageSwitcherProps {
   className?: string;
@@ -19,8 +18,6 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
     { code: "ru" as Language, label: "RU", flag: "🇷🇺" },
     { code: "en" as Language, label: "EN", flag: "🇺🇸" },
   ];
-
-  const currentLang = languages.find((lang) => lang.code === language);
 
   const toggleLanguage = () => {
     const newLang = language === "ru" ? "en" : "ru";

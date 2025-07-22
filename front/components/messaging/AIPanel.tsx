@@ -7,7 +7,6 @@ import {
   Bot,
   Send,
   X,
-  Minimize2,
   MessageSquare,
   Loader2,
   Sparkles,

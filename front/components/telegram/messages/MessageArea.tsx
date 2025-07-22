@@ -9,7 +9,6 @@ import {
   Bot,
   MessageCircle,
   Loader2,
-  AlertCircle,
   Copy,
   Check,
   Sparkles,
@@ -99,8 +98,8 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const { aiSettings } = useAISettings(sessionId);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [loading, setLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [connectionStatus, setConnectionStatus] = useState<
     "connected" | "connecting" | "disconnected"
@@ -366,51 +365,6 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
       setError("Ошибка соединения с сервером");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchMoreMessages = async () => {
-    if (!chatId || !sessionId || messages.length === 0 || isHistoryLoading)
-      return;
-
-    setIsHistoryLoading(true);
-    const scrollContainer = scrollContainerRef.current;
-    if (!scrollContainer) return;
-
-    // Preserve scroll position
-    const oldScrollHeight = scrollContainer.scrollHeight;
-    const oldScrollTop = scrollContainer.scrollTop;
-
-    try {
-      const oldestMessageId = messages[0].id;
-      const response = await fetch(
-        `${API_BASE_URL}/messages/history?session_id=${sessionId}&dialog_id=${chatId}&limit=100&offset_id=${oldestMessageId}`
-      );
-      const data = await response.json();
-
-      if (data.success && data.messages.length > 0) {
-        const uniqueNewMessages = data.messages.filter(
-          (newMsg: Message) =>
-            !messages.some((existingMsg) => existingMsg.id === newMsg.id)
-        );
-
-        setMessages((prev) =>
-          [...uniqueNewMessages, ...prev].sort((a, b) => a.id - b.id)
-        );
-
-        // Restore scroll position after DOM update
-        setTimeout(() => {
-          if (scrollContainerRef.current) {
-            const newScrollHeight = scrollContainerRef.current.scrollHeight;
-            scrollContainerRef.current.scrollTop =
-              newScrollHeight - oldScrollHeight + oldScrollTop;
-          }
-        }, 0);
-      }
-    } catch (error) {
-      console.error("Failed to fetch more messages:", error);
-    } finally {
-      setIsHistoryLoading(false);
     }
   };
 

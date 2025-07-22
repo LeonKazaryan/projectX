@@ -474,4 +474,10 @@
 - Cursor-style AI Panel: AI panel now slides in from the right and pushes main content to the left instead of overlapping
 - Layout Restructure: Moved AI panel to parent components for proper layout control
 - Profile Layout Fix: Fixed bottom control panel going off-screen with ultra-compact spacing for perfect 100% viewport fit
-  -\*Login Fix: Fixed frontend configuration to connect to local backend instead of production
+- Build Fix: Removed unused imports and variables to fix TypeScript compilation errors
+- Login Fix: Fixed frontend configuration to connect to local backend instead of production
+
+## 0.8.5a
+
+- Deleted some of the leftover code
+- Some of the useless functions deleted

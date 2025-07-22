@@ -9,7 +9,7 @@ import {
 } from "../../../src/components/ui/avatar";
 import { Input } from "../../../src/components/ui/input";
 import { Loader2, RotateCcw, Search } from "lucide-react";
-import { cn } from "../../../src/lib/utils";
+
 import { API_BASE_URL } from "../../services/authService";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -227,31 +227,6 @@ const ChatList: React.FC<ChatListProps & { onSessionExpired?: () => void }> = ({
       setError("Ошибка соединения с сервером");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const formatTime = (dateString: string | null) => {
-    if (!dateString) return "";
-
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) {
-      return date.toLocaleTimeString("ru-RU", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } else if (diffDays === 1) {
-      return "вчера";
-    } else if (diffDays < 7) {
-      return date.toLocaleDateString("ru-RU", { weekday: "short" });
-    } else {
-      return date.toLocaleDateString("ru-RU", {
-        day: "2-digit",
-        month: "2-digit",
-      });
     }
   };
 

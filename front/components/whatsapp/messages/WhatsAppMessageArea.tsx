@@ -65,7 +65,7 @@ const useAISettings = (sessionId: string) => {
 const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   chatId,
   chatName,
-  isAIPanelOpen = false,
+
   setIsAIPanelOpen,
 }) => {
   const {
