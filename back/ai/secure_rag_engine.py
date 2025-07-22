@@ -99,21 +99,113 @@ class SecureTelegramRAGEngine:
         self._msg_counters: Dict[str, int] = {}
     
     async def _ensure_collections_exist(self):
-        """Ensure required Qdrant collections exist"""
+        """Create collections if they don't exist"""
+        if not self.qdrant_client or self._collections_initialized:
+            return
+        
         try:
-            for name in self.collections.values():
-                if not self.qdrant_client.collection_exists(collection_name=name):
-                    self.qdrant_client.create_collection(
-                        collection_name=name,
+            for collection_type, collection_name in self.collections.items():
+                try:
+                    await asyncio.to_thread(
+                        self.qdrant_client.get_collection, collection_name
+                    )
+                    logger.info(f"Collection {collection_name} already exists")
+                    
+                    # Check if indexes exist for messages collection
+                    if collection_type == "messages":
+                        await self._ensure_message_indexes(collection_name)
+                        
+                except Exception:
+                    # Collection doesn't exist, create it
+                    await asyncio.to_thread(
+                        self.qdrant_client.create_collection,
+                        collection_name=collection_name,
                         vectors_config=models.VectorParams(
                             size=self.embedding_dimension,
-                            distance=models.Distance.COSINE,
+                            distance=models.Distance.COSINE
                         )
                     )
-                    # Create payload indexes for faster filtering
-                    self._ensure_payload_indexes(name)
+                    
+                    # Create indexes for faster filtering
+                    if collection_type == "messages":
+                        await self._create_message_indexes(collection_name)
+                    
+                    logger.info(f"Created collection {collection_name} with indexes")
+            
+            self._collections_initialized = True
+            logger.info("All collections and indexes are ready")
+            
         except Exception as e:
-            logger.error(f"Error creating Qdrant collections: {e}")
+            logger.error(f"Error ensuring collections exist: {e}")
+            self._collections_initialized = False
+    
+    async def _ensure_message_indexes(self, collection_name: str):
+        """Ensure all required indexes exist for messages collection"""
+        try:
+            # Check existing indexes using the correct API
+            collection_info = await asyncio.to_thread(
+                self.qdrant_client.get_collection, collection_name
+            )
+            
+            # Try different ways to get indexes info
+            existing_indexes = set()
+            if hasattr(collection_info, 'payload_indexes'):
+                existing_indexes = {idx.field_name for idx in collection_info.payload_indexes}
+            elif hasattr(collection_info, 'payload_index'):
+                existing_indexes = {idx.field_name for idx in collection_info.payload_index}
+            else:
+                # If we can't get indexes info, assume they don't exist and create them
+                logger.warning(f"Could not get indexes info for {collection_name}, creating all indexes")
+                await self._create_message_indexes(collection_name)
+                return
+            
+            # Create missing indexes
+            required_indexes = {
+                "session_id": models.PayloadSchemaType.KEYWORD,
+                "chat_id": models.PayloadSchemaType.INTEGER,
+                "day_bucket": models.PayloadSchemaType.KEYWORD,
+                "is_outgoing": models.PayloadSchemaType.BOOL
+            }
+            
+            for field_name, field_type in required_indexes.items():
+                if field_name not in existing_indexes:
+                    await asyncio.to_thread(
+                        self.qdrant_client.create_payload_index,
+                        collection_name=collection_name,
+                        field_name=field_name,
+                        field_schema=field_type
+                    )
+                    logger.info(f"Created index for {field_name} in {collection_name}")
+                    
+        except Exception as e:
+            logger.warning(f"Could not ensure indexes for {collection_name}: {e}")
+            # Try to create all indexes as fallback
+            try:
+                await self._create_message_indexes(collection_name)
+            except Exception as e2:
+                logger.error(f"Failed to create indexes as fallback: {e2}")
+    
+    async def _create_message_indexes(self, collection_name: str):
+        """Create all required indexes for messages collection"""
+        try:
+            indexes = [
+                ("session_id", models.PayloadSchemaType.KEYWORD),
+                ("chat_id", models.PayloadSchemaType.INTEGER),
+                ("day_bucket", models.PayloadSchemaType.KEYWORD),
+                ("is_outgoing", models.PayloadSchemaType.BOOL)
+            ]
+            
+            for field_name, field_type in indexes:
+                await asyncio.to_thread(
+                    self.qdrant_client.create_payload_index,
+                    collection_name=collection_name,
+                    field_name=field_name,
+                    field_schema=field_type
+                )
+                logger.info(f"Created index for {field_name} in {collection_name}")
+                
+        except Exception as e:
+            logger.error(f"Error creating indexes for {collection_name}: {e}")
 
     def _ensure_payload_indexes(self, collection_name: str):
         """Create payload indexes for fields used in filters if they are missing."""
@@ -149,11 +241,18 @@ class SecureTelegramRAGEngine:
         return str(uuid.UUID(bytes=hash_bytes))
     
     def _hash_text_content(self, text: str) -> str:
-        """Create hash of text content for deduplication without storing raw text"""
+        """Generate SHA-256 hash of text content for deduplication"""
         return hashlib.sha256(text.encode()).hexdigest()
     
-    async def _create_embedding(self, text: str) -> Optional[List[float]]:
-        """Create embedding using Gemini API"""
+    def _generate_point_id(self, session_id: str, chat_id: int, message_id: int) -> str:
+        """Generate unique point ID for Qdrant using UUID"""
+        import uuid
+        combined = f"{session_id}_{chat_id}_{message_id}"
+        # Generate deterministic UUID based on the combined string
+        return str(uuid.uuid5(uuid.NAMESPACE_DNS, combined))
+    
+    async def _generate_embedding(self, text: str) -> Optional[List[float]]:
+        """Generate embedding for text using Gemini"""
         if not self.ai_client or not text.strip():
             return None
         
@@ -162,113 +261,137 @@ class SecureTelegramRAGEngine:
             if len(text) > self.max_text_length:
                 text = text[:self.max_text_length]
             
-            embedding = await self.ai_client.create_embedding(text)
-            if embedding:
-                logger.debug(f"Created Gemini embedding: {len(embedding)} dimensions")
+            # Use Gemini embeddings directly
+            import google.generativeai as genai
+            
+            result = genai.embed_content(
+                model=self.embedding_model,
+                content=text,
+                task_type="semantic_similarity"
+            )
+            
+            if result and 'embedding' in result:
+                return result['embedding']
             else:
-                logger.warning("Failed to create embedding with Gemini")
-            
-            return embedding
-            
+                logger.warning(f"No embedding returned for text: {text[:50]}...")
+                return None
+                
         except Exception as e:
-            logger.error(f"Error creating Gemini embedding: {e}")
+            logger.error(f"Error creating embedding with Gemini: {e}")
             return None
     
     def _extract_safe_metadata(self, message: Dict) -> Dict:
-        """Extract only safe metadata, excluding raw message text"""
-        # Determine original timestamp if provided
-        original_ts = message.get("timestamp") or message.get("date") or datetime.now().isoformat()
-        if isinstance(original_ts, (int, float)):
-            # if unix ts
-            original_ts = datetime.fromtimestamp(float(original_ts)).isoformat()
-
-        # Simple day bucket (YYYY-MM-DD) for fast filtering
+        """Extract safe metadata from message for storage"""
         try:
-            day_bucket = original_ts[:10]
-        except Exception:
-            day_bucket = datetime.now().strftime("%Y-%m-%d")
+            # Parse date - handle different formats
+            date_str = message.get("date", "")
+            msg_date = datetime.now()  # Default fallback
+            
+            if date_str:
+                if "+" in date_str and "T" not in date_str:
+                    # Custom format like "41+00:00"
+                    try:
+                        minutes, time_part = date_str.split("+")
+                        minutes_ago = int(minutes)
+                        msg_date = datetime.now() - timedelta(minutes=minutes_ago)
+                    except (ValueError, IndexError):
+                        # If parsing fails, use current time
+                        msg_date = datetime.now()
+                elif "T" in date_str:
+                    # ISO format like "2025-07-21T16:34:14"
+                    try:
+                        # Remove timezone info if present
+                        clean_date = date_str.split("+")[0].split("Z")[0]
+                        msg_date = datetime.fromisoformat(clean_date)
+                    except ValueError:
+                        msg_date = datetime.now()
+                else:
+                    # Try to parse as ISO format
+                    try:
+                        msg_date = datetime.fromisoformat(date_str)
+                    except ValueError:
+                        msg_date = datetime.now()
 
-        safe_metadata = {
-            "session_id": message.get("session_id", ""),
-            "chat_id": int(message.get("chat_id", 0)),
-            "message_id": int(message.get("id", message.get("message_id", 0))),
-            "sender_id": int(message.get("sender_id", 0)),
-            "is_outgoing": bool(message.get("is_outgoing", False)),
-            "sender_type": "user" if bool(message.get("is_outgoing", False)) else "contact",
-            "date": message.get("date", ""),
-            "timestamp": original_ts,
-            "day_bucket": day_bucket,
-            "text_length": len(message.get("text", "")),
-            "text_hash": self._hash_text_content(message.get("text", "")),
-            "language": self._detect_language_simple(message.get("text", "")),
-            "has_media": bool(message.get("media")),
-            "is_reply": bool(message.get("reply_to_msg_id")),
-            "retention_expires": (datetime.now() + timedelta(days=self.retention_days)).isoformat()
-        }
-        
-        # Add sender name hash (non PII)
-        if message.get("sender_name"):
-            safe_metadata["sender_name_hash"] = hashlib.md5(
-                message["sender_name"].encode()
-            ).hexdigest()[:8]
-        
-        return safe_metadata
+            # Format date for day_bucket
+            day_bucket = msg_date.strftime("%Y-%m-%d")
+            
+            return {
+                "message_id": message.get("id", 0),
+                "is_outgoing": message.get("is_outgoing", False),
+                "date": msg_date.isoformat(),
+                "day_bucket": day_bucket,  # For time-based queries
+                "sender_name": message.get("sender_name", ""),
+                "sender_id": message.get("sender_id", 0),
+                "text_hash": self._hash_text_content(message.get("text", ""))
+            }
+        except Exception as e:
+            logger.error(f"Error extracting metadata: {e}")
+            # Fallback to basic metadata
+            return {
+                "message_id": message.get("id", 0),
+                "is_outgoing": message.get("is_outgoing", False),
+                "date": datetime.now().isoformat(),
+                "day_bucket": datetime.now().strftime("%Y-%m-%d"),
+                "text_hash": self._hash_text_content(message.get("text", ""))
+            }
     
     async def store_message_securely(self, session_id: str, chat_id: int, message: Dict) -> bool:
-        """Store message with embeddings while maintaining security and privacy"""
-        if not self.qdrant_client:
-            logger.warning("Qdrant client not available")
+        """Store a message securely in the vector database"""
+        if not self.qdrant_client or not self.ai_client:
+            logger.warning("Qdrant or AI client not available")
             return False
-        
-        if not self.ai_client:
-            logger.warning("Gemini client not available - cannot create embeddings")
-            return False
-        
-        # Ensure collections exist on first use
-        if not self._collections_initialized:
-            await self._ensure_collections_exist()
-            self._collections_initialized = True
         
         try:
-            message_text = message.get("text", "")
-            if not message_text.strip() or len(message_text) < 3:
-                return False  # Skip empty or very short messages
+            # Ensure collections exist
+            await self._ensure_collections_exist()
+            
+            message_text = message.get("text", "").strip()
+            if not message_text or len(message_text) < 3:
+                logger.debug(f"Skipping empty or short message: '{message_text}'")
+                return False
+            
+            logger.debug(f"Storing message: session_id={session_id}, chat_id={chat_id}, text='{message_text[:50]}...'")
             
             # Create embedding from text
-            embedding = await self._create_embedding(message_text)
+            embedding = await self._generate_embedding(message_text)
             if not embedding:
                 logger.warning("Failed to create embedding for message")
                 return False
             
-            # Generate secure unique ID
-            unique_id = self._generate_secure_message_id(
-                session_id, 
-                chat_id, 
-                message.get("id", 0),
-                message.get("date", "")
-            )
+            logger.debug(f"Generated embedding with {len(embedding)} dimensions")
             
-            # Extract only safe metadata (NO RAW TEXT STORED)
-            message_copy = {**message, "session_id": session_id, "chat_id": chat_id}
-            safe_payload = self._extract_safe_metadata(message_copy)
+            # Extract metadata safely
+            safe_metadata = self._extract_safe_metadata(message)
+            safe_metadata.update({
+                "session_id": session_id,
+                "chat_id": chat_id,
+                "text": message_text,  # Store text for AI context
+                "text_hash": self._hash_text_content(message_text)  # Keep hash for deduplication
+            })
             
-            # Store in Qdrant with embedding
-            self.qdrant_client.upsert(
+            logger.debug(f"Extracted metadata: {safe_metadata}")
+            
+            # Generate unique point ID
+            point_id = self._generate_point_id(session_id, chat_id, safe_metadata["message_id"])
+            
+            # Store in vector database
+            await asyncio.to_thread(
+                self.qdrant_client.upsert,
                 collection_name=self.collections["messages"],
                 points=[
                     models.PointStruct(
-                        id=unique_id,
+                        id=point_id,
                         vector=embedding,
-                        payload=safe_payload
+                        payload=safe_metadata
                     )
                 ]
             )
             
-            logger.debug(f"Securely stored message {unique_id} (text hash: {safe_payload['text_hash'][:8]})")
+            logger.debug(f"Successfully stored message with point_id={point_id}")
             return True
             
         except Exception as e:
-            logger.error(f"Error storing message securely: {e}")
+            logger.error(f"Error storing message: {e}")
             return False
     
     async def find_similar_messages_secure(
@@ -292,7 +415,7 @@ class SecureTelegramRAGEngine:
         
         try:
             # Create query embedding
-            query_embedding = await self._create_embedding(query_text)
+            query_embedding = await self._generate_embedding(query_text)
             if not query_embedding:
                 return []
             
@@ -313,7 +436,7 @@ class SecureTelegramRAGEngine:
                 )
             if day_buckets:
                 must_conditions.append(
-                    models.FieldCondition(key="day_bucket", match=models.MatchAny(values=day_buckets))
+                    models.FieldCondition(key="day_bucket", match=models.MatchAny(any=day_buckets))
                 )
             
             # Ensure collections exist on first search
@@ -339,6 +462,11 @@ class SecureTelegramRAGEngine:
                     "score": result.score,
                     "relevance": "high" if result.score > 0.85 else "medium" if result.score > 0.75 else "low",
                     "metadata": result.payload,
+                    # Include text for AI context
+                    "text": result.payload.get("text", ""),
+                    "is_outgoing": result.payload.get("is_outgoing", False),
+                    "date": result.payload.get("date", ""),
+                    "sender_name": result.payload.get("sender_name", ""),
                     # Create safe preview without exposing full text
                     "context_hint": f"Message from {result.payload.get('date', 'unknown')} ({result.payload.get('text_length', 0)} chars)"
                 }
@@ -391,9 +519,21 @@ class SecureTelegramRAGEngine:
             # Sort by timestamp (most recent first)
             recent_messages = sorted(
                 [r.payload for r in recent_results[0]],  # scroll returns (records, next_page_offset)
-                key=lambda x: x.get("timestamp", ""),
+                key=lambda x: x.get("date", ""),
                 reverse=True
             )[:context_limit]
+            
+            # Convert to proper message format
+            formatted_recent_messages = []
+            for msg in recent_messages:
+                formatted_recent_messages.append({
+                    "id": msg.get("message_id", 0),
+                    "text": msg.get("text", ""),
+                    "date": msg.get("date", ""),
+                    "is_outgoing": msg.get("is_outgoing", False),
+                    "sender_name": msg.get("sender_name", ""),
+                    "sender_id": msg.get("sender_id", 0)
+                })
             
             # Find semantically similar messages if current message provided
             similar_messages = []
@@ -403,11 +543,10 @@ class SecureTelegramRAGEngine:
                 )
             
             return {
-                "recent_messages_metadata": recent_messages,
+                "recent_messages": formatted_recent_messages,
                 "similar_messages": similar_messages,
-                "total_context_items": len(recent_messages) + len(similar_messages),
-                "rag_enhanced": True,
-                "security_note": "Raw message text not stored or returned for privacy"
+                "total_context_items": len(formatted_recent_messages) + len(similar_messages),
+                "rag_enhanced": True
             }
             
         except Exception as e:
@@ -557,7 +696,7 @@ class SecureTelegramRAGEngine:
             if not summary_text:
                 return
             # Create embedding for summary
-            embedding = await self._create_embedding(summary_text)
+            embedding = await self._generate_embedding(summary_text)
             if not embedding:
                 return
             chunk_id = hashlib.sha1(f"{session_id}:{chat_id}:{datetime.now().isoformat()}".encode()).hexdigest()
@@ -585,7 +724,7 @@ class SecureTelegramRAGEngine:
         if not self.qdrant_client or not self.ai_client:
             return []
         try:
-            query_emb = await self._create_embedding(query_text)
+            query_emb = await self._generate_embedding(query_text)
             if not query_emb:
                 return []
             results = self.qdrant_client.search(
@@ -607,6 +746,305 @@ class SecureTelegramRAGEngine:
         except Exception as e:
             logger.error(f"Error searching summary chunks: {e}")
             return []
+
+    async def get_messages_for_period(
+        self,
+        session_id: str,
+        chat_id: int,
+        dates: List[datetime.date],
+        limit: int = 1000
+    ) -> List[Dict]:
+        """Получить сообщения за указанный период с учетом безопасности"""
+        if not self.qdrant_client:
+            return []
+
+        try:
+            # Ensure collections exist
+            await self._ensure_collections_exist()
+            
+            # Convert dates to day_buckets
+            day_buckets = [d.strftime("%Y-%m-%d") for d in dates]
+            
+            # Try to use Qdrant filtering first
+            try:
+                search_filter = models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="session_id",
+                            match=models.MatchValue(value=session_id)
+                        ),
+                        models.FieldCondition(
+                            key="chat_id",
+                            match=models.MatchValue(value=chat_id)
+                        ),
+                        models.FieldCondition(
+                            key="day_bucket",
+                            match=models.MatchAny(any=day_buckets)
+                        )
+                    ]
+                )
+                
+                # Search with Qdrant filtering
+                search_result = await asyncio.to_thread(
+                    self.qdrant_client.scroll,
+                    collection_name=self.collections["messages"],
+                    scroll_filter=search_filter,
+                    limit=limit,
+                    with_payload=True,
+                    with_vectors=False
+                )
+                
+                messages = []
+                for point in search_result[0]:
+                    if point.payload:
+                        messages.append({
+                            "id": point.payload.get("message_id", 0),
+                            "text": point.payload.get("text", ""),  # Get text from payload
+                            "date": point.payload.get("date", ""),
+                            "is_outgoing": point.payload.get("is_outgoing", False),
+                            "sender_name": point.payload.get("sender_name", ""),
+                            "sender_id": point.payload.get("sender_id", 0)
+                        })
+                
+                logger.info(f"Found {len(messages)} messages for period {day_buckets} using Qdrant filtering")
+                return messages
+                
+            except Exception as e:
+                logger.warning(f"Qdrant filtering failed, falling back to Python filtering: {e}")
+                
+                # Fallback: get all messages and filter in Python
+                search_filter = models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="session_id",
+                            match=models.MatchValue(value=session_id)
+                        ),
+                        models.FieldCondition(
+                            key="chat_id",
+                            match=models.MatchValue(value=chat_id)
+                        )
+                    ]
+                )
+                
+                search_result = await asyncio.to_thread(
+                    self.qdrant_client.scroll,
+                    collection_name=self.collections["messages"],
+                    scroll_filter=search_filter,
+                    limit=limit,
+                    with_payload=True,
+                    with_vectors=False
+                )
+                
+                messages = []
+                for point in search_result[0]:
+                    if point.payload:
+                        # Filter by date in Python
+                        try:
+                            msg_date = datetime.fromisoformat(point.payload.get("date", ""))
+                            if msg_date.date() in dates:
+                                messages.append({
+                                    "id": point.payload.get("message_id", 0),
+                                    "text": point.payload.get("text", ""),  # Get text from payload
+                                    "date": point.payload.get("date", ""),
+                                    "is_outgoing": point.payload.get("is_outgoing", False),
+                                    "sender_name": point.payload.get("sender_name", ""),
+                                    "sender_id": point.payload.get("sender_id", 0)
+                                })
+                        except (ValueError, TypeError):
+                            continue
+                
+                logger.info(f"Found {len(messages)} messages for period {day_buckets} using Python filtering")
+                return messages
+            
+        except Exception as e:
+            logger.error(f"Error getting messages for period: {e}")
+            return []
+
+    async def get_period_summary(
+        self,
+        session_id: str,
+        chat_id: int,
+        dates: List[datetime.date],
+        max_chunks: int = 3
+    ) -> Optional[str]:
+        """Получить или сгенерировать summary для указанного периода"""
+        try:
+            # 1. Сначала ищем существующие summary chunks за этот период
+            day_buckets = [d.strftime("%Y-%m-%d") for d in dates]
+            existing_summaries = await self.find_similar_chunks(
+                session_id=session_id,
+                chat_id=chat_id,
+                query_text=" ".join(day_buckets),  # Используем даты как запрос
+                limit=max_chunks
+            )
+
+            if existing_summaries:
+                # Если нашли существующие summary - используем их
+                summaries = [s["payload"].get("summary", "") for s in existing_summaries if s["payload"].get("summary")]
+                if summaries:
+                    return "\n---\n".join(summaries)
+
+            # 2. Если нет существующих summary - генерируем новый
+            messages = await self.get_messages_for_period(session_id, chat_id, dates)
+            if not messages:
+                return None
+
+            # Группируем сообщения по дням для лучшей суммаризации
+            days_groups = {}
+            for msg in messages:
+                day = msg.get("day_bucket", "unknown")
+                if day not in days_groups:
+                    days_groups[day] = []
+                days_groups[day].append(msg)
+
+            # Генерируем summary для каждого дня
+            day_summaries = []
+            for day, day_messages in days_groups.items():
+                if not day_messages:
+                    continue
+
+                # Создаем контекст для суммаризации
+                lines = []
+                for msg in day_messages:
+                    who = "Вы" if msg.get("is_outgoing") else "Контакт"
+                    text = msg.get("text", "")[:120].replace("\n", " ")
+                    lines.append(f"{who}: {text}")
+                
+                transcript = "\n".join(lines)
+                prompt = f"Суммаризируй следующий фрагмент переписки за {day}. Выдели главные темы, важные моменты и эмоциональный контекст:\n\n{transcript}\n\nКраткая сводка:"
+                
+                day_summary = await self.ai_client.generate_text(
+                    prompt=prompt,
+                    max_tokens=200,
+                    temperature=0.3
+                )
+                if day_summary:
+                    day_summaries.append(f"[{day}]: {day_summary.strip()}")
+
+            if day_summaries:
+                final_summary = "\n---\n".join(day_summaries)
+                # Сохраняем summary как новый chunk для будущего использования
+                await self._store_period_summary(
+                    session_id=session_id,
+                    chat_id=chat_id,
+                    dates=dates,
+                    summary_text=final_summary
+                )
+                return final_summary
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error generating period summary: {e}")
+            return None
+
+    async def _store_period_summary(
+        self,
+        session_id: str,
+        chat_id: int,
+        dates: List[datetime.date],
+        summary_text: str
+    ) -> bool:
+        """Store summary for a period"""
+        if not self.qdrant_client or not self.ai_client:
+            return False
+        
+        try:
+            # Ensure collections exist
+            await self._ensure_collections_exist()
+            
+            # Create embedding for summary
+            embedding = await self._generate_embedding(summary_text)
+            if not embedding:
+                return False
+            
+            # Generate unique ID for summary
+            import uuid
+            period_str = "_".join([d.strftime("%Y-%m-%d") for d in dates])
+            summary_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{session_id}_{chat_id}_{period_str}"))
+            
+            # Store in summaries collection
+            await asyncio.to_thread(
+                self.qdrant_client.upsert,
+                collection_name=self.collections["summaries"],
+                points=[
+                    models.PointStruct(
+                        id=summary_id,
+                        vector=embedding,
+                        payload={
+                            "session_id": session_id,
+                            "chat_id": chat_id,
+                            "period_dates": [d.isoformat() for d in dates],
+                            "summary": summary_text,
+                            "created_at": datetime.now().isoformat()
+                        }
+                    )
+                ]
+            )
+            
+            logger.info(f"Stored period summary with ID {summary_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error storing period summary: {e}")
+            return False
+
+    async def sync_chat_history(
+        self,
+        session_id: str,
+        chat_id: int,
+        messages: List[Dict],
+        force_resync: bool = False
+    ) -> bool:
+        """Синхронизировать историю чата с RAG и сгенерировать summary по периодам"""
+        try:
+            # Если не форсируем — проверяем, есть ли уже сообщения за последние 30 дней
+            if not force_resync:
+                existing = await self.get_messages_for_period(
+                    session_id, chat_id,
+                    dates=[datetime.now().date() - timedelta(days=x) for x in range(30)]
+                )
+                if existing and len(existing) > 0:
+                    return True  # История уже есть
+
+            # Сохраняем каждое сообщение
+            for msg in messages:
+                # Добавляем session_id и chat_id если их нет
+                msg["session_id"] = session_id
+                msg["chat_id"] = chat_id
+                
+                # Сохраняем сообщение
+                await self.store_message_securely(session_id, chat_id, msg)
+
+            # Группируем сообщения по дням для генерации summary
+            days_with_messages = set()
+            for msg in messages:
+                # Use the same date parsing logic as _extract_safe_metadata
+                metadata = self._extract_safe_metadata(msg)
+                try:
+                    msg_date = datetime.fromisoformat(metadata["date"])
+                    days_with_messages.add(msg_date.date())
+                except ValueError:
+                    # Skip messages with invalid dates
+                    continue
+
+            # Генерируем summary для каждой недели, где есть сообщения
+            weeks = {}
+            for day in days_with_messages:
+                week_start = day - timedelta(days=day.weekday())
+                if week_start not in weeks:
+                    weeks[week_start] = []
+                weeks[week_start].append(day)
+
+            # Генерируем и сохраняем summary для каждой недели
+            for week_start, days in weeks.items():
+                await self._generate_and_store_summary(session_id, chat_id, days)
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error syncing chat history: {e}")
+            return False
 
 # Global secure RAG engine instance
 secure_rag_engine = SecureTelegramRAGEngine() 

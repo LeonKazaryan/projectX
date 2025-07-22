@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { Settings } from "./ui/Settings";
 import { API_BASE_URL } from "../services/authService";
 import { useMessagingStore } from "../messaging/MessagingStore";
+import AIPanel from "../messaging/AIPanel";
 
 const useTelegramSession = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -157,6 +158,7 @@ const TelegramClient: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [forceLogout, setForceLogout] = useState(false);
   const navigate = useNavigate();
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
 
   // Restore provider state on component mount
   useEffect(() => {
@@ -212,41 +214,60 @@ const TelegramClient: React.FC = () => {
   return (
     <>
       <div className="w-full flex flex-col bg-background text-foreground h-full">
-        <ResizablePanelGroup direction="horizontal" className="h-full w-full">
-          <ResizablePanel
-            defaultSize={30}
-            minSize={20}
-            maxSize={40}
-            className="border-r"
-          >
-            <ChatList
-              sessionId={sessionId!}
-              onChatSelect={(id, name) => setSelectedChat({ id, name })}
-              selectedChatId={selectedChat?.id}
-              onSessionExpired={handleSessionExpired}
-            />
-          </ResizablePanel>
-          <ResizableHandle />
-          <ResizablePanel defaultSize={75}>
-            {selectedChat && sessionId ? (
-              <MessageArea
-                sessionId={sessionId}
-                chatId={selectedChat.id}
-                chatName={selectedChat.name}
-                userId={undefined}
+        <div
+          className={`flex h-full transition-all duration-300 ${
+            isAIPanelOpen ? "mr-96" : "mr-0"
+          }`}
+        >
+          <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+            <ResizablePanel
+              defaultSize={30}
+              minSize={20}
+              maxSize={40}
+              className="border-r"
+            >
+              <ChatList
+                sessionId={sessionId!}
+                onChatSelect={(id, name) => setSelectedChat({ id, name })}
+                selectedChatId={selectedChat?.id}
+                onSessionExpired={handleSessionExpired}
               />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center text-muted-foreground">
-                  <p className="text-lg font-semibold">Выберите чат</p>
-                  <p className="text-sm">
-                    Чтобы начать общение, выберите чат из списка слева.
-                  </p>
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={75}>
+              {selectedChat && sessionId ? (
+                <MessageArea
+                  sessionId={sessionId}
+                  chatId={selectedChat.id}
+                  chatName={selectedChat.name}
+                  userId={undefined}
+                  isAIPanelOpen={isAIPanelOpen}
+                  setIsAIPanelOpen={setIsAIPanelOpen}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-muted-foreground">
+                    <p className="text-lg font-semibold">Выберите чат</p>
+                    <p className="text-sm">
+                      Чтобы начать общение, выберите чат из списка слева.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
-          </ResizablePanel>
-        </ResizablePanelGroup>
+              )}
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
+
+        {/* AI Panel - now at the same level as the main content */}
+        <AIPanel
+          isOpen={isAIPanelOpen}
+          onClose={() => setIsAIPanelOpen(false)}
+          chatId={selectedChat?.id?.toString() || ""}
+          chatName={selectedChat?.name || ""}
+          source="telegram"
+          sessionId={sessionId || ""}
+          currentMessages={[]}
+        />
       </div>
       <Settings
         isOpen={isSettingsOpen}

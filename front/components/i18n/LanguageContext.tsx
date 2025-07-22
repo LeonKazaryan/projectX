@@ -98,7 +98,54 @@ const translations: Translations = {
   },
   "features.lightning.desc": {
     ru: "Синхронизация в реальном времени на всех ваших устройствах",
-    en: "Real-time synchronization across all your devices",
+    en: "Real-time sync across all your devices",
+  },
+
+  // Authentication
+  loginTitle: { ru: "Вход в аккаунт", en: "Sign In" },
+  loginSubtitle: {
+    ru: "Войдите в свой уютный дом сообщений",
+    en: "Log in to your cozy messaging home",
+  },
+  registerTitle: { ru: "Регистрация", en: "Sign Up" },
+  registerSubtitle: {
+    ru: "Создайте свой аккаунт chathut",
+    en: "Create your chathut account",
+  },
+  emailOrUsername: {
+    ru: "Почта или имя пользователя",
+    en: "Email or Username",
+  },
+  emailOrUsernamePlaceholder: {
+    ru: "Введите почту или имя пользователя",
+    en: "Enter email or username",
+  },
+  password: { ru: "Пароль", en: "Password" },
+  passwordPlaceholder: { ru: "Введите пароль", en: "Enter your password" },
+  rememberMe: { ru: "Запомнить меня", en: "Remember me" },
+  username: { ru: "Имя пользователя", en: "Username" },
+  usernamePlaceholder: { ru: "Придумайте имя", en: "Choose a username" },
+  displayName: { ru: "Отображаемое имя", en: "Display Name" },
+  displayNamePlaceholder: {
+    ru: "Как вас называть?",
+    en: "How should we call you?",
+  },
+  email: { ru: "Почта", en: "Email" },
+  emailPlaceholder: { ru: "Введите почту", en: "Enter your email" },
+  confirmPassword: { ru: "Повторите пароль", en: "Confirm Password" },
+  confirmPasswordPlaceholder: {
+    ru: "Повторите пароль",
+    en: "Repeat your password",
+  },
+  loginBtn: { ru: "Войти", en: "Sign In" },
+  registerBtn: { ru: "Зарегистрироваться", en: "Sign Up" },
+  needAccount: {
+    ru: "Нет аккаунта? Зарегистрируйтесь",
+    en: "No account? Register",
+  },
+  haveAccount: {
+    ru: "Уже есть аккаунт? Войти",
+    en: "Already have an account? Sign In",
   },
 
   // Stats

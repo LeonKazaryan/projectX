@@ -16,11 +16,14 @@ import {
 } from "lucide-react";
 import { RAGService } from "../../telegram/utils/ragService";
 import { API_BASE_URL } from "../../services/authService";
-import AIPanel from "../../messaging/AIPanel";
+
+import ChatBackground from "../../messaging/ChatBackground";
 
 interface WhatsAppMessageAreaProps {
   chatId: string;
   chatName: string;
+  isAIPanelOpen?: boolean;
+  setIsAIPanelOpen?: (open: boolean) => void;
 }
 
 // AI settings interface
@@ -62,6 +65,8 @@ const useAISettings = (sessionId: string) => {
 const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   chatId,
   chatName,
+  isAIPanelOpen = false,
+  setIsAIPanelOpen,
 }) => {
   const {
     messages: allMessages,
@@ -95,7 +100,6 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   const [aiSuggestion, setAiSuggestion] = useState("");
   const [showAiSuggestion, setShowAiSuggestion] = useState(false);
   const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
-  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
 
   // Refs – (reserved for future enhancements)
 
@@ -326,7 +330,7 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
+    <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden max-h-screen">
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b border-border bg-card">
         <div className="flex items-center justify-between">
@@ -351,7 +355,7 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsAIPanelOpen(true)}
+              onClick={() => setIsAIPanelOpen?.(true)}
               className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-all"
             >
               <Bot className="h-4 w-4" />
@@ -362,10 +366,10 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-hidden relative">
+      <ChatBackground platform="whatsapp">
         <div
           ref={scrollContainerRef}
-          className="h-full px-4 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
+          className="h-full px-4 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-green-200/60 dark:scrollbar-thumb-green-900/40 scrollbar-track-transparent"
           onScroll={handleScroll}
         >
           {messages.length === 0 && loadedChatId === chatId && (
@@ -395,11 +399,17 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
                   }`}
                 >
                   <div
-                    className={`group max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                    className={`group max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-md transition-all duration-300 border border-transparent ${
                       message.isOutgoing
-                        ? "bg-green-600 text-white"
-                        : "bg-muted text-foreground"
+                        ? "bg-gradient-to-br from-green-400/90 to-green-600/90 text-white shadow-green-200/40 dark:shadow-green-900/30"
+                        : "bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-gray-100 border-gray-200/60 dark:border-gray-700/60 shadow-gray-200/30 dark:shadow-gray-900/20"
                     }`}
+                    style={{
+                      boxShadow: message.isOutgoing
+                        ? "0 4px 24px 0 rgba(37,211,102,0.10)"
+                        : "0 2px 12px 0 rgba(80,80,120,0.08)",
+                      backdropFilter: "blur(2px)",
+                    }}
                   >
                     <div className="space-y-1">
                       <p className="text-sm whitespace-pre-wrap break-words">
@@ -465,57 +475,176 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </ChatBackground>
 
       {/* AI Suggestion Panel */}
       {aiSettings.enabled && showAiSuggestion && aiSuggestion && (
-        <div className="px-4 py-2 border-t border-border">
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex items-start gap-2">
-            <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">
-                AI предлагает ответ:
-              </p>
-              <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap break-words">
-                {aiSuggestion}
-              </p>
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          className="px-4 py-3 border-t border-border"
+        >
+          <div className="relative overflow-hidden bg-gradient-to-r from-green-500/10 via-emerald-500/8 to-teal-500/10 dark:from-green-500/20 dark:via-emerald-500/15 dark:to-teal-500/20 border border-green-200/50 dark:border-green-700/50 rounded-2xl p-4 backdrop-blur-sm shadow-lg">
+            {/* Animated background pattern */}
+            <div className="absolute inset-0 opacity-5">
+              <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 via-transparent to-emerald-400/20 animate-pulse" />
+              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(34,197,94,0.1),transparent_50%)] animate-ping" />
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={dismissAISuggestion}
-                className="text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+
+            <div className="relative flex items-start gap-3">
+              {/* Animated AI icon */}
+              <motion.div
+                animate={{
+                  rotate: [0, 10, -10, 0],
+                  scale: [1, 1.1, 1],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg"
               >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={useAISuggestion}
-                className="text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30"
-              >
-                Использовать
-              </Button>
+                <Sparkles className="h-5 w-5 text-white" />
+              </motion.div>
+
+              <div className="flex-1 min-w-0 space-y-3">
+                {/* Header with animated elements */}
+                <motion.p
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-sm font-semibold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent"
+                >
+                  AI предлагает ответ:
+                </motion.p>
+
+                {/* Suggestion text with typing animation */}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap break-words"
+                >
+                  {aiSuggestion}
+                </motion.p>
+              </div>
+
+              {/* Action buttons with animations */}
+              <div className="flex flex-col gap-3 min-w-[120px]">
+                {/* Main action button */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.8 }}
+                >
+                  <Button
+                    onClick={useAISuggestion}
+                    className="w-full px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl font-medium"
+                  >
+                    Использовать
+                  </Button>
+                </motion.div>
+
+                {/* Secondary action button */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.9 }}
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={dismissAISuggestion}
+                    className="w-full h-9 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-all duration-200 hover:scale-105 border border-red-200/50 dark:border-red-700/50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </motion.div>
+              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {aiSettings.enabled && aiSuggestionLoading && (
-        <div className="px-4 py-2 border-t border-border">
-          <div className="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800 rounded-lg p-3 flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin text-gray-600 dark:text-gray-400" />
-            <span className="text-xs text-gray-600 dark:text-gray-400">
-              AI анализирует переписку...
-            </span>
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          className="px-4 py-3 border-t border-border"
+        >
+          <div className="relative overflow-hidden bg-gradient-to-r from-green-500/10 via-emerald-500/8 to-teal-500/10 dark:from-green-500/20 dark:via-emerald-500/15 dark:to-teal-500/20 border border-green-200/50 dark:border-green-700/50 rounded-2xl p-4 backdrop-blur-sm shadow-lg">
+            {/* Animated background pattern */}
+            <div className="absolute inset-0 opacity-5">
+              <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 via-transparent to-emerald-400/20 animate-pulse" />
+              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(34,197,94,0.1),transparent_50%)] animate-ping" />
+            </div>
+
+            <div className="relative flex items-center gap-3">
+              {/* Animated loading icon */}
+              <motion.div
+                animate={{
+                  rotate: 360,
+                  scale: [1, 1.1, 1],
+                }}
+                transition={{
+                  rotate: { duration: 2, repeat: Infinity, ease: "linear" },
+                  scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
+                }}
+                className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg"
+              >
+                <Loader2 className="h-5 w-5 text-white" />
+              </motion.div>
+
+              <div className="flex-1">
+                <motion.p
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-sm font-semibold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent"
+                >
+                  AI анализирует переписку...
+                </motion.p>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-xs text-gray-600 dark:text-gray-400 mt-1"
+                >
+                  Изучаю контекст и ваш стиль общения
+                </motion.p>
+              </div>
+
+              {/* Animated dots */}
+              <div className="flex gap-1">
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    animate={{
+                      y: [0, -8, 0],
+                      opacity: [0.5, 1, 0.5],
+                    }}
+                    transition={{
+                      duration: 1.2,
+                      repeat: Infinity,
+                      delay: i * 0.2,
+                    }}
+                    className="w-2 h-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full"
+                  />
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Input */}
-      <div className="flex-shrink-0 p-4 border-t border-border bg-card">
-        <div className="flex items-end gap-2">
+      <div className="flex-shrink-0 p-4 border-t border-border bg-gradient-to-br from-white/80 to-green-50/60 dark:from-gray-900/80 dark:to-green-950/80 backdrop-blur-md">
+        <div className="flex items-end gap-2 max-h-32 overflow-hidden">
           {aiSettings.enabled && (
             <Button
               variant="outline"
@@ -531,14 +660,14 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
               )}
             </Button>
           )}
-          <div className="flex-1">
+          <div className="flex-1 min-h-0">
             <Textarea
               ref={textareaRef}
               value={newMessage}
               onChange={handleTextareaChange}
               onKeyDown={handleKeyPress}
               placeholder="Написать сообщение..."
-              className="min-h-[40px] max-h-[150px] resize-none"
+              className="min-h-[40px] max-h-[80px] resize-none rounded-xl bg-white/70 dark:bg-gray-900/70 shadow-inner border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-green-400/40 transition-all overflow-y-auto"
               disabled={isSending}
             />
           </div>
@@ -546,7 +675,7 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
             onClick={handleSendMessage}
             disabled={!newMessage.trim() || isSending}
             size="icon"
-            className="flex-shrink-0"
+            className="flex-shrink-0 bg-gradient-to-br from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 text-white shadow-lg transform-gpu transition-all duration-200"
           >
             {isSending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -556,17 +685,6 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
           </Button>
         </div>
       </div>
-
-      {/* AI Panel */}
-      <AIPanel
-        isOpen={isAIPanelOpen}
-        onClose={() => setIsAIPanelOpen(false)}
-        chatId={chatId}
-        chatName={chatName}
-        source="whatsapp"
-        sessionId={whatsappSessionId}
-        currentMessages={messages}
-      />
     </div>
   );
 };

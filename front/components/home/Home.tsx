@@ -493,10 +493,9 @@ const Home = () => {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        mode={authMode}
+        initialMode={authMode}
         onLogin={handleLogin}
         onRegister={handleRegister}
-        onSwitchMode={setAuthMode}
       />
     </div>
   );

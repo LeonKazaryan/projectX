@@ -21,7 +21,7 @@ import {
 import { RAGService } from "../utils/ragService";
 import { motion, AnimatePresence } from "framer-motion";
 import { API_BASE_URL } from "../../services/authService";
-import AIPanel from "../../messaging/AIPanel";
+import ChatBackground from "../../messaging/ChatBackground";
 
 interface Message {
   id: number;
@@ -46,6 +46,8 @@ interface MessageAreaProps {
   chatId: number;
   chatName: string;
   userId?: number;
+  isAIPanelOpen?: boolean;
+  setIsAIPanelOpen?: (open: boolean) => void;
 }
 
 const useAISettings = (sessionId: string) => {
@@ -91,6 +93,8 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   chatId,
   chatName,
   userId,
+  isAIPanelOpen = false,
+  setIsAIPanelOpen,
 }) => {
   const { aiSettings } = useAISettings(sessionId);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -113,7 +117,6 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const [similarContext, setSimilarContext] = useState<string[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
-  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -647,7 +650,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
+    <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden max-h-screen">
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b border-border bg-card">
         <div className="flex items-center justify-between">
@@ -686,7 +689,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsAIPanelOpen(true)}
+              onClick={() => setIsAIPanelOpen?.(true)}
               className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-all"
             >
               <Bot className="h-4 w-4" />
@@ -697,7 +700,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-hidden relative bg-gradient-to-br from-blue-50/60 via-white/80 to-purple-100/60 dark:from-gray-900/80 dark:via-gray-900/90 dark:to-blue-950/80 backdrop-blur-md transition-colors duration-500">
+      <ChatBackground platform="telegram">
         <div
           ref={scrollContainerRef}
           className="h-full px-4 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-200/60 dark:scrollbar-thumb-blue-900/40 scrollbar-track-transparent"
@@ -811,7 +814,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </ChatBackground>
 
       {/* AI Suggestion - only show when AI is enabled */}
       {aiSettings.enabled && showAiSuggestion && aiSuggestion && (
@@ -911,7 +914,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
 
       {/* Input */}
       <div className="flex-shrink-0 p-4 border-t border-border bg-gradient-to-br from-white/80 to-blue-50/60 dark:from-gray-900/80 dark:to-blue-950/80 backdrop-blur-md">
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-2 max-h-32 overflow-hidden">
           {aiSettings.enabled && (
             <Button
               variant="outline"
@@ -923,14 +926,14 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
               <Sparkles className="h-4 w-4" />
             </Button>
           )}
-          <div className="flex-1">
+          <div className="flex-1 min-h-0">
             <Textarea
               ref={textareaRef}
               value={newMessage}
               onChange={handleTextareaChange}
               onKeyDown={handleKeyPress}
               placeholder="Написать сообщение..."
-              className="min-h-[40px] max-h-[150px] resize-none rounded-xl bg-white/70 dark:bg-gray-900/70 shadow-inner border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-400/40 transition-all"
+              className="min-h-[40px] max-h-[80px] resize-none rounded-xl bg-white/70 dark:bg-gray-900/70 shadow-inner border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-400/40 transition-all overflow-y-auto"
               disabled={sendingMessage}
             />
           </div>
@@ -948,17 +951,6 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
           </Button>
         </div>
       </div>
-
-      {/* AI Panel */}
-      <AIPanel
-        isOpen={isAIPanelOpen}
-        onClose={() => setIsAIPanelOpen(false)}
-        chatId={chatId.toString()}
-        chatName={chatName}
-        source="telegram"
-        sessionId={sessionId}
-        currentMessages={messages}
-      />
     </div>
   );
 };

@@ -40,7 +40,7 @@ async def get_message_history(
     background_tasks: BackgroundTasks = BackgroundTasks(),
     manager = Depends(get_telegram_manager)
 ):
-    """Получить историю сообщений из диалога"""
+    """Получить историю сообщений из диалога и синхронизировать с RAG"""
     result = await manager.get_messages(session_id, dialog_id, limit, offset_id=offset_id)
     
     if result["success"]:
@@ -51,7 +51,14 @@ async def get_message_history(
             dialog_id, 
             result["messages"]
         )
-        
+        # Синхронизируем всю историю с RAG (без force_resync)
+        background_tasks.add_task(
+            secure_rag_engine.sync_chat_history,
+            session_id,
+            dialog_id,
+            result["messages"],
+            False
+        )
         return MessagesResponse(
             success=True,
             messages=result["messages"]

@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Union
 import os
 import logging
+from datetime import datetime, timedelta
 
 from back.globals import get_telegram_manager
 from back.telegram.telegram_client import TelegramClientManager
@@ -176,12 +177,34 @@ async def ai_chat_with_context(
 
         # Build smart RAG context
         from back.ai.rag_pipeline import build_context_for_ai
+        from back.ai.secure_rag_engine import secure_rag_engine
+
+        # Log request info for debugging
+        logger.info(f"AI chat context request: session_id={request.session_id}, chat_id={request.chat_id}, messages_count={len(request.context_messages)}")
+
+        # Sync messages with RAG first
+        if request.context_messages:
+            sync_result = await secure_rag_engine.sync_chat_history(
+                session_id=request.session_id,
+                chat_id=int(request.chat_id) if isinstance(request.chat_id, str) else request.chat_id,
+                messages=request.context_messages
+            )
+            logger.info(f"RAG sync result: {sync_result}")
+
+            # Get messages from RAG to verify sync
+            dates = [(datetime.now() - timedelta(days=x)).date() for x in range(30)]
+            stored_messages = await secure_rag_engine.get_messages_for_period(
+                session_id=request.session_id,
+                chat_id=int(request.chat_id) if isinstance(request.chat_id, str) else request.chat_id,
+                dates=dates
+            )
+            logger.info(f"Messages in RAG: {len(stored_messages)}")
 
         if request.source == "whatsapp":
             # WhatsApp: simple prompt using provided recent messages only
             lines = []
             for msg in request.context_messages[-50:]:
-                who = "Вы" if msg.get("isOutgoing") else "Контакт"
+                who = "Вы" if msg.get("isOutgoing") else (request.chat_name if request.chat_name else "Контакт")
                 text = msg.get("text", "")
                 lines.append(f"{who}: {text}")
             recent_block = "\n".join(lines)
@@ -189,7 +212,14 @@ async def ai_chat_with_context(
             ctx_meta = {"recent": len(lines)}
             tokens_cnt = len(prompt)//4
         else:
-            ctx_info = await build_context_for_ai(request.session_id, int(request.chat_id), request.query, recent_limit=50, provided_recent=request.context_messages)
+            ctx_info = await build_context_for_ai(
+                session_id=request.session_id,
+                chat_id=int(request.chat_id),
+                query=request.query,
+                recent_limit=50,
+                provided_recent=request.context_messages,
+                chat_name=request.chat_name
+            )
             prompt = ctx_info["prompt"]
             ctx_meta = ctx_info["sections"]
             tokens_cnt = ctx_info["tokens"]

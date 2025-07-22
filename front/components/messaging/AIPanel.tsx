@@ -48,7 +48,7 @@ const AIPanel: React.FC<AIPanelProps> = ({
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+
   const [error, setError] = useState<string>("");
   const [suggestions] = useState([
     "О чём мы говорили вчера?",
@@ -69,10 +69,10 @@ const AIPanel: React.FC<AIPanelProps> = ({
   }, [messages]);
 
   useEffect(() => {
-    if (isOpen && !isMinimized) {
+    if (isOpen) {
       textareaRef.current?.focus();
     }
-  }, [isOpen, isMinimized]);
+  }, [isOpen]);
 
   // Close on ESC
   useEffect(() => {
@@ -125,7 +125,7 @@ const AIPanel: React.FC<AIPanelProps> = ({
           chat_id: source === "telegram" ? parseInt(chatId) : chatId,
           source,
           chat_name: chatName,
-          context_messages: currentMessages.slice(-20),
+          context_messages: currentMessages,
         }),
       });
       const data = await res.json();
@@ -204,9 +204,9 @@ const AIPanel: React.FC<AIPanelProps> = ({
           <div
             className={`${
               m.type === "user"
-                ? "bg-blue-500 text-white ml-auto"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
-            } rounded-2xl px-4 py-3`}
+                ? "bg-gradient-to-br from-blue-400/90 to-blue-600/90 text-white shadow-blue-200/40 dark:shadow-blue-900/30"
+                : "bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-gray-100 border border-orange-200/60 dark:border-orange-800/60 shadow-orange-200/30 dark:shadow-orange-900/20"
+            } rounded-2xl px-4 py-3 backdrop-blur-sm`}
           >
             <p className="text-sm whitespace-pre-wrap">{m.content}</p>
           </div>
@@ -230,10 +230,7 @@ const AIPanel: React.FC<AIPanelProps> = ({
           animate={{ x: 0 }}
           exit={{ x: "100%" }}
           transition={{ type: "spring", damping: 20, stiffness: 300 }}
-          className={`fixed right-0 top-0 h-screen bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl transform-gpu ${
-            isMinimized ? "w-80" : "w-96"
-          }`}
-          style={{ zIndex: 9999 }}
+          className="fixed top-16 right-0 h-[calc(100vh-4rem)] w-96 bg-gradient-to-br from-white/95 via-orange-50/90 to-orange-100/80 dark:from-gray-900/95 dark:via-orange-950/90 dark:to-orange-900/80 border-l border-orange-200/60 dark:border-orange-800/60 shadow-2xl transform-gpu z-50 backdrop-blur-md"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-orange-500 to-orange-600">
@@ -250,14 +247,6 @@ const AIPanel: React.FC<AIPanelProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsMinimized(!isMinimized)}
-                className="h-8 w-8 p-0 text-white hover:bg-white hover:bg-opacity-20"
-              >
-                <Minimize2 className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
                 onClick={onClose}
                 className="h-8 w-8 p-0 text-white hover:bg-white hover:bg-opacity-20"
               >
@@ -266,10 +255,10 @@ const AIPanel: React.FC<AIPanelProps> = ({
             </div>
           </div>
 
-          {!isMinimized && (
-            <>
-              {/* Messages */}
-              <ScrollArea className="h-[calc(100vh-8rem)]">
+          <>
+            {/* Messages */}
+            <div className="flex-1 overflow-hidden relative bg-gradient-to-br from-orange-50/60 via-white/80 to-orange-100/60 dark:from-gray-900/80 dark:via-gray-900/90 dark:to-orange-950/80 backdrop-blur-md">
+              <ScrollArea className="h-[calc(100vh-14rem)]">
                 <div className="p-4">
                   {messages.length === 0 ? (
                     <div className="text-center py-8">
@@ -290,7 +279,7 @@ const AIPanel: React.FC<AIPanelProps> = ({
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.1 }}
                             onClick={() => sendMessage(s)}
-                            className="w-full text-left p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                            className="w-full text-left p-3 rounded-lg border border-orange-200/60 dark:border-orange-800/60 hover:bg-orange-50/80 dark:hover:bg-orange-900/20 transition-colors group bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm"
                           >
                             <div className="flex items-start gap-3">
                               <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center group-hover:bg-orange-200 dark:group-hover:bg-orange-800 transition-colors">
@@ -323,48 +312,52 @@ const AIPanel: React.FC<AIPanelProps> = ({
                   )}
                 </div>
               </ScrollArea>
+            </div>
 
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mx-4 mb-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
-                >
-                  <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="text-sm">{error}</span>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Input */}
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex gap-2">
-                  <Textarea
-                    ref={textareaRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Спросите что-нибудь об этом чате..."
-                    className="flex-1 min-h-[2.5rem] max-h-24 resize-none"
-                    disabled={isLoading}
-                  />
-                  <Button
-                    onClick={() => sendMessage()}
-                    disabled={!input.trim() || isLoading}
-                    size="sm"
-                    className="h-10 w-10 p-0 bg-orange-500 hover:bg-orange-600"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                  </Button>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mx-4 mb-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+              >
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm">{error}</span>
                 </div>
+              </motion.div>
+            )}
+
+            {/* Input */}
+            <div className="p-4 border-t border-orange-200/60 dark:border-orange-800/60 bg-gradient-to-br from-white/80 to-orange-50/60 dark:from-gray-900/80 dark:to-orange-950/80 backdrop-blur-md">
+              <div className="flex gap-2 max-h-24 overflow-hidden">
+                <Textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Спросите что-нибудь об этом чате..."
+                  className="flex-1 min-h-[2.5rem] max-h-16 resize-none bg-white/70 dark:bg-gray-900/70 border-orange-200/60 dark:border-orange-800/60 focus:ring-2 focus:ring-orange-400/40 transition-all rounded-xl overflow-y-auto"
+                  disabled={isLoading}
+                  style={{
+                    maxHeight: "120px",
+                    overflowY: "auto",
+                  }}
+                />
+                <Button
+                  onClick={() => sendMessage()}
+                  disabled={!input.trim() || isLoading}
+                  size="sm"
+                  className="h-10 w-10 p-0 bg-orange-500 hover:bg-orange-600 flex-shrink-0"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </Button>
               </div>
-            </>
-          )}
+            </div>
+          </>
         </motion.div>
       )}
     </AnimatePresence>

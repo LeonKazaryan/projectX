@@ -460,3 +460,18 @@
 - Language button location changed (right side)
 - Enhanced interface of ChatList and Messages
 - Small Animations added to the messanger client
+
+# 0.8.5
+
+- AI now can reads and understands the name of the contact
+- AI can understands the time stamps and periods
+- New Message Area Backgrounds - Added stunning gradient backgrounds with floating animations
+- Platform-Specific Themes: Telegram uses blue/purple gradients, WhatsApp uses green/emerald gradients
+- Floating Message Bubbles: Subtle animated message bubbles float in the background for a dynamic feel
+- Completely redesigned AI suggestion panels with modern animations and styling
+- Fixed UX Layout: Improved button arrangement with proper spacing and hierarchy
+- Natural AI Responses: Fixed AI suggestions to be more natural and less robotic
+- Cursor-style AI Panel: AI panel now slides in from the right and pushes main content to the left instead of overlapping
+- Layout Restructure: Moved AI panel to parent components for proper layout control
+- Profile Layout Fix: Fixed bottom control panel going off-screen with ultra-compact spacing for perfect 100% viewport fit
+  -\*Login Fix: Fixed frontend configuration to connect to local backend instead of production

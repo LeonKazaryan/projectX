@@ -20,49 +20,147 @@ except Exception:
         return max(1, len(text) // 4)
 
 
-async def build_context_for_ai(session_id: str, chat_id: int, query: str, recent_limit: int = 20, chunk_limit: int = 3, provided_recent: List[Dict] | None = None):
+async def build_context_for_ai(session_id: str, chat_id: int, query: str, recent_limit: int = 20, chunk_limit: int = 3, provided_recent: List[Dict] | None = None, chat_name: str = ""):
     """Compose smart prompt context using recent messages, similar messages and summary chunks"""
-    # 1. Recent messages (prefer provided from client)
-    if provided_recent:
-        recent_messages = provided_recent[-recent_limit:]
-    else:
-        recent_ctx = await secure_rag_engine.get_enhanced_context_secure(session_id, chat_id, "", context_limit=recent_limit)
-        recent_messages = recent_ctx.get("recent_messages", [])
-    recent_block_lines = []
-    for msg in recent_messages:
-        ts = msg.get("date", "")[-8:]
-        who = "Вы" if msg.get("is_outgoing") else "Контакт"
-        text = msg.get("text", "")[:120].replace("\n", " ")
-        recent_block_lines.append(f"{ts} {who}: {text}")
-    recent_block = "\n".join(recent_block_lines)
-
-    # 2. Similar messages (with optional date filter)
-    buckets = _detect_requested_range(query)
-    similar = await secure_rag_engine.find_similar_messages_secure(session_id, chat_id, query, limit=5, score_threshold=0.25, day_buckets=buckets or None)
-    sim_lines = [f"→ ({round(i['score'],2)}) {i['metadata'].get('context_hint','')}" for i in similar]
-    similar_block = "\n".join(sim_lines)
-
-    # 3. Relevant summary chunks
-    chunks = await secure_rag_engine.find_similar_chunks(session_id, chat_id, query, limit=chunk_limit)
-    chunk_lines = [f"◼︎ ({round(c['score'],2)}) {c['payload'].get('summary', '')}" for c in chunks if c['payload'].get('summary')]
-    chunks_block = "\n".join(chunk_lines)
-
-    prompt_sections = [
-        "КОНТЕКСТ (свежие сообщения):", recent_block,
-        "\nРЕЛЕВАНТНЫЕ ОТРИВКИ ИЗ ПРОШЛОГО:", chunks_block,
-        "\nПОХОЖИЕ СООБЩЕНИЯ:", similar_block,
-        f"\n\nВОПРОС: {query}\nОТВЕТ:",
-    ]
-    full_prompt = "\n".join([s for s in prompt_sections if s])
-    return {
-        "prompt": full_prompt,
-        "tokens": _count_tokens(full_prompt),
-        "sections": {
+    
+    try:
+        # 1. Determine time period from query
+        time_info = _detect_time_range(query)
+        logger.info(f"Detected time period: {time_info['period_type']} for dates: {time_info['dates']}")
+        
+        # 2. Get messages based on context
+        if time_info["dates"]:
+            # If period is specified - get messages for this period
+            try:
+                period_messages = await secure_rag_engine.get_messages_for_period(
+                    session_id=session_id,
+                    chat_id=chat_id,
+                    dates=time_info["dates"]
+                )
+                logger.info(f"Found {len(period_messages)} messages for period")
+                
+                # Get summary for period
+                period_summary = await secure_rag_engine.get_period_summary(
+                    session_id=session_id,
+                    chat_id=chat_id,
+                    dates=time_info["dates"]
+                )
+                recent_messages = period_messages[-recent_limit:] if period_messages else []
+            except Exception as e:
+                logger.warning(f"Failed to get period messages, falling back to recent: {e}")
+                period_messages = []
+                period_summary = None
+                if provided_recent:
+                    recent_messages = provided_recent[-recent_limit:]
+                else:
+                    recent_ctx = await secure_rag_engine.get_enhanced_context_secure(session_id, chat_id, "", context_limit=recent_limit)
+                    recent_messages = recent_ctx.get("recent_messages", [])
+        else:
+            # If no period specified - use regular logic
+            if provided_recent:
+                recent_messages = provided_recent[-recent_limit:]
+            else:
+                recent_ctx = await secure_rag_engine.get_enhanced_context_secure(session_id, chat_id, "", context_limit=recent_limit)
+                recent_messages = recent_ctx.get("recent_messages", [])
+            period_summary = None
+            period_messages = recent_messages
+        
+        # 3. Build recent messages block
+        recent_block_lines = []
+        for msg in recent_messages:
+            ts = msg.get("date", "")[-8:] if msg.get("date") else ""
+            if msg.get("is_outgoing"):
+                who = "Вы"
+            else:
+                who = chat_name if chat_name else "Контакт"
+            text = msg.get("text", "")
+            recent_block_lines.append(f"{who} ({ts}): {text}")
+        
+        recent_block = "\n".join(recent_block_lines)
+        
+        # 4. Find similar messages with period consideration
+        try:
+            similar = await secure_rag_engine.find_similar_messages_secure(
+                session_id=session_id,
+                chat_id=chat_id,
+                query_text=query,
+                limit=5,
+                score_threshold=0.25,
+                day_buckets=[d.strftime("%Y-%m-%d") for d in time_info["dates"]] if time_info["dates"] else None
+            )
+            sim_lines = [f"→ ({round(i['score'],2)}) {i['metadata'].get('context_hint','')}" for i in similar]
+            similar_block = "\n".join(sim_lines)
+        except Exception as e:
+            logger.warning(f"Failed to find similar messages: {e}")
+            similar_block = ""
+        
+        # 5. Get additional summary chunks
+        try:
+            chunks = await secure_rag_engine.find_similar_chunks(
+                session_id=session_id,
+                chat_id=chat_id,
+                query_text=query,
+                limit=chunk_limit
+            )
+            chunk_lines = [f"◼︎ ({round(c['score'],2)}) {c['payload'].get('summary', '')}" for c in chunks if c['payload'].get('summary')]
+            chunks_block = "\n".join(chunk_lines)
+        except Exception as e:
+            logger.warning(f"Failed to find summary chunks: {e}")
+            chunks_block = ""
+        
+        # 6. Compose final prompt with period consideration
+        prompt_sections = []
+        
+        # Add period information if specified
+        if time_info["dates"]:
+            prompt_sections.extend([
+                f"ЗАПРОШЕННЫЙ ПЕРИОД: {time_info['period_type']}",
+                f"ВСЕГО СООБЩЕНИЙ ЗА ПЕРИОД: {len(period_messages)}",
+            ])
+            if period_summary:
+                prompt_sections.extend([
+                    "ОБЩИЙ КОНТЕКСТ ПЕРИОДА:",
+                    period_summary
+                ])
+        
+        # Add main sections
+        prompt_sections.extend([
+            "\nПОСЛЕДНИЕ СООБЩЕНИЯ:", recent_block,
+            "\nРЕЛЕВАНТНЫЕ ОТРЫВКИ:", chunks_block,
+            "\nПОХОЖИЕ СООБЩЕНИЯ:", similar_block,
+            f"\n\nВОПРОС: {query}\nОТВЕТ:",
+        ])
+        
+        full_prompt = "\n".join([s for s in prompt_sections if s])
+        
+        # 7. Calculate metadata
+        sections = {
             "recent": len(recent_block_lines),
-            "similar": len(similar),
-            "chunks": len(chunks)
+            "similar": len(similar) if 'similar' in locals() else 0,
+            "chunks": len(chunk_lines) if 'chunk_lines' in locals() else 0,
+            "period_messages": len(period_messages) if time_info["dates"] else 0,
+            "has_period_summary": bool(period_summary)
         }
-    }
+        
+        tokens = len(full_prompt) // 4  # Rough token estimation
+        
+        logger.info(f"Built context: {sections['recent']} recent, {sections['similar']} similar, {sections['chunks']} chunks")
+        
+        return {
+            "prompt": full_prompt,
+            "sections": sections,
+            "tokens": tokens
+        }
+        
+    except Exception as e:
+        logger.error(f"Error building context: {e}")
+        # Fallback to simple context
+        fallback_prompt = f"Вопрос: {query}\nОтвет:"
+        return {
+            "prompt": fallback_prompt,
+            "sections": {"recent": 0, "similar": 0, "chunks": 0, "period_messages": 0, "has_period_summary": False},
+            "tokens": len(fallback_prompt) // 4
+        }
 
 
 logger = logging.getLogger(__name__)
@@ -327,20 +425,21 @@ class RAGPipeline:
     def _create_rag_prompt(self, conversation_context: str, user_style: str) -> str:
         """Create the RAG prompt for OpenAI"""
         
-        return f"""Ты — умный и проактивный AI-ассистент в Telegram. Твоя главная задача — помогать пользователю вести содержательный и интересный диалог.
+        return f"""Ты — AI-ассистент, который пишет сообщения ОТ ИМЕНИ пользователя. Твоя задача — написать естественное сообщение, которое звучит как сам пользователь.
 
-ПРОФИЛЬ СТИЛЯ ПОЛЬЗОВАТЕЛЯ (придерживайся его):
+ПРОФИЛЬ СТИЛЯ ПОЛЬЗОВАТЕЛЯ (строго следуй ему):
 {user_style}
 
 ПОСЛЕДНИЕ СООБЩЕНИЯ В ЧАТЕ:
 {conversation_context}
 
-ТВОИ ИНСТРУКЦИИ:
-1.  **Отвечай по существу.** Если собеседник задает прямой вопрос (например, "что посмотреть в Алмате?", "какой фильм посоветуешь?"), **дай на него конкретный, развернутый и полезный ответ**, используя свои знания. Не задавай уточняющих вопросов, если можешь дать хороший ответ сразу.
-2.  **Будь проактивным.** Если вопрос слишком общий, предложи несколько вариантов на выбор, сгруппированных по интересам. Например: "В Алмате много всего интересного! Если любишь природу, то стоит съездить на Медеу и Чимбулак. Если интересна культура — посети Музей искусств им. Кастеева. Для вечерних прогулок отлично подойдет улица Панфилова."
-3.  **Не будь роботом.** Избегай фраз "Могу ли я помочь?", "Уточните, пожалуйста". Сразу переходи к делу. Твоя цель — дать готовый, классный ответ, который пользователь может сразу отправить.
-4.  **Адаптируй ответ под стиль пользователя,** указанный в профиле.
-5.  **Формат ответа:** Отвечай ТОЛЬКО текстом предлагаемого сообщения. Никаких вступлений, комментариев или объяснений.
+КРИТИЧЕСКИЕ ПРАВИЛА:
+1.  **Пиши ОТ ИМЕНИ пользователя, не как AI.** Никаких "может быть", "попробуй", "как насчет". Просто отвечай естественно.
+2.  **НЕ будь роботом.** Избегай фраз "Могу ли я помочь?", "Уточните, пожалуйста", "Не знаю, что ответить".
+3.  **НЕ давай советы самому себе.** Не говори "ответь что-нибудь милое" или "может что-нибудь игривое".
+4.  **Отвечай по существу.** Если задан вопрос — дай прямой ответ в стиле пользователя.
+5.  **Будь естественным.** Используй сленг, эмодзи и стиль общения из профиля пользователя.
+6.  **Формат:** ТОЛЬКО текст сообщения, без кавычек и объяснений.
 
 ПРЕДЛАГАЕМОЕ СООБЩЕНИЕ:"""
     
@@ -359,27 +458,97 @@ class RAGPipeline:
         
         return min(1.0, base_confidence)
 
-# simple russian date keywords detection -> list of day_buckets strings
-def _detect_requested_range(query: str) -> List[str]:
+def _detect_time_range(query: str) -> Dict[str, Any]:
+    """
+    Умное определение временного периода из запроса.
+    Возвращает информацию о запрошенном периоде времени.
+    """
     query_lower = query.lower()
-    today = datetime.now().date()
-    if "позавчера" in query_lower:
-        target = today - timedelta(days=2)
-        return [target.strftime("%Y-%m-%d")]
-    if "вчера" in query_lower:
-        target = today - timedelta(days=1)
-        return [target.strftime("%Y-%m-%d")]
-    # match dd mm or dd.mm or dd.mm.yyyy
-    m = re.search(r"(\d{1,2})[ .](\d{1,2})(?:[ .](\d{4}))?", query_lower)
-    if m:
-        day = int(m.group(1))
-        month = int(m.group(2))
-        year = int(m.group(3)) if m.group(3) else today.year
-        try:
-            target = datetime(year, month, day).date()
-            return [target.strftime("%Y-%m-%d")]
-        except ValueError:
-            pass
+    now = datetime.now()
+    result = {
+        "dates": [],           # Список дат для поиска
+        "period_type": "",     # Тип периода (день/неделя/месяц)
+        "is_relative": True,   # Относительный или конкретный период
+        "original_query": query # Исходный запрос
+    }
+
+    # 1. Проверяем ключевые слова для стандартных периодов
+    time_keywords = {
+        "сегодня": {
+            "dates": [now.date()],
+            "period_type": "день"
+        },
+        "вчера": {
+            "dates": [(now - timedelta(days=1)).date()],
+            "period_type": "день"
+        },
+        "позавчера": {
+            "dates": [(now - timedelta(days=2)).date()],
+            "period_type": "день"
+        },
+        "на этой неделе": {
+            "dates": [(now - timedelta(days=x)).date() for x in range(7)],
+            "period_type": "неделя"
+        },
+        "на прошлой неделе": {
+            "dates": [(now - timedelta(days=x)).date() for x in range(7, 14)],
+            "period_type": "неделя"
+        },
+        "в этом месяце": {
+            "dates": [(now - timedelta(days=x)).date() for x in range(30)],
+            "period_type": "месяц"
+        },
+        "в прошлом месяце": {
+            "dates": [(now - timedelta(days=x)).date() for x in range(30, 60)],
+            "period_type": "месяц"
+        }
+    }
+
+    # 2. Проверяем относительные периоды (например, "2 дня назад", "неделю назад")
+    relative_patterns = [
+        (r"(\d+)\s*(дней|дня|день)\s*назад", "день"),
+        (r"(\d+)\s*(недель|недели|неделю)\s*назад", "неделя"),
+        (r"(\d+)\s*(месяцев|месяца|месяц)\s*назад", "месяц")
+    ]
+
+    # Проверяем каждое ключевое слово
+    for keyword, period_info in time_keywords.items():
+        if keyword in query_lower:
+            result.update(period_info)
+            return result
+
+    # Проверяем относительные паттерны
+    for pattern, period_type in relative_patterns:
+        match = re.search(pattern, query_lower)
+        if match:
+            amount = int(match.group(1))
+            if period_type == "день":
+                result["dates"] = [(now - timedelta(days=x)).date() for x in range(amount)]
+            elif period_type == "неделя":
+                result["dates"] = [(now - timedelta(days=x)).date() for x in range(amount * 7)]
+            elif period_type == "месяц":
+                result["dates"] = [(now - timedelta(days=x)).date() for x in range(amount * 30)]
+            result["period_type"] = period_type
+            return result
+
+    # 3. Если не нашли явный период, но есть слова о прошлом - берём последние 30 дней
+    past_keywords = ["раньше", "прошлый", "прошлая", "прошлые", "прошлом", "прошлого", "назад"]
+    if any(word in query_lower for word in past_keywords):
+        result["dates"] = [(now - timedelta(days=x)).date() for x in range(30)]
+        result["period_type"] = "месяц"
+        return result
+
+    # 4. По умолчанию - последние 7 дней
+    result["dates"] = [(now - timedelta(days=x)).date() for x in range(7)]
+    result["period_type"] = "неделя"
+    return result
+
+# Заменяем старую функцию на новую
+def _detect_requested_range(query: str) -> List[str]:
+    """Legacy function for compatibility - uses new _detect_time_range"""
+    time_info = _detect_time_range(query)
+    if time_info["dates"]:
+        return [d.strftime("%Y-%m-%d") for d in time_info["dates"]]
     return []
 
 # Global RAG pipeline instance

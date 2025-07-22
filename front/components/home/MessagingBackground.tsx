@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { gsap } from "gsap";
 
 interface MessagingBackgroundProps {
@@ -8,9 +8,20 @@ interface MessagingBackgroundProps {
 
 const MessagingBackground: React.FC<MessagingBackgroundProps> = ({
   color = "general",
-  density = 20,
+  density = 8,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Pre-calculate bubble creation parameters to prevent recalculation
+  const bubbleParams = useMemo(() => {
+    return Array.from({ length: 20 }, () => ({
+      size: 40 + Math.random() * 80,
+      driftX: (Math.random() - 0.5) * 40,
+      driftY: -80 - Math.random() * 100,
+      duration: 10 + Math.random() * 8,
+      opacity: 0.08 + Math.random() * 0.12,
+    }));
+  }, []);
 
   const getColor = () => {
     switch (color) {
@@ -36,33 +47,30 @@ const MessagingBackground: React.FC<MessagingBackgroundProps> = ({
     const isSent = Math.random() > 0.5;
     bubble.classList.add(isSent ? "sent" : "received");
 
-    // Set size (width and height)
-    const size = 40 + Math.random() * 100;
-    bubble.style.width = `${size}px`;
-    bubble.style.height = `${size * 0.6}px`;
-
-    // Set position
+    // Get pre-calculated parameters
+    const params =
+      bubbleParams[Math.floor(Math.random() * bubbleParams.length)];
     const containerWidth = containerRef.current.offsetWidth;
     const containerHeight = containerRef.current.offsetHeight;
     const posX = Math.random() * containerWidth;
     const posY = Math.random() * containerHeight;
 
+    bubble.style.width = `${params.size}px`;
+    bubble.style.height = `${params.size * 0.6}px`;
     bubble.style.left = `${posX}px`;
     bubble.style.top = `${posY}px`;
-
-    // Set opacity
-    bubble.style.opacity = (0.1 + Math.random() * 0.2).toString();
+    bubble.style.opacity = params.opacity.toString();
 
     // Add to container
     containerRef.current.appendChild(bubble);
 
-    // Animate with GSAP - smoother animation with easeInOut
+    // Animate with GSAP - using pre-calculated values for smooth animation
     gsap.to(bubble, {
-      y: -80 - Math.random() * 120, // Less extreme movement
-      x: (Math.random() - 0.5) * 30, // More subtle horizontal drift
+      y: params.driftY,
+      x: params.driftX,
       opacity: 0,
-      duration: 8 + Math.random() * 7, // Longer duration for smoother movement
-      ease: "power1.inOut", // Smoother easing function
+      duration: params.duration,
+      ease: "power2.out", // Smoother easing function
       onComplete: () => {
         if (bubble.parentNode) {
           bubble.parentNode.removeChild(bubble);
@@ -76,7 +84,7 @@ const MessagingBackground: React.FC<MessagingBackgroundProps> = ({
   useEffect(() => {
     const interval = setInterval(() => {
       createBubble();
-    }, 1000 / (density / 10));
+    }, 3000 / (density / 3));
 
     return () => {
       clearInterval(interval);
@@ -114,6 +122,8 @@ const MessagingBackground: React.FC<MessagingBackgroundProps> = ({
             transform-origin: center;
             will-change: transform, opacity;
             transform: translateZ(0);
+            backface-visibility: hidden;
+            perspective: 1000px;
           }
           
           .floating-message.sent {

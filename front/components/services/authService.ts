@@ -63,27 +63,61 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Add error handling for certificate issues
+  validateStatus: function (status) {
+    return status >= 200 && status < 500; // Accept all responses to handle them properly
+  },
 });
 
 class AuthService {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const response = await apiClient.post("/auth/login", {
-      email_or_username: credentials.emailOrUsername,
-      password: credentials.password,
-      remember_me: credentials.rememberMe || false,
-    });
+    try {
+      const response = await apiClient.post("/auth/login", {
+        email_or_username: credentials.emailOrUsername,
+        password: credentials.password,
+        remember_me: credentials.rememberMe || false,
+      });
 
-    const authResponse = this.createAuthResponse(response.data);
-    this.setTokens(authResponse);
-    return authResponse;
+      if (response.status >= 400) {
+        throw new Error(response.data?.detail || 'Login failed');
+      }
+
+      const authResponse = this.createAuthResponse(response.data);
+      this.setTokens(authResponse);
+      return authResponse;
+    } catch (error: any) {
+      console.error('Login error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+        throw new Error('Network error: Unable to connect to server. Please check your internet connection.');
+      }
+      if (error.code === 'ERR_CERT_AUTHORITY_INVALID') {
+        throw new Error('Certificate error: Server certificate is invalid. Please contact support.');
+      }
+      throw error;
+    }
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
-    const response = await apiClient.post("/auth/register", userData);
+    try {
+      const response = await apiClient.post("/auth/register", userData);
 
-    const authResponse = this.createAuthResponse(response.data);
-    this.setTokens(authResponse);
-    return authResponse;
+      if (response.status >= 400) {
+        throw new Error(response.data?.detail || 'Registration failed');
+      }
+
+      const authResponse = this.createAuthResponse(response.data);
+      this.setTokens(authResponse);
+      return authResponse;
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+        throw new Error('Network error: Unable to connect to server. Please check your internet connection.');
+      }
+      if (error.code === 'ERR_CERT_AUTHORITY_INVALID') {
+        throw new Error('Certificate error: Server certificate is invalid. Please contact support.');
+      }
+      throw error;
+    }
   }
 
   private createAuthResponse(data: any): AuthResponse {

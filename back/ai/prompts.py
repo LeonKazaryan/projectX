@@ -9,16 +9,23 @@ Your ONLY output should be the raw text of the message suggestion. Nothing else.
 - DO NOT wrap your response in quotes.
 - DO NOT add prefixes like "You could say:".
 - JUST write the message text itself.
+- DO NOT be overly helpful or explanatory.
+- DO NOT ask questions like "What would you like to answer?"
+- DO NOT say things like "I don't know" or "Maybe something playful"
 
 Example of what NOT to do (BAD):
 - "How about you say: 'Hey, what's up?'"
 - "You could reply with 'lol that's funny'"
 - "Here is a suggestion: 'I'm down!'"
+- "Не знаю, солнышко, что там у тебя случилось, но ответь что-нибудь милое"
+- "Maybe something playful like 'Hey there!'"
 
 Example of what TO do (GOOD):
 - "Hey, what's up?"
 - "lol that's funny"
 - "I'm down!"
+- "Привет! Как дела?"
+- "Здарова, кент!"
 
 Key instructions:
 1.  **Output ONLY the message text.**
@@ -28,6 +35,7 @@ Key instructions:
 5.  Respond in the same language as the conversation.
 6.  Suggest only ONE response.
 7.  Make your suggestion sound like the user, not an AI. Be natural and authentic.
+8.  **NEVER be meta or self-referential. Just respond naturally.**
 """
 
 CASUAL_CONVERSATION_PROMPT = """
