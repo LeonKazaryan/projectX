@@ -58,13 +58,13 @@ const useAISettings = (sessionId: string) => {
     proactive_suggestions: false,
     auto_suggest_on_incoming: false,
   });
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true); // Удалено
 
   useEffect(() => {
     if (!sessionId) return;
 
     const loadSettings = async () => {
-      setLoading(true);
+      // setLoading(true); // Удалено
       try {
         // This would be your actual API call
         const response = await fetch(
@@ -77,14 +77,14 @@ const useAISettings = (sessionId: string) => {
       } catch (error) {
         console.error("Failed to load AI settings:", error);
       } finally {
-        setLoading(false);
+        // setLoading(false); // Удалено
       }
     };
 
     loadSettings();
   }, [sessionId]);
 
-  return { aiSettings, loading };
+  return { aiSettings };
 };
 
 const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
@@ -95,7 +95,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
 
   setIsAIPanelOpen,
 }) => {
-  const { aiSettings, loading: aiSettingsLoading } = useAISettings(sessionId);
+  const { aiSettings } = useAISettings(sessionId);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);

@@ -485,3 +485,8 @@
 ## 0.8.5b
 
 - TypeScript compilations fix: Removed unused imports and fixed variable naming conflicts
+
+## 0.8.5c
+
+- Loading from useAIsettings deleted
+- No useless loading, error, suggestionDismissed in AIsettings
