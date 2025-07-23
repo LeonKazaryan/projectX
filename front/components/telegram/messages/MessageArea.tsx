@@ -99,8 +99,6 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
 
   const [connectionStatus, setConnectionStatus] = useState<
     "connected" | "connecting" | "disconnected"
@@ -110,7 +108,6 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
   const [hasSuggestion, setHasSuggestion] = useState(false);
   const [ragEnabled, setRagEnabled] = useState(true);
   const [ragEnhanced, setRagEnhanced] = useState(false);
@@ -259,7 +256,6 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
         setSimilarContext(suggestion.similar_context || []);
         setShowAiSuggestion(true);
         setHasSuggestion(true);
-        setSuggestionDismissed(false);
       } else {
         setAiSuggestion("Не удалось сгенерировать ответ. Попробуйте еще раз.");
         setShowAiSuggestion(true);
@@ -292,7 +288,6 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
         setShowScrollButton(false);
         setAiSuggestion("");
         setHasSuggestion(false);
-        setSuggestionDismissed(false);
         // ... reset other states
       }
       previousChatIdRef.current = chatId;
@@ -343,7 +338,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
     if (!chatId || !sessionId) return;
 
     try {
-      setLoading(true);
+      // setLoading(true); // Removed as per edit hint
       const response = await fetch(
         `${API_BASE_URL}/messages/history?session_id=${sessionId}&dialog_id=${chatId}&limit=200`
       );
@@ -357,14 +352,14 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
           }
         );
         setMessages(sortedMessages);
-        setError("");
+        // setError(""); // Removed as per edit hint
       } else {
-        setError(data.error || "Ошибка загрузки сообщений");
+        // setError(data.error || "Ошибка загрузки сообщений"); // Removed as per edit hint
       }
     } catch (error) {
-      setError("Ошибка соединения с сервером");
+      // setError("Ошибка соединения с сервером"); // Removed as per edit hint
     } finally {
-      setLoading(false);
+      // setLoading(false); // Removed as per edit hint
     }
   };
 
@@ -374,7 +369,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
     try {
       setSendingMessage(true);
       setHasSuggestion(false);
-      setSuggestionDismissed(true);
+      // setSuggestionDismissed(true); // Removed as per edit hint
 
       const response = await fetch(`${API_BASE_URL}/messages/send`, {
         method: "POST",
@@ -406,10 +401,10 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
         setIsNearBottom(true);
         setTimeout(() => scrollToBottom(true), 150);
       } else {
-        setError(data.error || "Ошибка отправки сообщения");
+        // setError(data.error || "Ошибка отправки сообщения"); // Removed as per edit hint
       }
     } catch (error) {
-      setError("Ошибка соединения с сервером");
+      // setError("Ошибка соединения с сервером"); // Removed as per edit hint
     } finally {
       setSendingMessage(false);
     }
@@ -513,7 +508,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
 
   const dismissAISuggestion = () => {
     setShowAiSuggestion(false);
-    setSuggestionDismissed(true);
+    // setSuggestionDismissed(true); // Removed as per edit hint
     setHasSuggestion(false);
 
     // Don't get new suggestions for a while after dismissal
@@ -525,7 +520,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const restoreAISuggestion = () => {
     if (hasSuggestion && aiSuggestion) {
       setShowAiSuggestion(true);
-      setSuggestionDismissed(false);
+      // setSuggestionDismissed(false); // Removed as per edit hint
     } else {
       // Generate new suggestion
       getManualAISuggestion();
@@ -538,14 +533,14 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
       const lastMessage = messages[messages.length - 1];
       // Only reset dismissal for new incoming messages, not user's own messages
       if (!lastMessage.is_outgoing) {
-        setSuggestionDismissed(false);
+        // setSuggestionDismissed(false); // Removed as per edit hint
       }
     }
   }, [messages]);
 
   // Also reset dismissal when switching chats
   useEffect(() => {
-    setSuggestionDismissed(false);
+    // setSuggestionDismissed(false); // Removed as per edit hint
   }, [chatId]);
 
   // Re-enable automatic suggestions when enabled in settings
