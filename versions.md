@@ -516,3 +516,8 @@
 
 - AI suggestions fix
 - Lables on the messages changed
+
+# 0.9.3
+
+- Restore-session fix
+- Chats Load fix

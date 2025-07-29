@@ -23,6 +23,7 @@ A modern AI-powered messaging client for Telegram and WhatsApp with intelligent 
 - **AI Suggestion Fixes**: Fixed infinite loop issues with automatic AI suggestions
 - **AI Error Prevention**: Added safeguards to prevent continuous AI generation failures
 - **UI Improvements**: Hide sender names in personal chats, show only in group chats
+- **Session Management Fix**: Fixed Telegram session storage and client management for API calls
 
 ### v2.1.0 - Local Message Storage & Session Persistence
 

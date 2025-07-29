@@ -149,7 +149,7 @@ class TelegramClientManager:
             await client.connect()
             
             if await client.is_user_authorized():
-                # Сохраняем клиент под session_string (не session_id!) для совместимости с get_dialogs
+                # Сохраняем клиент под session_string для последующих API вызовов
                 self.active_clients[session_string] = client
                 await self._setup_event_handlers(client, session_string)
                 

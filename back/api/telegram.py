@@ -16,24 +16,20 @@ async def connect_telegram(
     manager = Depends(get_telegram_manager)
 ):
     """Validate Telegram session string and mark user as connected"""
-    session_id = f"user_{current_user.id}_temp_connect"
     
-    # Validate session string
-    result = await manager.restore_session(request.session_string, session_id)
+    # Validate and restore session
+    result = await manager.restore_session(request.session_string, f"user_{current_user.id}_connect")
     if not result["success"]:
         raise HTTPException(status_code=400, detail="Invalid session string")
     
     # Get user info to verify session is valid
-    user_info = await manager.get_user_info(session_id)
+    user_info = await manager.get_user_info(request.session_string)  # Use session_string directly
     if not user_info["success"]:
-        await manager.disconnect_client(session_id)
         raise HTTPException(status_code=500, detail="Could not get user info from Telegram")
     
-    # Clean up temporary session
-    await manager.disconnect_client(session_id)
+    # Don't clean up the session - keep it for API calls
+    # Session is now stored under session_string for later use
     
-    # Session is valid, return success
-    # Note: We don't save to database anymore, session is stored locally in frontend
     return {
         "message": "Telegram connected successfully",
         "telegram_user_id": user_info["id"],
@@ -56,21 +52,19 @@ async def restore_telegram_session(
     manager = Depends(get_telegram_manager)
 ):
     """Validate and restore Telegram session from frontend"""
-    session_id = f"user_{current_user.id}_restore"
     
-    # Validate session string
-    result = await manager.restore_session(request.session_string, session_id)
+    # Validate and restore session
+    result = await manager.restore_session(request.session_string, f"user_{current_user.id}_restore")
     if not result["success"]:
         raise HTTPException(status_code=400, detail="Invalid session string")
     
     # Get user info to verify session is valid
-    user_info = await manager.get_user_info(session_id)
+    user_info = await manager.get_user_info(request.session_string)  # Use session_string directly
     if not user_info["success"]:
-        await manager.disconnect_client(session_id)
         raise HTTPException(status_code=500, detail="Could not get user info from Telegram")
     
-    # Clean up temporary session
-    await manager.disconnect_client(session_id)
+    # Don't clean up the session - keep it for API calls
+    # Session is now stored under session_string for later use
     
     return {
         "message": "Telegram session restored successfully",
