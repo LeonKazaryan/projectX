@@ -20,6 +20,9 @@ A modern AI-powered messaging client for Telegram and WhatsApp with intelligent 
 - **API Caching**: Added in-memory caching for chats and messages (30s and 60s TTL)
 - **Batch Size Optimization**: Reduced initial load sizes for faster response times
 - **Error Handling**: Better error logging and connection cleanup
+- **AI Suggestion Fixes**: Fixed infinite loop issues with automatic AI suggestions
+- **AI Error Prevention**: Added safeguards to prevent continuous AI generation failures
+- **UI Improvements**: Hide sender names in personal chats, show only in group chats
 
 ### v2.1.0 - Local Message Storage & Session Persistence
 

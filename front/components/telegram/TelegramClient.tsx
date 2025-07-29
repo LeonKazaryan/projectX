@@ -118,6 +118,8 @@ const TelegramClient: React.FC = () => {
   const [selectedChat, setSelectedChat] = useState<{
     id: number;
     name: string;
+    isGroup: boolean;
+    isChannel: boolean;
   } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [forceLogout, setForceLogout] = useState(false);
@@ -219,8 +221,13 @@ const TelegramClient: React.FC = () => {
         <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
           <ChatList
             sessionId={sessionString || ""}
-            onChatSelect={(chatId, chatName) =>
-              setSelectedChat({ id: chatId, name: chatName })
+            onChatSelect={(chatId, chatName, isGroup, isChannel) =>
+              setSelectedChat({
+                id: chatId,
+                name: chatName,
+                isGroup,
+                isChannel,
+              })
             }
             selectedChatId={selectedChat?.id}
             onSessionExpired={handleSessionExpired}
@@ -235,6 +242,8 @@ const TelegramClient: React.FC = () => {
               chatName={selectedChat.name}
               setIsAIPanelOpen={setIsAIPanelOpen}
               onMessagesUpdated={handleMessagesUpdated}
+              isGroup={selectedChat.isGroup}
+              isChannel={selectedChat.isChannel}
             />
           ) : (
             <div className="flex items-center justify-center h-full bg-muted/30">

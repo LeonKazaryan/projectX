@@ -511,3 +511,8 @@
 - WebScoket optimization
 - Perfomacne Optimization
 - API Caching
+
+# 0.9.2
+
+- AI suggestions fix
+- Lables on the messages changed

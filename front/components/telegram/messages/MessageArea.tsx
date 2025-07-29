@@ -52,9 +52,12 @@ interface MessageAreaProps {
   isAIPanelOpen?: boolean;
   setIsAIPanelOpen?: (open: boolean) => void;
   onMessagesUpdated?: () => void;
+  isGroup?: boolean; // Add group chat detection
+  isChannel?: boolean; // Add channel detection
 }
 
 const useAISettings = (_sessionId: string) => {
+  // eslint-disable-line @typescript-eslint/no-unused-vars
   // eslint-disable-line @typescript-eslint/no-unused-vars
   const [aiSettings] = useState<AISettings>({
     enabled: true,
@@ -62,7 +65,7 @@ const useAISettings = (_sessionId: string) => {
     suggestion_delay: 1.0,
     continuous_suggestions: false,
     proactive_suggestions: false,
-    auto_suggest_on_incoming: false,
+    auto_suggest_on_incoming: false, // Disabled by default to prevent loops
   });
   // const [loading, setLoading] = useState(true); // Удалено
 
@@ -76,9 +79,10 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   chatId,
   chatName,
   userId,
-
   setIsAIPanelOpen,
   onMessagesUpdated,
+  isGroup = false, // Default to false (personal chat)
+  isChannel = false, // Default to false (not a channel)
 }) => {
   // [CONTEXT-TRACE] Track why AI gets no messages
   console.log(
@@ -229,12 +233,31 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   }, []);
 
   const regenerateAISuggestion = useCallback(async () => {
-    if (aiSuggestionLoading) return;
+    // Multiple safeguards to prevent infinite loops
+    if (aiSuggestionLoading || !aiSettings.enabled || !sessionId || !chatId) {
+      console.log(
+        "🤖 AI suggestion skipped: loading or disabled or missing session/chat"
+      );
+      return;
+    }
+
+    // Don't generate if we already have a suggestion showing
+    if (showAiSuggestion && aiSuggestion) {
+      console.log("🤖 AI suggestion skipped: already showing");
+      return;
+    }
+
     setAiSuggestionLoading(true);
     setAiSuggestion("");
 
     try {
       const historyForAgent = messages.slice(-15);
+
+      // Check if we have any messages to work with
+      if (historyForAgent.length === 0) {
+        console.log("🤖 AI suggestion skipped: no messages");
+        return;
+      }
 
       // Convert messages to the format expected by API
       const recentMessages = historyForAgent.map((msg) => ({
@@ -250,6 +273,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
         throw new Error("Not authenticated");
       }
 
+      console.log("🤖 Sending AI suggestion request...");
       const response = await fetch(`${API_BASE_URL}/ai/suggest-response`, {
         method: "POST",
         headers: {
@@ -265,6 +289,10 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
         }),
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const data = await response.json();
 
       if (data.success && data.suggestion) {
@@ -274,19 +302,39 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
         setSimilarContext([]);
         setShowAiSuggestion(true);
         setHasSuggestion(true);
-        console.log("🤖 AI suggestion generated:", data.suggestion);
+        console.log(
+          "🤖 AI suggestion generated successfully:",
+          data.suggestion
+        );
       } else {
         throw new Error(data.error || "Failed to generate suggestion");
       }
     } catch (error) {
       console.error("Error generating AI suggestion:", error);
-      setAiSuggestion("Ошибка при генерации ответа. Попробуйте еще раз.");
-      setShowAiSuggestion(true);
-      setHasSuggestion(true);
+
+      // Don't show error suggestion to avoid infinite loops
+      setAiSuggestion("");
+      setShowAiSuggestion(false);
+      setHasSuggestion(false);
+
+      // Show error only once
+      if (!sessionStorage.getItem("ai_error_shown")) {
+        sessionStorage.setItem("ai_error_shown", "true");
+        setTimeout(() => sessionStorage.removeItem("ai_error_shown"), 5000);
+      }
     } finally {
       setAiSuggestionLoading(false);
     }
-  }, [aiSuggestionLoading, messages, sessionId, chatId, chatName]);
+  }, [
+    aiSuggestionLoading,
+    messages,
+    sessionId,
+    chatId,
+    chatName,
+    aiSettings,
+    showAiSuggestion,
+    aiSuggestion,
+  ]);
 
   // This is now just an alias
   const getManualAISuggestion = regenerateAISuggestion;
@@ -297,7 +345,14 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
       // If last message is from contact (not outgoing), generate suggestion
-      if (!lastMessage.is_outgoing && !aiSuggestionLoading) {
+      // Add checks to prevent infinite loops
+      if (
+        !lastMessage.is_outgoing &&
+        !aiSuggestionLoading &&
+        !showAiSuggestion &&
+        aiSettings.enabled &&
+        aiSettings.auto_suggest_on_incoming
+      ) {
         console.log(
           "🤖 New contact message detected, generating suggestion..."
         );
@@ -307,14 +362,34 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
       }
     }
     return () => {}; // Return empty cleanup function
-  }, [messages, aiSuggestionLoading, regenerateAISuggestion]);
+  }, [
+    messages,
+    aiSuggestionLoading,
+    regenerateAISuggestion,
+    showAiSuggestion,
+    aiSettings,
+  ]);
 
-  // Auto-generate suggestions when new messages arrive
+  // Auto-generate suggestions when new messages arrive (with better conditions)
+  const [lastProcessedMessageId, setLastProcessedMessageId] = useState<
+    number | null
+  >(null);
+
   useEffect(() => {
     if (messages.length > 0) {
-      startContinuousAI();
+      const lastMessage = messages[messages.length - 1];
+      // Only process if this is a new message we haven't seen before
+      if (
+        lastMessage.id !== lastProcessedMessageId &&
+        !lastMessage.is_outgoing &&
+        aiSettings.enabled &&
+        aiSettings.auto_suggest_on_incoming
+      ) {
+        setLastProcessedMessageId(lastMessage.id);
+        startContinuousAI();
+      }
     }
-  }, [messages, startContinuousAI]);
+  }, [messages, startContinuousAI, lastProcessedMessageId, aiSettings]);
 
   const loadLocalMessages = async () => {
     console.log(`[CONTEXT-TRACE-2] Loading messages for chat ${chatId}`);
@@ -936,11 +1011,13 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
                   }}
                 >
                   <div className="space-y-1">
-                    {!message.is_outgoing && message.sender_name && (
-                      <p className="text-xs font-semibold text-blue-500 dark:text-blue-300 mb-1">
-                        {message.sender_name}
-                      </p>
-                    )}
+                    {!message.is_outgoing &&
+                      message.sender_name &&
+                      (isGroup || isChannel) && (
+                        <p className="text-xs font-semibold text-blue-500 dark:text-blue-300 mb-1">
+                          {message.sender_name}
+                        </p>
+                      )}
                     <p className="text-sm whitespace-pre-wrap break-words">
                       {message.text}
                     </p>

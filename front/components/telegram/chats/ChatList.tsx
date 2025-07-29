@@ -31,7 +31,12 @@ interface Dialog {
 
 interface ChatListProps {
   sessionId: string;
-  onChatSelect: (chatId: number, chatName: string) => void;
+  onChatSelect: (
+    chatId: number,
+    chatName: string,
+    isGroup: boolean,
+    isChannel: boolean
+  ) => void;
   selectedChatId?: number;
   includeArchived?: boolean;
   includeReadonly?: boolean;
@@ -355,7 +360,14 @@ const ChatList: React.FC<ChatListProps & { onSessionExpired?: () => void }> = ({
                           ? "bg-blue-200/80 dark:bg-blue-900/60 border border-blue-400/40"
                           : ""
                       }`}
-                      onClick={() => onChatSelect(dialog.id, dialog.name)}
+                      onClick={() =>
+                        onChatSelect(
+                          dialog.id,
+                          dialog.name,
+                          dialog.is_group,
+                          dialog.is_channel
+                        )
+                      }
                     >
                       <Avatar className="h-10 w-10 shadow-md">
                         {dialog.photo ? (
