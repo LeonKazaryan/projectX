@@ -121,32 +121,41 @@ async def register(
 ):
     """Register a new user with cyberpunk validation"""
     
-    password_validation = validate_password_strength(user_data.password)
-    if not password_validation["valid"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "message": "Password does not meet security requirements",
-                "errors": password_validation["errors"],
-                "strength": password_validation["strength"]
-            }
-        )
-    
-    existing_user = await get_user_by_email_async(db, user_data.email)
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists"
-        )
-    
-    existing_username = await get_user_by_username_async(db, user_data.username)
-    if existing_username:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already taken"
-        )
+    print(f"🔍 Register attempt for user: {user_data.username} ({user_data.email})")
     
     try:
+        password_validation = validate_password_strength(user_data.password)
+        if not password_validation["valid"]:
+            print(f"❌ Password validation failed for {user_data.username}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "message": "Password does not meet security requirements",
+                    "errors": password_validation["errors"],
+                    "strength": password_validation["strength"]
+                }
+            )
+        
+        print(f"✅ Password validation passed for {user_data.username}")
+        
+        existing_user = await get_user_by_email_async(db, user_data.email)
+        if existing_user:
+            print(f"❌ Email already exists: {user_data.email}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User with this email already exists"
+            )
+        
+        existing_username = await get_user_by_username_async(db, user_data.username)
+        if existing_username:
+            print(f"❌ Username already taken: {user_data.username}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already taken"
+            )
+        
+        print(f"✅ User validation passed for {user_data.username}")
+        
         hashed_password = TokenHandler.hash_password(user_data.password)
         user_dict = {
             "username": user_data.username.lower(),
@@ -159,7 +168,9 @@ async def register(
             "is_verified": False
         }
         
+        print(f"🔧 Creating user in database: {user_data.username}")
         new_user = await create_user_async(db, user_dict)
+        print(f"✅ User created successfully: {new_user.id}")
         
         token_data = {
             "user_id": str(new_user.id),
@@ -167,6 +178,7 @@ async def register(
             "email": new_user.email
         }
         tokens = TokenHandler.create_token_pair(token_data)
+        print(f"✅ Tokens created for user: {new_user.username}")
         
         device_info = extract_device_info(request.headers.get("user-agent", ""))
         refresh_token_hash = TokenHandler.hash_refresh_token(tokens["refresh_token"])
@@ -183,6 +195,8 @@ async def register(
         await create_user_session_async(db, session_data)
         await update_user_last_login_async(db, new_user.id)
         
+        print(f"🎉 Registration completed successfully for: {new_user.username}")
+        
         return Token(
             access_token=tokens["access_token"],
             refresh_token=tokens["refresh_token"],
@@ -191,11 +205,22 @@ async def register(
             user=UserResponse.from_orm(new_user)
         )
         
-    except IntegrityError:
+    except IntegrityError as e:
+        print(f"❌ Database integrity error: {e}")
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User creation failed due to constraint violation"
+        )
+    except Exception as e:
+        print(f"❌ Unexpected error during registration: {e}")
+        print(f"❌ Error type: {type(e)}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during registration"
         )
 
 

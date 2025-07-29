@@ -14,9 +14,12 @@ from sqlalchemy.orm import relationship, Session, selectinload
 from sqlalchemy.sql import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-
+import os
 
 Base = declarative_base()
+
+# Check if we're in production (PostgreSQL) or development (SQLite)
+IS_LOCAL = os.getenv("ENV") == "development" or not os.getenv("DATABASE_URL")
 
 
 def generate_uuid():
@@ -43,7 +46,13 @@ class User(Base, TimestampMixin):
     """User model for authentication and profile management"""
     __tablename__ = "users"
     
-    id = Column(String(36), primary_key=True, default=generate_uuid)  # UUID as string for SQLite
+    # Use UUID for PostgreSQL, String for SQLite
+    if IS_LOCAL:
+        id = Column(String(36), primary_key=True, default=generate_uuid)
+    else:
+        from sqlalchemy.dialects.postgresql import UUID as PGUUID
+        id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    
     username = Column(String(50), unique=True, nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
@@ -93,8 +102,15 @@ class PlatformSession(Base, TimestampMixin):
     """Platform sessions for Telegram and WhatsApp"""
     __tablename__ = "platform_sessions"
     
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    # Use UUID for PostgreSQL, String for SQLite
+    if IS_LOCAL:
+        id = Column(String(36), primary_key=True, default=generate_uuid)
+        user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    else:
+        from sqlalchemy.dialects.postgresql import UUID as PGUUID
+        id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+        user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    
     platform = Column(String(20), nullable=False)  # "telegram" or "whatsapp"
     session_string = Column(Text, nullable=False)
     
@@ -191,11 +207,23 @@ async def get_user_by_email_or_username_async(db: AsyncSession, email_or_usernam
 
 async def create_user_async(db: AsyncSession, user_data: dict) -> User:
     """Create a new user (async)"""
-    user = User(**user_data)
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-    return user
+    try:
+        print(f"🔧 Creating user with data: {user_data.get('username', 'unknown')}")
+        user = User(**user_data)
+        print(f"🔧 User object created: {user.id}")
+        db.add(user)
+        print(f"🔧 User added to session")
+        await db.commit()
+        print(f"🔧 Database commit successful")
+        await db.refresh(user)
+        print(f"🔧 User refreshed from database: {user.id}")
+        return user
+    except Exception as e:
+        print(f"❌ Error creating user: {e}")
+        print(f"❌ Error type: {type(e)}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        raise
 
 
 async def update_user_last_login_async(db: AsyncSession, user_id: str):

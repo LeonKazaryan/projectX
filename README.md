@@ -13,6 +13,8 @@ A modern AI-powered messaging client for Telegram and WhatsApp with intelligent 
 - **Database Async Fixes**: Fixed async SQLAlchemy operations for proper database connectivity
 - **Authentication Fixes**: Resolved 500 errors in registration and login endpoints
 - **Production Database**: Fixed async driver configuration for PostgreSQL in production
+- **PostgreSQL UUID Support**: Fixed model definitions to work with PostgreSQL UUID and SQLite String types
+- **Enhanced Logging**: Added detailed logging for debugging authentication issues
 
 ### v2.1.0 - Local Message Storage & Session Persistence
 
