@@ -19,10 +19,10 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { API_BASE_URL, authService } from "../../services/authService";
 import ChatBackground from "../../messaging/ChatBackground";
-import { useMessagingStore } from "../../messaging/MessagingStore";
+// import { useMessagingStore } from "../../messaging/MessagingStore"; // Unused import
 import {
   getMessages,
-  saveMessage,
+  // saveMessage, // Unused import
   setMessages as setLocalMessages,
 } from "../../utils/localMessageStore";
 
@@ -54,8 +54,9 @@ interface MessageAreaProps {
   onMessagesUpdated?: () => void;
 }
 
-const useAISettings = (sessionId: string) => {
-  const [aiSettings, setAiSettings] = useState<AISettings>({
+const useAISettings = (_sessionId: string) => {
+  // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [aiSettings] = useState<AISettings>({
     enabled: true,
     memory_limit: 20,
     suggestion_delay: 1.0,
@@ -71,7 +72,7 @@ const useAISettings = (sessionId: string) => {
 };
 
 const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
-  sessionId,
+  sessionId, // eslint-disable-line @typescript-eslint/no-unused-vars
   chatId,
   chatName,
   userId,
@@ -87,8 +88,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   );
 
   const { aiSettings } = useAISettings(sessionId);
-  const { loadMessages: loadMessagesFromStore, getChatMessages } =
-    useMessagingStore();
+  // const { loadMessages: loadMessagesFromStore } = useMessagingStore(); // Unused
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -512,7 +512,9 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
           setHasMoreMessages(newMessages.length === 100);
 
           if (newMessages.length > 0) {
-            setOldestMessageId(Math.min(...newMessages.map((m) => m.id)));
+            setOldestMessageId(
+              Math.min(...newMessages.map((m: Message) => m.id))
+            );
           }
         } else {
           // При первоначальной загрузке заменяем все сообщения
@@ -520,13 +522,15 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
           setHasMoreMessages(newMessages.length === 100);
 
           if (newMessages.length > 0) {
-            setOldestMessageId(Math.min(...newMessages.map((m) => m.id)));
+            setOldestMessageId(
+              Math.min(...newMessages.map((m: Message) => m.id))
+            );
           }
 
           // Также обновляем store для AIPanel - напрямую добавляем сообщения
           try {
             // Convert MessageArea format to MessagingStore format
-            const storeMessages = newMessages.map((msg) => ({
+            const storeMessages = newMessages.map((msg: Message) => ({
               id: msg.id.toString(),
               chatId: chatId.toString(),
               from: msg.sender_name || (msg.is_outgoing ? "You" : "Unknown"),

@@ -19,7 +19,7 @@ interface WhatsAppAuthProps {
 
 const WhatsAppAuth: React.FC<WhatsAppAuthProps> = ({
   onAuthSuccess,
-  onAuthError,
+  // onAuthError, // Unused parameter
 }) => {
   const [step, setStep] = useState<"checking" | "qr" | "connected">("checking");
   const [qrCode, setQrCode] = useState("");

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, ChevronDown, Sparkles, Loader2 } from "lucide-react";
 import {
   getMessages,
-  saveMessage,
+  // saveMessage, // Unused import
   setMessages,
 } from "../../utils/localMessageStore";
 import { useMessagingStore } from "../../messaging/MessagingStore";
@@ -24,14 +24,14 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [loadedChatId, setLoadedChatId] = useState<string | null>(null);
-  const [isTyping, setIsTyping] = useState(false);
+  const [_isTyping, setIsTyping] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
 
   // Infinite scroll state
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
-  const [oldestMessageId, setOldestMessageId] = useState<string>("");
+  const [_oldestMessageId, setOldestMessageId] = useState<string>("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);

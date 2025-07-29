@@ -492,3 +492,7 @@
 - No useless loading, error, suggestionDismissed in AIsettings
 
 # 0.9.0
+
+## 0.9.0a
+
+- Fixed nonused variables issue

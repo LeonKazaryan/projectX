@@ -1,5 +1,5 @@
 // Локальное хранилище истории сообщений для чатов (IndexedDB)
-import { set, get, del, update } from 'idb-keyval';
+import { set, get, del } from 'idb-keyval';
 import type { Message } from '../messaging/types';
 
 const getChatKey = (chatId: string | number) => `chat_history_${chatId}`;

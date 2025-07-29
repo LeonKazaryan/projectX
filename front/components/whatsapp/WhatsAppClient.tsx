@@ -18,9 +18,9 @@ import AIPanel from "../messaging/AIPanel";
 const WhatsAppClient: React.FC = () => {
   const navigate = useNavigate();
   const {
-    connectProvider,
+    // connectProvider, // Unused
     error,
-    isLoading,
+    // isLoading, // Unused
     selectedChat,
     selectChat,
     providers,
@@ -33,9 +33,9 @@ const WhatsAppClient: React.FC = () => {
   );
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [_isConnecting, setIsConnecting] = useState(false);
   const [showQr, setShowQr] = useState(false);
-  const [qrCode, setQrCode] = useState<string | null>(null);
+  // const [qrCode, setQrCode] = useState<string | null>(null); // Unused
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);

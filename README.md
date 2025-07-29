@@ -4,6 +4,13 @@ A modern AI-powered messaging client for Telegram and WhatsApp with intelligent 
 
 ## 🚀 Latest Updates
 
+### v2.1.1 - Build Fixes & Code Quality
+
+- **TypeScript Build Fixes**: Fixed all TypeScript compilation errors for production deployment
+- **Unused Variable Cleanup**: Removed or properly marked unused variables and imports
+- **Production Ready**: Frontend now builds successfully without any TypeScript errors
+- **Code Quality**: Improved code organization and removed dead code
+
 ### v2.1.0 - Local Message Storage & Session Persistence
 
 - **Local Message History**: Complete rewrite of message handling - all chat history now stored locally in IndexedDB

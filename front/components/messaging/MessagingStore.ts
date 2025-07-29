@@ -48,23 +48,23 @@ interface MessagingState {
   restoreProviderStates: () => Promise<void>;
 }
 
-// Local storage helpers for caching
-function getCachedMessages(chatId: string): Message[] {
-  try {
-    const cached = localStorage.getItem(`chathut_messages_${chatId}`);
-    return cached ? JSON.parse(cached) : [];
-  } catch {
-    return [];
-  }
-}
+// Local storage helpers for caching - commented out as unused
+// function getCachedMessages(chatId: string): Message[] {
+//   try {
+//     const cached = localStorage.getItem(`chathut_messages_${chatId}`);
+//     return cached ? JSON.parse(cached) : [];
+//   } catch {
+//     return [];
+//   }
+// }
 
-function setCachedMessages(chatId: string, messages: Message[]) {
-  try {
-    localStorage.setItem(`chathut_messages_${chatId}`, JSON.stringify(messages));
-  } catch (error) {
-    console.warn('Failed to cache messages:', error);
-  }
-}
+// function setCachedMessages(chatId: string, messages: Message[]) {
+//   try {
+//     localStorage.setItem(`chathut_messages_${chatId}`, JSON.stringify(messages));
+//   } catch (error) {
+//     console.warn('Failed to cache messages:', error);
+//   }
+// }
 
 export const useMessagingStore = create<MessagingState>((set, get) => ({
   // Initial state
@@ -312,7 +312,7 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
 
   // Handle messaging events
   handleEvent: (event) => {
-    const { messages } = get();
+    // const { messages } = get(); // Unused variable
     
     if (event.type === "message:new") {
       const messageData = event.data as Message;

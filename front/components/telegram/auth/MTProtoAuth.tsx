@@ -17,7 +17,7 @@ interface MTProtoAuthProps {
 
 const MTProtoAuth: React.FC<MTProtoAuthProps> = ({
   onAuthSuccess,
-  onAuthError,
+  // onAuthError, // Unused parameter
 }) => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
