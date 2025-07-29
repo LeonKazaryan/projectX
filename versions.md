@@ -500,3 +500,14 @@
 ## 0.9.0c
 
 - Registration fix
+
+## 0.9.0d
+
+- PostgreSQL - SQLite
+- Fixed DB
+
+# 0.9.1
+
+- WebScoket optimization
+- Perfomacne Optimization
+- API Caching

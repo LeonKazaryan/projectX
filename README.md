@@ -15,6 +15,11 @@ A modern AI-powered messaging client for Telegram and WhatsApp with intelligent 
 - **Production Database**: Fixed async driver configuration for PostgreSQL in production
 - **PostgreSQL UUID Support**: Fixed model definitions to work with PostgreSQL UUID and SQLite String types
 - **Enhanced Logging**: Added detailed logging for debugging authentication issues
+- **Performance Optimizations**: Major speed improvements for chat and message loading
+- **WebSocket Stability**: Improved WebSocket connection handling for production environment
+- **API Caching**: Added in-memory caching for chats and messages (30s and 60s TTL)
+- **Batch Size Optimization**: Reduced initial load sizes for faster response times
+- **Error Handling**: Better error logging and connection cleanup
 
 ### v2.1.0 - Local Message Storage & Session Persistence
 

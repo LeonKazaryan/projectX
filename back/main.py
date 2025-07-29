@@ -125,24 +125,46 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         await telegram_manager.add_websocket(session_id, websocket)
         ws_monitor.log_connection(session_id, "REGISTERED", "Added to telegram manager")
         
+        # Send initial connection confirmation
+        await websocket.send_text('{"type": "connected", "session_id": "' + session_id + '"}')
+        
         while True:
-            # Keep connection alive and listen for ping/pong
             try:
-                await asyncio.sleep(30)  # Send heartbeat every 30 seconds
-                await websocket.send_text('{"type": "ping"}')
-                ws_monitor.log_message_sent(session_id, "ping", True)
-            except Exception:
-                ws_monitor.log_connection(session_id, "HEARTBEAT_FAILED", "Ping failed, breaking loop")
+                # Wait for client messages or timeout after 30 seconds
+                try:
+                    # Use receive_text with timeout to detect disconnections faster
+                    message = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                    # Handle ping/pong messages
+                    if message:
+                        import json
+                        try:
+                            data = json.loads(message)
+                            if data.get("type") == "ping":
+                                await websocket.send_text('{"type": "pong"}')
+                                ws_monitor.log_message_sent(session_id, "pong", True)
+                        except json.JSONDecodeError:
+                            # Non-JSON message, ignore
+                            pass
+                except asyncio.TimeoutError:
+                    # No message received in 30 seconds, send heartbeat
+                    await websocket.send_text('{"type": "ping"}')
+                    ws_monitor.log_message_sent(session_id, "ping", True)
+                    
+            except Exception as e:
+                ws_monitor.log_connection(session_id, "HEARTBEAT_FAILED", f"Connection error: {str(e)}")
                 break
             
     except WebSocketDisconnect:
         ws_monitor.log_connection(session_id, "DISCONNECTED", "Client disconnected")
-        await telegram_manager.remove_websocket_connection(session_id, websocket)
-        ws_monitor.cleanup_session(session_id)
     except Exception as e:
         ws_monitor.log_connection(session_id, "ERROR", f"Exception: {str(e)}")
-        await telegram_manager.remove_websocket_connection(session_id, websocket)
-        ws_monitor.cleanup_session(session_id)
+    finally:
+        # Cleanup in all cases
+        try:
+            await telegram_manager.remove_websocket_connection(session_id, websocket)
+            ws_monitor.cleanup_session(session_id)
+        except Exception as cleanup_error:
+            print(f"Error during WebSocket cleanup: {cleanup_error}")
 
 # Monitoring endpoint
 @app.get("/api/monitor")

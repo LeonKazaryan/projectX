@@ -7,6 +7,7 @@ from telethon.tl.types import Message, Dialog, User, Chat, Channel
 from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
 import json
 from datetime import datetime
+import time # Added for timing in get_dialogs
 
 class TelegramClientManager:
     def __init__(self):
@@ -174,65 +175,77 @@ class TelegramClientManager:
         try:
             print(f"📋 [TELEGRAM] get_dialogs called with session_id: {session_id[:50]}...")
             print(f"📋 [TELEGRAM] Active clients count: {len(self.active_clients)}")
-            print(f"📋 [TELEGRAM] Active client keys: {[k[:50] + '...' for k in self.active_clients.keys()]}")
             
             client = self.active_clients.get(session_id)
             if not client:
                 print(f"❌ [TELEGRAM] Client not found for session_id: {session_id[:50]}...")
                 return {"success": False, "error": "Клиент не найден"}
             
-            dialogs = await client.get_dialogs(limit=limit, archived=False)
+            # Optimize: Load dialogs in smaller batches for faster initial response
+            actual_limit = min(limit, 30)  # Start with 30 dialogs max for speed
+            
+            print(f"📋 [TELEGRAM] Loading {actual_limit} dialogs...")
+            start_time = time.time()
+            
+            dialogs = await client.get_dialogs(limit=actual_limit, archived=False)
             
             if include_archived:
-                # Also get archived dialogs
-                archived_dialogs = await client.get_dialogs(limit=limit, archived=True)
+                # Only get archived if specifically requested
+                archived_dialogs = await client.get_dialogs(limit=10, archived=True)  # Limit archived to 10
                 dialogs.extend(archived_dialogs)
             
+            load_time = time.time() - start_time
+            print(f"📋 [TELEGRAM] Dialogs loaded in {load_time:.2f}s")
+            
             dialogs_data = []
+            process_start = time.time()
+            
             for dialog in dialogs:
                 entity = dialog.entity
                 
-                # Determine entity types and properties
-                is_user = isinstance(entity, User)
-                is_basic_group = isinstance(entity, Chat)
-                is_channel = isinstance(entity, Channel)
-                is_supergroup = is_channel and hasattr(entity, 'megagroup') and entity.megagroup
-                is_broadcast_channel = is_channel and entity.broadcast
+                # Fast type checking
+                is_user = hasattr(entity, 'first_name')  # Faster than isinstance
+                is_channel = hasattr(entity, 'broadcast')
+                is_basic_group = not is_user and not is_channel
+                is_supergroup = is_channel and getattr(entity, 'megagroup', False)
+                is_broadcast_channel = is_channel and getattr(entity, 'broadcast', False)
                 
-                # Determine if we can send messages
-                can_send_messages = True
-                if is_channel:
-                    can_send_messages = not entity.broadcast and (
-                        not hasattr(entity, 'default_banned_rights') or 
-                        entity.default_banned_rights is None or 
-                        not entity.default_banned_rights.send_messages
-                    )
-                
-                # Skip read-only channels if include_readonly is False
-                if is_broadcast_channel and not include_readonly and not can_send_messages:
-                    continue
-                
-                # Skip ALL types of groups if include_groups is False
-                # This includes basic groups (Chat) and supergroups (Channel with megagroup=True)
+                # Quick filtering before expensive operations
                 if not include_groups and (is_basic_group or is_supergroup):
                     continue
                 
+                if is_broadcast_channel and not include_readonly:
+                    continue
+                
+                # Determine if we can send messages (simplified logic)
+                can_send_messages = True
+                if is_broadcast_channel:
+                    can_send_messages = False
+                elif is_channel:
+                    # For supergroups, assume we can send unless explicitly restricted
+                    can_send_messages = is_supergroup
+                
+                # Build dialog data with minimal processing
                 dialog_data = {
                     "id": dialog.id,
-                    "name": dialog.name,
+                    "name": dialog.name or "Unknown",
                     "is_user": is_user,
-                    "is_group": is_basic_group or is_supergroup,  # Both basic groups and supergroups are considered "groups"
-                    "is_channel": is_broadcast_channel,  # Only broadcast channels are considered "channels"
+                    "is_group": is_basic_group or is_supergroup,
+                    "is_channel": is_broadcast_channel,
                     "can_send_messages": can_send_messages,
                     "is_archived": dialog.archived,
-                    "unread_count": dialog.unread_count,
+                    "unread_count": getattr(dialog, 'unread_count', 0),
                     "last_message": {
-                        "text": dialog.message.message if dialog.message else "",
-                        "date": dialog.message.date.isoformat() if dialog.message else None
+                        "text": getattr(dialog.message, 'message', '') if dialog.message else '',
+                        "date": dialog.message.date.isoformat() if dialog.message and dialog.message.date else None
                     }
                 }
                 
                 dialogs_data.append(dialog_data)
+            
+            process_time = time.time() - process_start
+            total_time = time.time() - start_time
+            print(f"📋 [TELEGRAM] Processed {len(dialogs_data)} dialogs in {process_time:.2f}s (total: {total_time:.2f}s)")
             
             return {
                 "success": True,
@@ -240,28 +253,47 @@ class TelegramClientManager:
             }
             
         except Exception as e:
+            print(f"❌ [TELEGRAM] get_dialogs error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return {"success": False, "error": str(e)}
     
     async def get_messages(self, session_id: str, dialog_id: int, limit: int = 50, offset_id: int = 0) -> dict:
         """Получить сообщения из диалога"""
         try:
+            print(f"💬 [TELEGRAM] get_messages called: dialog_id={dialog_id}, limit={limit}, offset_id={offset_id}")
+            start_time = time.time()
+            
             client = self.active_clients.get(session_id)
             if not client:
                 return {"success": False, "error": "Клиент не найден"}
             
-            messages = await client.get_messages(dialog_id, limit=limit, offset_id=offset_id)
+            # Optimize: Use smaller batch size for faster initial load
+            actual_limit = min(limit, 100)  # Max 100 messages per request
+            
+            messages = await client.get_messages(dialog_id, limit=actual_limit, offset_id=offset_id)
+            
+            load_time = time.time() - start_time
+            print(f"💬 [TELEGRAM] Loaded {len(messages)} messages in {load_time:.2f}s")
             
             messages_data = []
+            process_start = time.time()
+            
             for message in messages:
-                if isinstance(message, Message):
+                if hasattr(message, 'id'):  # Faster check than isinstance
                     message_data = {
                         "id": message.id,
-                        "text": message.message,
-                        "date": message.date.isoformat(),
-                        "sender_id": message.sender_id,
-                        "is_outgoing": message.out
+                        "text": getattr(message, 'message', '') or '',
+                        "date": message.date.isoformat() if message.date else '',
+                        "sender_id": getattr(message, 'sender_id', 0),
+                        "is_outgoing": getattr(message, 'out', False),
+                        "sender_name": getattr(message, 'sender_name', None)  # Added for UI
                     }
                     messages_data.append(message_data)
+            
+            process_time = time.time() - process_start
+            total_time = time.time() - start_time
+            print(f"💬 [TELEGRAM] Processed {len(messages_data)} messages in {process_time:.2f}s (total: {total_time:.2f}s)")
             
             return {
                 "success": True,
@@ -269,6 +301,9 @@ class TelegramClientManager:
             }
             
         except Exception as e:
+            print(f"❌ [TELEGRAM] get_messages error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return {"success": False, "error": str(e)}
     
     async def send_message(self, session_id: str, dialog_id: int, text: str) -> dict:
