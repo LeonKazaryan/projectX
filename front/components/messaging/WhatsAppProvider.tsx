@@ -7,9 +7,9 @@ import type {
 import { io, Socket } from "socket.io-client";
 import authService from "../services/authService";
 
-// Удалить кастомный интерфейс ImportMeta, использовать стандартный import.meta.env
+// Use environment variable or default to localhost
 const WHATSAPP_API_URL =
-  import.meta.env.VITE_WHATSAPP_API_URL || "http://localhost:3000";
+  (import.meta as any).env?.VITE_WHATSAPP_API_URL || "http://localhost:3000";
 
 export class WhatsAppProvider implements IMessagingProvider {
   private isConnectedState: boolean = false;
@@ -53,8 +53,13 @@ export class WhatsAppProvider implements IMessagingProvider {
    * Returns true if a ready session was restored.
    */
   async init(): Promise<boolean> {
+    console.log("🔄 WhatsApp Provider: Trying to restore session...");
+
     const currentUser = this.getCurrentUser();
-    if (!currentUser) return false;
+    if (!currentUser) {
+      console.log("❌ WhatsApp Provider: No authenticated user found");
+      return false;
+    }
 
     // Clear any sessions that don't belong to current user
     this.clearForeignSession();
@@ -62,7 +67,12 @@ export class WhatsAppProvider implements IMessagingProvider {
     const storedId = localStorage.getItem(
       `whatsapp_session_id_${currentUser.id}`
     );
-    if (!storedId) return false;
+    if (!storedId) {
+      console.log("❌ WhatsApp Provider: No stored session found");
+      return false;
+    }
+
+    console.log("🔍 WhatsApp Provider: Found stored session:", storedId);
 
     // Double-check session belongs to current user
     if (!this.isSessionForCurrentUser(storedId)) {
@@ -78,6 +88,7 @@ export class WhatsAppProvider implements IMessagingProvider {
 
       if (data.success && data.isReady) {
         // Session is alive
+        console.log("✅ WhatsApp Provider: Session is alive and ready");
         this.sessionId = storedId;
         this.ready = true;
         this.isConnectedState = true;
@@ -90,9 +101,11 @@ export class WhatsAppProvider implements IMessagingProvider {
         });
 
         return true;
+      } else {
+        console.log("❌ WhatsApp Provider: Session not ready or invalid");
       }
     } catch (e) {
-      console.warn("Failed to restore WhatsApp session", e);
+      console.warn("❌ WhatsApp Provider: Failed to restore session", e);
     }
 
     return false;
@@ -238,20 +251,46 @@ export class WhatsAppProvider implements IMessagingProvider {
 
     try {
       const response = await fetch(
-        `${WHATSAPP_API_URL}/whatsapp/messages?sessionId=${this.sessionId}&chatId=${chatId}&limit=50`
+        `${WHATSAPP_API_URL}/whatsapp/messages?sessionId=${this.sessionId}&chatId=${chatId}&limit=5000`
       );
       const data = await response.json();
 
       if (data.success) {
-        return data.messages.map((msg: any) => ({
-          id: msg.id,
-          chatId: chatId,
-          from: msg.from,
-          text: msg.body || msg.text || "",
-          timestamp: new Date(msg.timestamp).toISOString(),
-          source: "whatsapp" as const,
-          isOutgoing: msg.isOutgoing || msg.fromMe || false,
-        }));
+        console.log(
+          "📨 Raw WhatsApp messages data:",
+          data.messages.slice(0, 2)
+        ); // Log first 2 messages
+
+        return data.messages.map((msg: any) => {
+          // Handle different timestamp formats
+          let timestamp: string;
+          try {
+            if (msg.timestamp) {
+              // If timestamp is already a number (Unix timestamp), convert to milliseconds
+              const ts =
+                typeof msg.timestamp === "number"
+                  ? msg.timestamp * 1000
+                  : msg.timestamp;
+              timestamp = new Date(ts).toISOString();
+            } else {
+              // Fallback to current time if no timestamp
+              timestamp = new Date().toISOString();
+            }
+          } catch (error) {
+            console.warn("Failed to parse timestamp:", msg.timestamp, error);
+            timestamp = new Date().toISOString();
+          }
+
+          return {
+            id: msg.id,
+            chatId: chatId,
+            from: msg.from,
+            text: msg.body || msg.text || "",
+            timestamp: timestamp,
+            source: "whatsapp" as const,
+            isOutgoing: msg.isOutgoing || msg.fromMe || false,
+          };
+        });
       }
       return [];
     } catch (error) {
@@ -408,6 +447,34 @@ export class WhatsAppProvider implements IMessagingProvider {
   setReady(val: boolean) {
     this.ready = val;
     this.isConnectedState = val;
+  }
+
+  /**
+   * Set an existing session ID and mark as ready
+   * Used when WhatsAppAuth has already established a session
+   */
+  setExistingSession(sessionId: string) {
+    console.log("🔗 WhatsAppProvider: Setting existing session:", sessionId);
+    this.sessionId = sessionId;
+    this.qrCode = null;
+    this.ready = true;
+    this.isConnectedState = true;
+
+    console.log(
+      "🔌 WhatsAppProvider: Setting up Socket.IO for existing session"
+    );
+    // Setup Socket.IO for the existing session
+    this.setupSocketIO();
+
+    // Store session for current user
+    const currentUser = this.getCurrentUser();
+    if (currentUser) {
+      console.log(
+        "💾 WhatsAppProvider: Storing session for user:",
+        currentUser.id
+      );
+      localStorage.setItem(`whatsapp_session_id_${currentUser.id}`, sessionId);
+    }
   }
 
   /**

@@ -131,6 +131,12 @@ class AuthService {
   }
 
   private setTokens(authResponse: AuthResponse): void {
+    console.log('Setting tokens:', {
+      accessToken: authResponse.accessToken ? 'Token exists' : 'No token',
+      refreshToken: authResponse.refreshToken ? 'Token exists' : 'No token',
+      user: authResponse.user
+    });
+    
     localStorage.setItem("chathut_access_token", authResponse.accessToken);
     if (authResponse.refreshToken) {
       localStorage.setItem("chathut_refresh_token", authResponse.refreshToken);
@@ -180,9 +186,12 @@ class AuthService {
   }
 
   async getProfile(): Promise<ProfileData> {
+    const token = this.getAccessToken();
+    console.log('Getting profile with token:', token ? 'Token exists' : 'No token');
+    
     const response = await apiClient.get('/auth/me', {
       headers: {
-        Authorization: `Bearer ${this.getAccessToken()}`,
+        Authorization: `Bearer ${token}`,
       },
     });
     return response.data;

@@ -190,7 +190,7 @@ const ChatList: React.FC<ChatListProps & { onSessionExpired?: () => void }> = ({
       setSessionExpired(false);
       const params = new URLSearchParams({
         session_id: sessionId,
-        limit: "200",
+        limit: "5000",
         include_archived: includeArchived.toString(),
         include_readonly: includeReadonly.toString(),
         include_groups: includeGroups.toString(),

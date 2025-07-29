@@ -3,7 +3,6 @@ import { Button } from "../../../src/components/ui/button";
 import { Textarea } from "../../../src/components/ui/textarea";
 import { Avatar, AvatarFallback } from "../../../src/components/ui/avatar";
 import { Separator } from "../../../src/components/ui/separator";
-import { ragService } from "../utils/ragService";
 import {
   Send,
   Bot,
@@ -17,10 +16,15 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react";
-import { RAGService } from "../utils/ragService";
 import { motion, AnimatePresence } from "framer-motion";
-import { API_BASE_URL } from "../../services/authService";
+import { API_BASE_URL, authService } from "../../services/authService";
 import ChatBackground from "../../messaging/ChatBackground";
+import { useMessagingStore } from "../../messaging/MessagingStore";
+import {
+  getMessages,
+  saveMessage,
+  setMessages as setLocalMessages,
+} from "../../utils/localMessageStore";
 
 interface Message {
   id: number;
@@ -47,6 +51,7 @@ interface MessageAreaProps {
   userId?: number;
   isAIPanelOpen?: boolean;
   setIsAIPanelOpen?: (open: boolean) => void;
+  onMessagesUpdated?: () => void;
 }
 
 const useAISettings = (sessionId: string) => {
@@ -60,29 +65,7 @@ const useAISettings = (sessionId: string) => {
   });
   // const [loading, setLoading] = useState(true); // Удалено
 
-  useEffect(() => {
-    if (!sessionId) return;
-
-    const loadSettings = async () => {
-      // setLoading(true); // Удалено
-      try {
-        // This would be your actual API call
-        const response = await fetch(
-          `${API_BASE_URL}/ai/settings?session_id=${sessionId}`
-        );
-        const data = await response.json();
-        if (data.success && data.settings) {
-          setAiSettings(data.settings);
-        }
-      } catch (error) {
-        console.error("Failed to load AI settings:", error);
-      } finally {
-        // setLoading(false); // Удалено
-      }
-    };
-
-    loadSettings();
-  }, [sessionId]);
+  // Removed AI settings loading - not needed for MessageArea
 
   return { aiSettings };
 };
@@ -94,8 +77,18 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   userId,
 
   setIsAIPanelOpen,
+  onMessagesUpdated,
 }) => {
+  // [CONTEXT-TRACE] Track why AI gets no messages
+  console.log(
+    `[CONTEXT-TRACE-1] MessageArea rendered: chatId=${chatId}, sessionId=${
+      sessionId ? "present" : "missing"
+    }`
+  );
+
   const { aiSettings } = useAISettings(sessionId);
+  const { loadMessages: loadMessagesFromStore, getChatMessages } =
+    useMessagingStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -113,6 +106,11 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   const [ragEnhanced, setRagEnhanced] = useState(false);
   const [similarContext, setSimilarContext] = useState<string[]>([]);
   const [isNearBottom, setIsNearBottom] = useState(true);
+
+  // Infinite scroll state
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [oldestMessageId, setOldestMessageId] = useState<number>(0);
 
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -156,14 +154,15 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
               if (!messageExists) {
                 const newMessages = [...prev, data.data];
 
-                // Add new message to RAG asynchronously
-                ragService
-                  .addMessage(sessionId, chatId, data.data)
-                  .catch((err) =>
-                    console.warn("Failed to add message to RAG:", err)
-                  );
-
-                return newMessages.sort((a, b) => a.id - b.id);
+                // Sort by date first, then by ID as fallback
+                return newMessages.sort((a, b) => {
+                  const dateA = new Date(a.date).getTime();
+                  const dateB = new Date(b.date).getTime();
+                  if (dateA !== dateB) {
+                    return dateA - dateB;
+                  }
+                  return a.id - b.id;
+                });
               }
               return prev;
             });
@@ -234,52 +233,168 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
     setAiSuggestionLoading(true);
     setAiSuggestion("");
 
-    const historyForAgent = messages.slice(-15);
-    const lastContactMessage = [...historyForAgent]
-      .filter((m) => !m.is_outgoing)
-      .pop();
-    const query = lastContactMessage?.text || "Что ответить?";
-
     try {
-      const ragService = new RAGService();
-      const suggestion = await ragService.getAgentResponse(
-        sessionId,
-        chatId,
-        query,
-        historyForAgent
-      );
+      const historyForAgent = messages.slice(-15);
 
-      if (suggestion && suggestion.suggestion) {
-        setAiSuggestion(suggestion.suggestion);
-        setRagEnabled(true);
-        setRagEnhanced(suggestion.rag_enhanced || false);
-        setSimilarContext(suggestion.similar_context || []);
+      // Convert messages to the format expected by API
+      const recentMessages = historyForAgent.map((msg) => ({
+        id: msg.id.toString(),
+        text: msg.text,
+        isOutgoing: msg.is_outgoing,
+        from: msg.sender_name || (msg.is_outgoing ? "You" : "Contact"),
+        timestamp: msg.date,
+      }));
+
+      const token = authService.getAccessToken();
+      if (!token) {
+        throw new Error("Not authenticated");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/ai/suggest-response`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          chat_id: chatId.toString(),
+          source: "telegram",
+          chat_name: chatName,
+          recent_messages: recentMessages,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.suggestion) {
+        setAiSuggestion(data.suggestion);
+        setRagEnabled(false);
+        setRagEnhanced(false);
+        setSimilarContext([]);
         setShowAiSuggestion(true);
         setHasSuggestion(true);
+        console.log("🤖 AI suggestion generated:", data.suggestion);
       } else {
-        setAiSuggestion("Не удалось сгенерировать ответ. Попробуйте еще раз.");
-        setShowAiSuggestion(true);
+        throw new Error(data.error || "Failed to generate suggestion");
       }
     } catch (error) {
-      console.error("Error regenerating AI suggestion via agent:", error);
-      setAiSuggestion("Ошибка при генерации ответа.");
+      console.error("Error generating AI suggestion:", error);
+      setAiSuggestion("Ошибка при генерации ответа. Попробуйте еще раз.");
       setShowAiSuggestion(true);
+      setHasSuggestion(true);
     } finally {
       setAiSuggestionLoading(false);
     }
-  }, [aiSuggestionLoading, messages, sessionId, chatId]);
+  }, [aiSuggestionLoading, messages, sessionId, chatId, chatName]);
 
   // This is now just an alias
   const getManualAISuggestion = regenerateAISuggestion;
 
   // New function for continuous AI monitoring
   const startContinuousAI = useCallback(() => {
-    // DISABLED: No more automatic suggestions
-    // AI will only suggest when user explicitly asks for it
+    // Auto-generate suggestion when new message from contact arrives
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      // If last message is from contact (not outgoing), generate suggestion
+      if (!lastMessage.is_outgoing && !aiSuggestionLoading) {
+        console.log(
+          "🤖 New contact message detected, generating suggestion..."
+        );
+        setTimeout(() => {
+          regenerateAISuggestion();
+        }, 1000); // Small delay to avoid rapid-fire suggestions
+      }
+    }
     return () => {}; // Return empty cleanup function
-  }, []);
+  }, [messages, aiSuggestionLoading, regenerateAISuggestion]);
+
+  // Auto-generate suggestions when new messages arrive
+  useEffect(() => {
+    if (messages.length > 0) {
+      startContinuousAI();
+    }
+  }, [messages, startContinuousAI]);
+
+  const loadLocalMessages = async () => {
+    console.log(`[CONTEXT-TRACE-2] Loading messages for chat ${chatId}`);
+
+    // First load from local storage (instant)
+    const localMsgs = await getMessages(chatId.toString());
+    console.log(`[CONTEXT-TRACE-3] Local messages count: ${localMsgs.length}`);
+
+    // Update UI with local messages immediately
+    if (localMsgs.length > 0) {
+      setMessages(
+        localMsgs.map((msg) => ({
+          id: parseInt(msg.id),
+          text: msg.text,
+          date: msg.timestamp,
+          is_outgoing: msg.isOutgoing,
+          sender_name: msg.from,
+        }))
+      );
+    }
+
+    // Then load fresh data directly from API (bypassing MessagingStore because chats are not in store)
+    try {
+      const url = `${API_BASE_URL}/messages/history?session_id=${sessionId}&dialog_id=${chatId}&limit=5000&offset_id=0`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.success && data.messages) {
+        console.log(
+          `[CONTEXT-TRACE-4] Fresh messages count: ${data.messages.length}`
+        );
+
+        const freshMessages = data.messages.sort((a: any, b: any) => {
+          const dateA = new Date(a.date).getTime();
+          const dateB = new Date(b.date).getTime();
+          if (dateA !== dateB) return dateA - dateB;
+          return a.id - b.id;
+        });
+
+        // Update UI with fresh messages
+        setMessages(freshMessages);
+
+        // Convert to MessagingStore format and save to local storage
+        const storeMessages = freshMessages.map((msg: any) => ({
+          id: msg.id.toString(),
+          chatId: chatId.toString(),
+          from: msg.sender_name || (msg.is_outgoing ? "You" : "Unknown"),
+          text: msg.text,
+          timestamp: msg.date,
+          source: "telegram" as const,
+          isOutgoing: msg.is_outgoing,
+        }));
+
+        // Save to local storage for instant loading next time
+        await setLocalMessages(chatId.toString(), storeMessages);
+        console.log(
+          `[CONTEXT-TRACE-5] Saved ${storeMessages.length} messages to local storage`
+        );
+
+        // Notify TelegramClient to refresh AI context
+        if (onMessagesUpdated) {
+          onMessagesUpdated();
+        }
+      } else {
+        console.log(
+          `[CONTEXT-TRACE-ERROR] API failed: ${data.error || "Unknown error"}`
+        );
+      }
+    } catch (error) {
+      console.error(`[CONTEXT-TRACE-ERROR] Failed to load messages:`, error);
+    }
+  };
 
   useEffect(() => {
+    console.log(
+      `[CONTEXT-TRACE-1] useEffect triggered: chatId=${chatId}, sessionId=${
+        sessionId ? "present" : "missing"
+      }`
+    );
+
     if (chatId && sessionId) {
       const isSwitch = previousChatIdRef.current !== chatId;
       if (isSwitch) {
@@ -288,11 +403,18 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
         setShowScrollButton(false);
         setAiSuggestion("");
         setHasSuggestion(false);
+        // Reset pagination state
+        setIsLoadingMore(false);
+        setHasMoreMessages(true);
+        setOldestMessageId(0);
         // ... reset other states
       }
       previousChatIdRef.current = chatId;
-      fetchMessages();
+
+      loadLocalMessages();
       connectWebSocket();
+    } else {
+      console.log(`[CONTEXT-TRACE-ERROR] Missing sessionId or chatId`);
     }
     return () => disconnectWebSocket();
   }, [sessionId, chatId, connectWebSocket, disconnectWebSocket]);
@@ -334,32 +456,129 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
     }
   }, [messages]);
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (
+    offsetId: number = 0,
+    isLoadingMore: boolean = false
+  ) => {
     if (!chatId || !sessionId) return;
 
     try {
-      // setLoading(true); // Removed as per edit hint
-      const response = await fetch(
-        `${API_BASE_URL}/messages/history?session_id=${sessionId}&dialog_id=${chatId}&limit=200`
+      console.log(
+        `[CONTEXT-TRACE-4] fetchMessages: Calling API for chat ${chatId}`
       );
+
+      const url = `${API_BASE_URL}/messages/history?session_id=${sessionId}&dialog_id=${chatId}&limit=100&offset_id=${offsetId}`;
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data.success) {
-        const sortedMessages = (data.messages || []).sort(
+        console.log(
+          `[CONTEXT-TRACE-5] API returned ${
+            (data.messages || []).length
+          } messages`
+        );
+        const newMessages = (data.messages || []).sort(
           (a: Message, b: Message) => {
-            // Sort by ID (or date if needed)
+            // Sort by date first, then by ID as fallback
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            if (dateA !== dateB) {
+              return dateA - dateB;
+            }
             return a.id - b.id;
           }
         );
-        setMessages(sortedMessages);
-        // setError(""); // Removed as per edit hint
+
+        if (isLoadingMore) {
+          // При загрузке старых сообщений добавляем их в начало
+          setMessages((prevMessages) => {
+            const combined = [...newMessages, ...prevMessages];
+            // Убираем дубликаты по ID
+            const uniqueMessages = combined.filter(
+              (msg, index, self) =>
+                index === self.findIndex((m) => m.id === msg.id)
+            );
+            return uniqueMessages.sort((a, b) => {
+              const dateA = new Date(a.date).getTime();
+              const dateB = new Date(b.date).getTime();
+              if (dateA !== dateB) {
+                return dateA - dateB;
+              }
+              return a.id - b.id;
+            });
+          });
+
+          // Проверяем есть ли еще сообщения
+          setHasMoreMessages(newMessages.length === 100);
+
+          if (newMessages.length > 0) {
+            setOldestMessageId(Math.min(...newMessages.map((m) => m.id)));
+          }
+        } else {
+          // При первоначальной загрузке заменяем все сообщения
+          setMessages(newMessages);
+          setHasMoreMessages(newMessages.length === 100);
+
+          if (newMessages.length > 0) {
+            setOldestMessageId(Math.min(...newMessages.map((m) => m.id)));
+          }
+
+          // Также обновляем store для AIPanel - напрямую добавляем сообщения
+          try {
+            // Convert MessageArea format to MessagingStore format
+            const storeMessages = newMessages.map((msg) => ({
+              id: msg.id.toString(),
+              chatId: chatId.toString(),
+              from: msg.sender_name || (msg.is_outgoing ? "You" : "Unknown"),
+              text: msg.text,
+              timestamp: msg.date,
+              source: "telegram" as const,
+              isOutgoing: msg.is_outgoing,
+            }));
+
+            // Save to local storage for instant loading next time
+            await setLocalMessages(chatId.toString(), storeMessages);
+
+            console.log(
+              `[CONTEXT-TRACE-6] Updated MessagingStore with ${storeMessages.length} messages`
+            );
+          } catch (error) {
+            console.warn("Failed to update MessagingStore:", error);
+          }
+        }
       } else {
-        // setError(data.error || "Ошибка загрузки сообщений"); // Removed as per edit hint
+        console.log(
+          `[CONTEXT-TRACE-ERROR] API failed: ${data.error || "Unknown error"}`
+        );
       }
     } catch (error) {
-      // setError("Ошибка соединения с сервером"); // Removed as per edit hint
+      console.error("Error loading messages from server:", error);
+    }
+  };
+
+  const loadMoreMessages = async () => {
+    if (isLoadingMore || !hasMoreMessages || !oldestMessageId) return;
+
+    setIsLoadingMore(true);
+
+    // Сохраняем текущую позицию скролла
+    const scrollContainer = scrollContainerRef.current;
+    const scrollTop = scrollContainer?.scrollTop || 0;
+    const scrollHeight = scrollContainer?.scrollHeight || 0;
+
+    try {
+      await fetchMessages(oldestMessageId, true);
+
+      // Восстанавливаем позицию скролла после загрузки
+      setTimeout(() => {
+        if (scrollContainer) {
+          const newScrollHeight = scrollContainer.scrollHeight;
+          const scrollDifference = newScrollHeight - scrollHeight;
+          scrollContainer.scrollTop = scrollTop + scrollDifference;
+        }
+      }, 50);
     } finally {
-      // setLoading(false); // Removed as per edit hint
+      setIsLoadingMore(false);
     }
   };
 
@@ -430,6 +649,15 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
 
     // Show button when scrolled up more than 100px from bottom
     setShowScrollButton(!nearBottom);
+
+    // Infinite scroll: load more messages when near top
+    const distanceFromTop = scrollTop;
+    const nearTop = distanceFromTop <= 100;
+
+    if (nearTop && hasMoreMessages && !isLoadingMore) {
+      console.log("🔄 Near top, loading more messages...");
+      loadMoreMessages();
+    }
   };
 
   const handleScrollToBottom = () => {
@@ -438,11 +666,20 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
   };
 
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        console.warn("Invalid date string:", dateString);
+        return "??:??";
+      }
+      return date.toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      console.error("Error formatting time:", error, dateString);
+      return "??:??";
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -565,7 +802,7 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
         }, aiSettings.suggestion_delay * 1000);
       }
     }
-  }, [messages, aiSettings, getManualAISuggestion]);
+  }, [messages, aiSettings, regenerateAISuggestion]);
 
   const getConnectionStatusColor = () => {
     switch (connectionStatus) {
@@ -655,6 +892,16 @@ const MessageArea: React.FC<Omit<MessageAreaProps, "aiSettings">> = ({
           className="h-full px-4 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-200/60 dark:scrollbar-thumb-blue-900/40 scrollbar-track-transparent"
           onScroll={handleScroll}
         >
+          {/* Loading more indicator */}
+          {isLoadingMore && (
+            <div className="flex justify-center py-4">
+              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Загружаем старые сообщения...</span>
+              </div>
+            </div>
+          )}
+
           <AnimatePresence initial={false}>
             {messages.map((message) => (
               <motion.div

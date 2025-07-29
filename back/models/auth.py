@@ -186,29 +186,7 @@ class UserPreferencesResponse(AIPreferences):
         from_attributes = True
 
 
-# Telegram Connection Models
-class TelegramConnectionCreate(BaseModel):
-    """Create Telegram connection"""
-    telegram_user_id: int
-    telegram_username: Optional[str] = None
-    telegram_display_name: Optional[str] = None
-    phone_number: Optional[str] = None
-    session_data: str  # Encrypted
 
-
-class TelegramConnectionResponse(BaseModel):
-    """Telegram connection response"""
-    id: UUID
-    telegram_user_id: int
-    telegram_username: Optional[str] = None
-    telegram_display_name: Optional[str] = None
-    phone_number: Optional[str] = None
-    is_active: bool
-    connected_at: datetime
-    last_sync: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True
 
 
 # Error Models

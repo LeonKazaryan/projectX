@@ -1,244 +1,235 @@
-from fastapi import APIRouter, HTTPException, Depends, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Union
-import os
-import logging
-from datetime import datetime, timedelta
+from typing import List, Dict, Any, Optional
+import json
+from datetime import datetime
 
-from back.globals import get_telegram_manager
-from back.telegram.telegram_client import TelegramClientManager
-from back.agents.chief_agent import ChiefAgent
-from back.ai.gemini_client import gemini_client
+from .auth import get_current_user
+from ..models.database import User
+from ..services.ai_service import AIService
+from ..services.context_service import ContextService
 
-logger = logging.getLogger(__name__)
 router = APIRouter()
 
-class AISettings(BaseModel):
-    memory_limit: int = 20
-    enabled: bool = True
-    suggestion_delay: float = 1.0  # Delay in seconds before showing suggestion
-    continuous_suggestions: bool = True  # Whether to provide continuous suggestions
-    proactive_suggestions: bool = True  # Whether to suggest when conversation is quiet
+class ChatContextRequest(BaseModel):
+    query: str
+    session_id: str
+    chat_id: str  # can be int for telegram or str for whatsapp
+    source: str  # "telegram" or "whatsapp"
+    chat_name: str
+    context_messages: List[Dict[str, Any]] = []
 
-class AISettingsResponse(BaseModel):
+class ChatContextResponse(BaseModel):
     success: bool
-    settings: Optional[AISettings] = None
+    response: str
+    error: Optional[str] = None
+    context_used: Optional[int] = None
+    memory_updated: Optional[bool] = None
+
+class SuggestionRequest(BaseModel):
+    session_id: str
+    chat_id: str
+    source: str  # "telegram" or "whatsapp"
+    chat_name: str
+    recent_messages: List[Dict[str, Any]] = []
+    user_style: Optional[str] = None
+
+class SuggestionResponse(BaseModel):
+    success: bool
+    suggestion: str
     error: Optional[str] = None
 
-# In-memory settings storage (in production, use database)
-user_ai_settings: dict = {}
+# Initialize services
+ai_service = AIService()
+context_service = ContextService()
 
-def get_user_ai_settings(session_id: str) -> AISettings:
-    """Get AI settings for a user"""
-    return user_ai_settings.get(session_id, AISettings())
-
-
-@router.get("/settings", response_model=AISettingsResponse)
-async def get_ai_settings(session_id: str = Query(...)):
-    """Get the current AI settings for a session."""
-    try:
-        settings = get_user_ai_settings(session_id)
-        return AISettingsResponse(success=True, settings=settings)
-    except Exception as e:
-        logger.error(f"Error getting AI settings for session {session_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve AI settings.")
-
-@router.post("/settings")
-async def update_ai_settings(
-    session_id: str = Body(...),
-    settings: AISettings = Body(...)
+@router.post("/chat-context", response_model=ChatContextResponse)
+async def ai_chat_context(
+    request: ChatContextRequest,
+    current_user: User = Depends(get_current_user)
 ):
-    """Update the AI settings for a session."""
+    """
+    AI chat assistant with full context memory and analysis
+    """
     try:
-        user_ai_settings[session_id] = settings
-        logger.info(f"Updated AI settings for session {session_id}")
-        return {"success": True, "message": "Settings updated successfully."}
+        # Get user ID
+        user_id = current_user.id
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User ID not found"
+            )
+
+        # Process the AI request with context
+        result = await ai_service.process_chat_query(
+            user_id=user_id,
+            session_id=request.session_id,
+            chat_id=request.chat_id,
+            source=request.source,
+            chat_name=request.chat_name,
+            query=request.query,
+            context_messages=request.context_messages
+        )
+
+        return ChatContextResponse(
+            success=True,
+            response=result["response"],
+            context_used=result.get("context_used", 0),
+            memory_updated=result.get("memory_updated", False)
+        )
+
     except Exception as e:
-        logger.error(f"Error updating AI settings for session {session_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update AI settings.")
+        print(f"AI Error: {str(e)}")
+        return ChatContextResponse(
+            success=False,
+            response="",
+            error=str(e)
+        )
 
 @router.get("/health")
-async def ai_health_check():
-    """Check AI system health (e.g., connection to Gemini)."""
-    # Check if Gemini API key is configured
-    is_configured = bool(os.getenv("GEMINI_API_KEY"))
-    return {
-        "status": "ok" if is_configured else "degraded",
-        "details": "Gemini API key is configured." if is_configured else "Gemini API key not set.",
-        "components": {
-            "gemini": "configured" if is_configured else "not_configured"
-        }
-    }
-
-class AgentResponseRequest(BaseModel):
-    session_id: str
-    chat_id: int
-    query: str
-    message_history: List[Dict] # e.g. {"sender": "user", "text": "Hello"}
-
-def normalize_message_history(message_history: List[Dict], user_id: Union[str, int, None] = None) -> List[Dict]:
-    """
-    Преобразует историю сообщений так, чтобы у каждого сообщения была роль:
-    - 'Вы' если исходящее (is_outgoing == True или sender == 'user')
-    - 'Собеседник' если входящее
-    """
-    normalized = []
-    for msg in message_history:
-        # Определяем, кто автор
-        is_out = msg.get('is_outgoing') or msg.get('isOutgoing')
-        sender = msg.get('sender', '')
-        # Если явно указано outgoing
-        if is_out:
-            role = 'Вы'
-        # Если sender явно user
-        elif sender == 'user' or sender == user_id:
-            role = 'Вы'
-        else:
-            role = 'Собеседник'
-        normalized.append({
-            **msg,
-            'role': role
-        })
-    return normalized
-
-@router.post("/generate-agent-response")
-async def generate_agent_response(
-    request: AgentResponseRequest,
-    manager: TelegramClientManager = Depends(get_telegram_manager)
-):
-    """
-    Handles a user query by executing a multi-agent workflow 
-    to generate a human-like, personalized response.
-    """
+async def ai_health():
+    """Check AI service health"""
     try:
-        # Use our gemini_client singleton
-        if not gemini_client.client:
-            raise HTTPException(status_code=500, detail="Gemini client not initialized")
+        health = await ai_service.health_check()
+        return {
+            "status": "healthy",
+            "services": health,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"AI service unhealthy: {str(e)}"
+        )
 
-        chief_agent = ChiefAgent(llm_client=gemini_client, telegram_manager=manager)
+@router.post("/analyze-full-chat")
+async def analyze_full_chat(
+    request: ChatContextRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Analyze and vectorize entire chat history for smart search"""
+    try:
+        user_id = current_user.id
         
-        # Prepare last_message for agents expecting it
-        last_message = {
-            "sender": "user",
-            "text": request.query
-        }
-
-        # Нормализуем историю сообщений
-        normalized_history = normalize_message_history(request.message_history)
-
-        initial_state = {
-            "session_id": request.session_id,
-            "chat_id": request.chat_id,
-            "query": request.query,
-            "message_history": normalized_history,
-            "last_message": last_message,
-        }
-
-        result_state = await chief_agent.execute(initial_state)
-
-        if 'error' in result_state:
-            raise HTTPException(status_code=500, detail=result_state['error'])
-
+        # Process ALL messages for this chat
+        result = await ai_service.vectorize_chat_history(
+            user_id=user_id,
+            session_id=request.session_id,
+            chat_id=request.chat_id,
+            source=request.source,
+            chat_name=request.chat_name,
+            all_messages=request.context_messages
+        )
+        
         return {
             "success": True,
-            "response": result_state.get('final_response', 'No response generated.'),
-            "debug_data": {
-                "persona_profile": result_state.get('persona_profile'),
-                "context": result_state.get('context'),
-                "draft_response": result_state.get('draft_response'),
-                "similar_messages": result_state.get('similar_messages', [])
-            }
+            "vectorized_messages": result.get("vectorized_count", 0),
+            "memory_updated": True
         }
-
+        
     except Exception as e:
-        logger.error(f"Error in agent response generation: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Full chat analysis error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-class AIChatContextRequest(BaseModel):
-    query: str
-    session_id: str
-    chat_id: Union[int, str]
-    source: str = "telegram"  # telegram or whatsapp
-    chat_name: str = ""
-    context_messages: List[Dict] = []
+@router.post("/clear-memory/{chat_id}")
+async def clear_chat_memory(
+    chat_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Clear AI memory for specific chat"""
+    try:
+        user_id = current_user.id
+        await context_service.clear_chat_memory(user_id, chat_id)
+        return {"success": True, "message": "Chat memory cleared"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-@router.post("/chat-context")
-async def ai_chat_with_context(
-    request: AIChatContextRequest,
-    manager: TelegramClientManager = Depends(get_telegram_manager)
+@router.post("/suggest-response", response_model=SuggestionResponse)
+async def suggest_response(
+    request: SuggestionRequest,
+    current_user: User = Depends(get_current_user)
 ):
     """
-    AI chat that can answer questions about the conversation context.
-    Uses RAG to find relevant information and provides intelligent responses.
+    Generate AI-powered response suggestions in user's style
     """
     try:
-        if not gemini_client.client:
-            raise HTTPException(status_code=500, detail="AI service not available")
-
-        # Build smart RAG context
-        from back.ai.rag_pipeline import build_context_for_ai
-        from back.ai.secure_rag_engine import secure_rag_engine
-
-        # Log request info for debugging
-        logger.info(f"AI chat context request: session_id={request.session_id}, chat_id={request.chat_id}, messages_count={len(request.context_messages)}")
-
-        # Sync messages with RAG first
-        if request.context_messages:
-            sync_result = await secure_rag_engine.sync_chat_history(
-                session_id=request.session_id,
-                chat_id=int(request.chat_id) if isinstance(request.chat_id, str) else request.chat_id,
-                messages=request.context_messages
+        # Get recent messages for context
+        context_messages = request.recent_messages[-10:]  # Last 10 messages
+        
+        # Find the last message from contact (not outgoing)
+        last_contact_message = None
+        for msg in reversed(context_messages):
+            if not msg.get('isOutgoing', False):
+                last_contact_message = msg
+                break
+        
+        if not last_contact_message:
+            return SuggestionResponse(
+                success=True,
+                suggestion="Привет! Как дела?"
             )
-            logger.info(f"RAG sync result: {sync_result}")
+        
+        # Analyze user's writing style from outgoing messages
+        user_messages = [msg['text'] for msg in context_messages if msg.get('isOutgoing', False)]
+        user_style_analysis = ""
+        if user_messages:
+            avg_length = sum(len(msg) for msg in user_messages) / len(user_messages)
+            if avg_length < 20:
+                user_style_analysis = "краткий стиль, короткие сообщения"
+            elif avg_length > 100:
+                user_style_analysis = "подробный стиль, длинные сообщения"
+            else:
+                user_style_analysis = "средний стиль сообщений"
+        
+        # Create suggestion prompt
+        prompt = f"""
+Проанализируй переписку и предложи подходящий ответ в стиле пользователя.
 
-            # Get messages from RAG to verify sync
-            dates = [(datetime.now() - timedelta(days=x)).date() for x in range(30)]
-            stored_messages = await secure_rag_engine.get_messages_for_period(
-                session_id=request.session_id,
-                chat_id=int(request.chat_id) if isinstance(request.chat_id, str) else request.chat_id,
-                dates=dates
-            )
-            logger.info(f"Messages in RAG: {len(stored_messages)}")
+Последнее сообщение собеседника: "{last_contact_message.get('text', '')}"
 
-        if request.source == "whatsapp":
-            # WhatsApp: simple prompt using provided recent messages only
-            lines = []
-            for msg in request.context_messages[-50:]:
-                who = "Вы" if msg.get("isOutgoing") else (request.chat_name if request.chat_name else "Контакт")
-                text = msg.get("text", "")
-                lines.append(f"{who}: {text}")
-            recent_block = "\n".join(lines)
-            prompt = f"Контекст WhatsApp:\n{recent_block}\n\nВопрос: {request.query}\nОтвет:"
-            ctx_meta = {"recent": len(lines)}
-            tokens_cnt = len(prompt)//4
-        else:
-            ctx_info = await build_context_for_ai(
-                session_id=request.session_id,
-                chat_id=int(request.chat_id),
-                query=request.query,
-                recent_limit=50,
-                provided_recent=request.context_messages,
-                chat_name=request.chat_name
-            )
-            prompt = ctx_info["prompt"]
-            ctx_meta = ctx_info["sections"]
-            tokens_cnt = ctx_info["tokens"]
+Стиль пользователя: {user_style_analysis}
 
-        # Generate response
-        response = await gemini_client.generate_text(prompt=prompt, max_tokens=400, temperature=0.7)
-        if not response:
-            raise HTTPException(status_code=500, detail="Failed to generate AI response")
+Контекст последних сообщений:
+{chr(10).join([f"{'Я' if msg.get('isOutgoing') else 'Собеседник'}: {msg.get('text', '')}" for msg in context_messages[-5:]])}
 
-        return {
-            "success": True,
-            "response": response.strip(),
-            "context_meta": ctx_meta,
-            "prompt_tokens": tokens_cnt,
-            "source": request.source
-        }
+Предложи естественный ответ в стиле пользователя. Ответ должен быть:
+- В том же тоне что и предыдущие сообщения пользователя
+- Подходящий по контексту
+- Естественный и живой
+- Не более 100 символов
 
-    except HTTPException:
-        raise
+Только текст ответа, без кавычек и объяснений:
+"""
+
+        # Get suggestion from AI service
+        suggestion = await ai_service.process_request(
+            user_id=current_user.id,
+            chat_id=request.chat_id,
+            query=prompt,
+            context_messages=[],  # Using embedded context in prompt
+            source=request.source
+        )
+        
+        return SuggestionResponse(
+            success=True,
+            suggestion=suggestion.strip()
+        )
+        
     except Exception as e:
-        logger.error(f"Error in AI chat context: {e}")
-        raise HTTPException(status_code=500, detail=f"AI chat failed: {str(e)}")
+        print(f"AI suggestion error: {str(e)}")
+        return SuggestionResponse(
+            success=False,
+            suggestion="Не удалось сгенерировать предложение",
+            error=str(e)
+        )
+
+@router.get("/health")
+async def ai_health():
+    """Check AI service health"""
+    return {"status": "healthy", "service": "ai"} 

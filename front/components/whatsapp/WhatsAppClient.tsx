@@ -4,19 +4,16 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "../../src/components/ui/resizable";
-import { Button } from "../../src/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import WhatsAppAuth from "./auth/WhatsAppAuth";
 import WhatsAppChatList from "./chats/WhatsAppChatList";
 import WhatsAppMessageArea from "./messages/WhatsAppMessageArea";
+import WhatsAppAuth from "./auth/WhatsAppAuth";
+import { Button } from "../../src/components/ui/button";
+import { ArrowLeft, MessageSquare } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useMessagingStore } from "../messaging/MessagingStore";
 import type { Chat } from "../messaging/types";
 import { WhatsAppProvider } from "../messaging/WhatsAppProvider";
 import AIPanel from "../messaging/AIPanel";
-
-const WHATSAPP_API_URL =
-  (import.meta as any).env?.VITE_WHATSAPP_API_URL || "http://localhost:3000";
 
 const WhatsAppClient: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +25,7 @@ const WhatsAppClient: React.FC = () => {
     selectChat,
     providers,
     loadChats,
+    getChatMessages,
   } = useMessagingStore();
 
   const whatsappConnected = useMessagingStore((state) =>
@@ -41,6 +39,7 @@ const WhatsAppClient: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Get WhatsAppProvider instance
   const whatsappProvider = providers?.whatsapp;
@@ -63,6 +62,7 @@ const WhatsAppClient: React.FC = () => {
       const wa = whatsappProvider as WhatsAppProvider;
       if (wa.isReady()) {
         setIsReady(true);
+        setIsAuthenticated(true);
       }
     }
   }, [whatsappConnected, whatsappProvider]);
@@ -79,7 +79,9 @@ const WhatsAppClient: React.FC = () => {
       const poll = setInterval(async () => {
         try {
           const res = await fetch(
-            `${WHATSAPP_API_URL}/whatsapp/status?sessionId=${sessionId}`
+            `${
+              process.env.REACT_APP_WHATSAPP_API_URL || "http://localhost:3000"
+            }/whatsapp/status?sessionId=${sessionId}`
           );
           const data = await res.json();
           if (data.success && data.isReady) {
@@ -99,83 +101,45 @@ const WhatsAppClient: React.FC = () => {
     }
   }, [showQr, sessionId, isReady]); // Remove loadChats from dependencies!
 
-  const handleConnect = async () => {
+  const handleAuthSuccess = async (sessionData: string) => {
+    console.log("🎯 handleAuthSuccess called with sessionData:", sessionData);
     setIsConnecting(true);
     try {
-      const success = await connectProvider("whatsapp");
-      if (success && whatsappProvider) {
+      // Use the sessionId from WhatsAppAuth
+      setSessionId(sessionData);
+      setShowQr(false);
+      setIsReady(true);
+      setIsAuthenticated(true);
+
+      console.log("📱 Setting up WhatsApp provider with session:", sessionData);
+
+      // Set the existing session in the provider instead of connecting from scratch
+      if (whatsappProvider) {
         const wa = whatsappProvider as WhatsAppProvider;
-        setSessionId(wa.getSessionId());
-        const qr = wa.getQrCode();
-        setQrCode(qr);
-        if (qr) {
-          setShowQr(true);
-          setIsReady(false);
-        } else {
-          // Session already ready
-          setShowQr(false);
-          setIsReady(true);
-          setIsAuthenticated(true);
-          // Load chats immediately
-          loadChats("whatsapp");
-        }
+        wa.setExistingSession(sessionData);
+
+        console.log("💬 Loading WhatsApp chats...");
+        // Load chats immediately after setting the session
+        loadChats("whatsapp");
+      } else {
+        console.error("❌ WhatsApp provider not found!");
       }
     } catch (error) {
-      console.error("Failed to connect WhatsApp:", error);
+      console.error("❌ Failed to setup WhatsApp session:", error);
+      setAuthError("Ошибка подключения к WhatsApp");
     } finally {
       setIsConnecting(false);
     }
   };
 
+  const handleAuthError = (err: string) => {
+    setAuthError(err);
+    console.error("WhatsApp auth error:", err);
+  };
+
   const handleChatSelect = (chat: Chat) => {
     selectChat(chat);
   };
-
-  if (isLoading || isConnecting) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">
-            {isConnecting ? "Connecting to WhatsApp..." : "Loading..."}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (showQr && qrCode) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
-        <div className="w-full max-w-md">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/")}
-            className="mb-4"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            На главную
-          </Button>
-          <div className="flex flex-col items-center">
-            <p className="mb-2 text-lg font-orbitron">
-              Сканируй QR-код WhatsApp
-            </p>
-            <img
-              src={qrCode}
-              alt="WhatsApp QR Code"
-              className="mb-4 border-4 border-green-500 rounded-lg shadow-lg"
-            />
-            <p className="text-sm text-muted-foreground mb-2">
-              Открой WhatsApp на телефоне → Устройства → Подключить устройство
-            </p>
-            <p className="text-xs text-yellow-400 font-rajdhani">
-              После сканирования QR-кода чат загрузится автоматически
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (!isAuthenticated || !isReady) {
     return (
@@ -190,11 +154,13 @@ const WhatsAppClient: React.FC = () => {
             На главную
           </Button>
           <WhatsAppAuth
-            onConnect={handleConnect}
-            onError={(err) => console.error("WhatsApp auth error:", err)}
+            onAuthSuccess={handleAuthSuccess}
+            onAuthError={handleAuthError}
           />
-          {error && (
-            <p className="text-sm text-destructive mt-4 text-center">{error}</p>
+          {(error || authError) && (
+            <p className="text-sm text-destructive mt-4 text-center">
+              {authError || error}
+            </p>
           )}
         </div>
       </div>
@@ -203,53 +169,52 @@ const WhatsAppClient: React.FC = () => {
 
   return (
     <>
-      <div className="w-full flex flex-col bg-background text-foreground h-full">
-        <div
-          className={`flex h-full transition-all duration-300 ${
-            isAIPanelOpen ? "mr-96" : "mr-0"
-          }`}
-        >
-          <ResizablePanelGroup direction="horizontal" className="flex-grow">
-            <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
-              <WhatsAppChatList
-                onChatSelect={handleChatSelect}
-                selectedChatId={selectedChat?.id}
-              />
-            </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel defaultSize={75}>
-              {selectedChat ? (
-                <WhatsAppMessageArea
-                  chatId={selectedChat.id}
-                  chatName={selectedChat.title}
-                  isAIPanelOpen={isAIPanelOpen}
-                  setIsAIPanelOpen={setIsAIPanelOpen}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-muted-foreground">
-                    <p className="text-lg font-semibold">Выберите чат</p>
-                    <p className="text-sm">
-                      Чтобы начать общение, выберите чат из списка слева.
-                    </p>
-                  </div>
+      <ResizablePanelGroup direction="horizontal" className="h-full">
+        <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
+          <WhatsAppChatList
+            onChatSelect={handleChatSelect}
+            selectedChatId={selectedChat?.id}
+          />
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel defaultSize={70}>
+          {selectedChat ? (
+            <WhatsAppMessageArea
+              chatId={selectedChat.id}
+              chatName={selectedChat.title}
+              setIsAIPanelOpen={setIsAIPanelOpen}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full bg-muted/30">
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto">
+                  <MessageSquare className="h-8 w-8 text-green-600 dark:text-green-400" />
                 </div>
-              )}
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </div>
+                <div>
+                  <h3 className="text-lg font-medium text-foreground">
+                    Выберите чат
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Выберите чат из списка, чтобы начать переписку
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
-        {/* AI Panel - now at the same level as the main content */}
-        <AIPanel
-          isOpen={isAIPanelOpen}
-          onClose={() => setIsAIPanelOpen(false)}
-          chatId={selectedChat?.id || ""}
-          chatName={selectedChat?.title || ""}
-          source="whatsapp"
-          sessionId={sessionId || ""}
-          currentMessages={[]}
-        />
-      </div>
+      <AIPanel
+        isOpen={isAIPanelOpen}
+        onClose={() => setIsAIPanelOpen(false)}
+        chatId={selectedChat?.id || ""}
+        chatName={selectedChat?.title || ""}
+        source="whatsapp"
+        sessionId={sessionId || ""}
+        currentMessages={
+          selectedChat?.id ? getChatMessages(selectedChat.id) : []
+        }
+      />
     </>
   );
 };

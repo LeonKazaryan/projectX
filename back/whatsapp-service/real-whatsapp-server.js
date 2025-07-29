@@ -324,7 +324,7 @@ app.get('/whatsapp/messages', async (req, res) => {
     }
     
     const chat = await sessions[sessionId].client.getChatById(chatId);
-    const messages = await chat.fetchMessages({ limit: Number(limit) || 50 });
+    const messages = await chat.fetchMessages({ limit: Number(limit) || 5000 });
     
     res.json({ 
       success: true, 

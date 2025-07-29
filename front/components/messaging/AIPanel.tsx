@@ -54,7 +54,11 @@ const AIPanel: React.FC<AIPanelProps> = ({
     "Сделай краткий пересказ переписки",
     "Как лучше ответить на это сообщение?",
     "Найди упоминания адреса или встречи",
+    "Найди все обсуждения про работу",
+    "Когда мы договаривались о встрече?",
   ]);
+
+  const [isIndexing, setIsIndexing] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -84,9 +88,70 @@ const AIPanel: React.FC<AIPanelProps> = ({
     return () => document.removeEventListener("keydown", handleEsc);
   }, [isOpen, onClose]);
 
+  const indexFullChat = async () => {
+    if (isIndexing || currentMessages.length === 0) return;
+
+    setIsIndexing(true);
+    try {
+      console.log(
+        `🧠 Indexing ${currentMessages.length} messages for smart search...`
+      );
+
+      const res = await fetch(`${API_BASE_URL}/ai/analyze-full-chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem(
+            "chathut_access_token"
+          )}`,
+        },
+        body: JSON.stringify({
+          query: "Index entire chat history",
+          session_id: sessionId,
+          chat_id: chatId.toString(),
+          source,
+          chat_name: chatName,
+          context_messages: currentMessages,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        console.log(
+          `✅ Indexed ${data.vectorized_messages} conversation chunks`
+        );
+        // Show success message
+        const successMsg: AIMessage = {
+          id: Date.now().toString(),
+          type: "ai",
+          content: `✅ Успешно проиндексировал ${data.vectorized_messages} блоков переписки! Теперь я могу быстро находить информацию по всей истории чата.`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, successMsg]);
+      } else {
+        throw new Error(data.error || "Indexing failed");
+      }
+    } catch (e: any) {
+      console.error("Indexing error:", e);
+      const errorMsg: AIMessage = {
+        id: Date.now().toString(),
+        type: "ai",
+        content: `❌ Ошибка индексации: ${e.message}`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setIsIndexing(false);
+    }
+  };
+
   const sendMessage = async (textOverride?: string) => {
     const text = textOverride || input.trim();
     if (!text || isLoading) return;
+
+    console.log(
+      `[CONTEXT-TRACE-9] AI Panel sending query with ${currentMessages.length} context messages`
+    );
 
     const userMsg: AIMessage = {
       id: Date.now().toString(),
@@ -121,7 +186,7 @@ const AIPanel: React.FC<AIPanelProps> = ({
         body: JSON.stringify({
           query: text,
           session_id: sessionId,
-          chat_id: source === "telegram" ? parseInt(chatId) : chatId,
+          chat_id: chatId.toString(),
           source,
           chat_name: chatName,
           context_messages: currentMessages,
@@ -243,6 +308,21 @@ const AIPanel: React.FC<AIPanelProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={indexFullChat}
+                disabled={isIndexing || currentMessages.length === 0}
+                className="h-8 px-2 text-white hover:bg-white hover:bg-opacity-20 text-xs"
+                title="Проиндексировать всю историю чата для умного поиска"
+              >
+                {isIndexing ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Search className="w-3 h-3" />
+                )}
+                {isIndexing ? "Индексация..." : "Индекс"}
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

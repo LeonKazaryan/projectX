@@ -435,7 +435,7 @@ const Profile: React.FC = () => {
                       {t("profile.activeLinks")}
                     </span>
                     <span className="info-value">
-                      {profile?.connected_accounts.filter(
+                      {profile?.connected_accounts?.filter(
                         (acc) => acc.is_active
                       ).length || 0}
                     </span>
@@ -472,7 +472,7 @@ const Profile: React.FC = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
             >
-              {profile?.connected_accounts.map(renderAccountCard)}
+              {profile?.connected_accounts?.map(renderAccountCard)}
             </motion.div>
           </div>
         </motion.div>

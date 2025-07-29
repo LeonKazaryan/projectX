@@ -17,10 +17,10 @@ from back.api.auth import router as auth_router
 from back.api.telegram_auth import telegram_auth_router
 from back.api.messages import messages_router
 from back.api.chats import chats_router
-from back.api.ai import router as ai_router
-from back.api.rag import router as rag_router
 from back.api.telegram import router as telegram_router
 from back.api.whatsapp import router as whatsapp_router
+from back.api.sessions import router as sessions_router
+from back.api.ai import router as ai_router
 from back.database.config import connect_database, disconnect_database, init_database, test_connection
 from back.utils.websocket_monitor import ws_monitor
 import back.globals as globals
@@ -83,23 +83,22 @@ app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(telegram_auth_router, prefix="/api/auth", tags=["Telegram Authentication"])
 app.include_router(messages_router, prefix="/api/messages", tags=["messages"])
 app.include_router(chats_router, prefix="/api/chats", tags=["chats"])
-app.include_router(ai_router, prefix="/api/ai", tags=["ai"])
-app.include_router(rag_router, prefix="/api/rag", tags=["rag"])
 app.include_router(telegram_router, prefix="/api/telegram", tags=["Telegram"])
 app.include_router(whatsapp_router, prefix="/api", tags=["WhatsApp"])
+app.include_router(sessions_router, prefix="/api/sessions", tags=["Sessions"])
+app.include_router(ai_router, prefix="/api/ai", tags=["AI Assistant"])
 
 @app.get("/")
 async def root():
     return {
-        "message": "ChartHut Cyberpunk API 🤖",
+        "message": "ChartHut API 🤖",
         "status": "running",
         "version": "0.7.0",
         "features": [
             "🔐 Advanced Authentication System",
-            "🤖 AI-Powered Messaging",
             "📡 Real-time Communication",
-            "🗄️ PostgreSQL Database",
-            "⚡ Neural Networks Integration"
+            "🗄️ SQLite Database",
+            "⚡ Fast Messaging"
         ]
     }
 

@@ -27,14 +27,23 @@ class TelegramClientManager:
     async def authenticate_with_phone(self, phone: str, session_id: str) -> dict:
         """Начать процесс аутентификации по номеру телефона"""
         try:
+            print(f"🔐 [TELEGRAM] Starting auth for phone: {phone[:3]}***{phone[-3:]} (session: {session_id})")
+            print(f"🔐 [TELEGRAM] API_ID: {self.api_id}, API_HASH: {self.api_hash[:10]}...")
+            
             client = await self.create_client()
+            print(f"🔐 [TELEGRAM] Client created successfully")
+            
             await client.connect()
+            print(f"🔐 [TELEGRAM] Client connected to Telegram servers")
             
             # Отправить код
+            print(f"🔐 [TELEGRAM] Sending code request to phone: {phone}")
             code_request = await client.send_code_request(phone)
+            print(f"🔐 [TELEGRAM] Code request successful! Hash: {code_request.phone_code_hash[:10]}...")
             
             # Сохранить клиент временно
             self.active_clients[f"temp_{session_id}"] = client
+            print(f"🔐 [TELEGRAM] Client saved temporarily for session: {session_id}")
             
             return {
                 "success": True,
@@ -43,9 +52,12 @@ class TelegramClientManager:
             }
             
         except Exception as e:
+            print(f"❌ [TELEGRAM] Auth error: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return {
                 "success": False,
-                "error": str(e)
+                "error": f"{type(e).__name__}: {str(e)}"
             }
     
     async def verify_phone_code(self, phone: str, code: str, phone_code_hash: str, session_id: str) -> dict:
@@ -62,12 +74,12 @@ class TelegramClientManager:
                 # Получить сессию
                 session_string = client.session.save()
                 
-                # Переместить клиент в активные
-                self.active_clients[session_id] = client
+                # Переместить клиент в активные под session_string (не UUID!)
+                self.active_clients[session_string] = client
                 del self.active_clients[f"temp_{session_id}"]
                 
                 # Настроить обработчики событий
-                await self._setup_event_handlers(client, session_id)
+                await self._setup_event_handlers(client, session_string)
                 
                 return {
                     "success": True,
@@ -90,21 +102,29 @@ class TelegramClientManager:
     async def verify_2fa_password(self, password: str, session_id: str) -> dict:
         """Проверить пароль 2FA"""
         try:
+            print(f"🔐 [TELEGRAM] Verifying 2FA password for session: {session_id}")
+            
             client = self.active_clients.get(f"temp_{session_id}")
             if not client:
+                print(f"❌ [TELEGRAM] Temp session not found: temp_{session_id}")
                 return {"success": False, "error": "Сессия не найдена"}
             
+            print(f"🔐 [TELEGRAM] Attempting sign_in with password...")
             await client.sign_in(password=password)
+            print(f"🔐 [TELEGRAM] 2FA password accepted!")
             
             # Получить сессию
             session_string = client.session.save()
+            print(f"🔐 [TELEGRAM] Session string generated successfully")
             
-            # Переместить клиент в активные
-            self.active_clients[session_id] = client
+            # Переместить клиент в активные под session_string (не UUID!)
+            self.active_clients[session_string] = client
             del self.active_clients[f"temp_{session_id}"]
+            print(f"🔐 [TELEGRAM] Client moved to active sessions under session_string")
             
             # Настроить обработчики событий
-            await self._setup_event_handlers(client, session_id)
+            await self._setup_event_handlers(client, session_string)
+            print(f"🔐 [TELEGRAM] Event handlers configured")
             
             return {
                 "success": True,
@@ -113,23 +133,34 @@ class TelegramClientManager:
             }
             
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            print(f"❌ [TELEGRAM] 2FA error: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return {"success": False, "error": f"{type(e).__name__}: {str(e)}"}
     
     async def restore_session(self, session_string: str, session_id: str) -> dict:
         """Восстановить сессию из строки"""
         try:
+            print(f"🔄 [TELEGRAM] Restoring session for session_id: {session_id}")
+            print(f"🔄 [TELEGRAM] Session string length: {len(session_string)}")
+            
             client = await self.create_client(session_string)
             await client.connect()
             
             if await client.is_user_authorized():
-                self.active_clients[session_id] = client
-                await self._setup_event_handlers(client, session_id)
+                # Сохраняем клиент под session_string (не session_id!) для совместимости с get_dialogs
+                self.active_clients[session_string] = client
+                await self._setup_event_handlers(client, session_string)
+                
+                print(f"✅ [TELEGRAM] Session restored and client saved under session_string")
+                print(f"✅ [TELEGRAM] Active clients count: {len(self.active_clients)}")
                 
                 return {
                     "success": True,
                     "message": "Сессия восстановлена"
                 }
             else:
+                print(f"❌ [TELEGRAM] Session is not authorized")
                 return {
                     "success": False,
                     "error": "Сессия недействительна"
@@ -141,8 +172,13 @@ class TelegramClientManager:
     async def get_dialogs(self, session_id: str, limit: int = 50, include_archived: bool = False, include_readonly: bool = True, include_groups: bool = True) -> dict:
         """Получить список диалогов"""
         try:
+            print(f"📋 [TELEGRAM] get_dialogs called with session_id: {session_id[:50]}...")
+            print(f"📋 [TELEGRAM] Active clients count: {len(self.active_clients)}")
+            print(f"📋 [TELEGRAM] Active client keys: {[k[:50] + '...' for k in self.active_clients.keys()]}")
+            
             client = self.active_clients.get(session_id)
             if not client:
+                print(f"❌ [TELEGRAM] Client not found for session_id: {session_id[:50]}...")
                 return {"success": False, "error": "Клиент не найден"}
             
             dialogs = await client.get_dialogs(limit=limit, archived=False)
@@ -351,12 +387,29 @@ class TelegramClientManager:
     async def get_user_info(self, session_id: str) -> dict:
         """Получить информацию о пользователе Telegram"""
         try:
+            print(f"👤 [TELEGRAM] Getting user info for session: {session_id[:50]}...")
+            print(f"👤 [TELEGRAM] Active clients count: {len(self.active_clients)}")
+            
             client = self.active_clients.get(session_id)
             if not client:
+                print(f"❌ [TELEGRAM] Client not found for session: {session_id[:50]}...")
                 return {"success": False, "error": "Клиент не найден"}
 
-            me = await client.get_me()
+            print(f"✅ [TELEGRAM] Client found, getting user info...")
+            
+            # Add timeout to prevent hanging
+            try:
+                me = await asyncio.wait_for(client.get_me(), timeout=10.0)
+                print(f"✅ [TELEGRAM] User info retrieved successfully")
+            except asyncio.TimeoutError:
+                print(f"⏰ [TELEGRAM] get_me() timed out")
+                return {"success": False, "error": "Timeout при получении информации о пользователе"}
+            except Exception as e:
+                print(f"❌ [TELEGRAM] get_me() failed: {e}")
+                return {"success": False, "error": f"Ошибка получения данных: {str(e)}"}
+                
             if not me:
+                print(f"❌ [TELEGRAM] get_me() returned None")
                 return {"success": False, "error": "Не удалось получить информацию о пользователе"}
             
             print("--- TELEGRAM USER OBJECT ---")

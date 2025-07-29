@@ -1,16 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from back.database.config import get_async_db
-from back.models.database import (
-    User, 
-    create_or_update_telegram_connection_async,
-    deactivate_telegram_connection_async,
-    TelegramConnection
-)
+from back.models.database import User
 from back.api.auth import get_current_user
 from pydantic import BaseModel
 from back.globals import get_telegram_manager
-from sqlalchemy import select
 
 router = APIRouter(tags=["Telegram"])
 
@@ -21,83 +13,69 @@ class ConnectRequest(BaseModel):
 async def connect_telegram(
     request: ConnectRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db),
     manager = Depends(get_telegram_manager)
 ):
+    """Validate Telegram session string and mark user as connected"""
     session_id = f"user_{current_user.id}_temp_connect"
     
+    # Validate session string
     result = await manager.restore_session(request.session_string, session_id)
     if not result["success"]:
         raise HTTPException(status_code=400, detail="Invalid session string")
     
+    # Get user info to verify session is valid
     user_info = await manager.get_user_info(session_id)
     if not user_info["success"]:
         await manager.disconnect_client(session_id)
         raise HTTPException(status_code=500, detail="Could not get user info from Telegram")
     
+    # Clean up temporary session
     await manager.disconnect_client(session_id)
-
-    connection_data = {
+    
+    # Session is valid, return success
+    # Note: We don't save to database anymore, session is stored locally in frontend
+    return {
+        "message": "Telegram connected successfully",
         "telegram_user_id": user_info["id"],
         "telegram_username": user_info["username"],
         "telegram_display_name": f"{user_info['first_name'] or ''} {user_info['last_name'] or ''}".strip(),
-        "phone_number": user_info["phone"],
-        "session_data": request.session_string,  # Save session to DB
-        "is_active": True
+        "phone_number": user_info["phone"]
     }
-
-    await create_or_update_telegram_connection_async(
-        db, 
-        user_id=current_user.id,
-        conn_data=connection_data
-    )
-    
-    # Explicitly fetch user and update
-    user_to_update = await db.get(User, current_user.id)
-    if user_to_update:
-        user_to_update.is_telegram_connected = True
-        await db.commit()
-    
-    return {"message": "Telegram connected successfully"}
-
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
 async def logout_telegram(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db)
+    current_user: User = Depends(get_current_user)
 ):
-    success = await deactivate_telegram_connection_async(db, user_id=current_user.id)
-    if not success:
-        raise HTTPException(status_code=404, detail="No active Telegram connection found")
-
-    # Explicitly fetch user and update
-    user_to_update = await db.get(User, current_user.id)
-    if user_to_update:
-        user_to_update.is_telegram_connected = False
-        await db.commit()
-
+    """Logout from Telegram (frontend handles session cleanup)"""
     return {"message": "Telegram disconnected successfully"}
 
-
-@router.get("/restore-session", status_code=status.HTTP_200_OK)
+@router.post("/restore-session", status_code=status.HTTP_200_OK)
 async def restore_telegram_session(
+    request: ConnectRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db)
+    manager = Depends(get_telegram_manager)
 ):
-    """Restore Telegram session from database"""
-    # Get the active telegram connection
-    result = await db.execute(
-        select(TelegramConnection).filter(
-            TelegramConnection.user_id == current_user.id,
-            TelegramConnection.is_active == True
-        )
-    )
-    connection = result.scalars().first()
+    """Validate and restore Telegram session from frontend"""
+    session_id = f"user_{current_user.id}_restore"
     
-    if not connection or not connection.session_data:
-        raise HTTPException(status_code=404, detail="No active Telegram session found")
+    # Validate session string
+    result = await manager.restore_session(request.session_string, session_id)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Invalid session string")
+    
+    # Get user info to verify session is valid
+    user_info = await manager.get_user_info(session_id)
+    if not user_info["success"]:
+        await manager.disconnect_client(session_id)
+        raise HTTPException(status_code=500, detail="Could not get user info from Telegram")
+    
+    # Clean up temporary session
+    await manager.disconnect_client(session_id)
     
     return {
-        "session_string": connection.session_data,
-        "telegram_username": connection.telegram_username
+        "message": "Telegram session restored successfully",
+        "telegram_user_id": user_info["id"],
+        "telegram_username": user_info["username"],
+        "telegram_display_name": f"{user_info['first_name'] or ''} {user_info['last_name'] or ''}".strip(),
+        "phone_number": user_info["phone"]
     } 

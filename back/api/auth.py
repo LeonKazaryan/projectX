@@ -12,13 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from back.database.config import get_async_db
-from back.models.database import User, create_user_async, get_user_by_email_async, get_user_by_username_async, create_user_session_async, get_user_by_id_async, get_user_by_email_or_username_async, update_user_last_login_async, get_active_user_session_async, deactivate_user_session_async, cleanup_expired_sessions_async, get_user_preferences_async, update_user_preferences_async
+from back.models.database import User, create_user_async, get_user_by_email_async, get_user_by_username_async, get_user_by_id_async, get_user_by_email_or_username_async, update_user_last_login_async
 from back.models.auth import (
     UserCreate, UserLogin, UserResponse, UserUpdate, Token, 
     RefreshTokenRequest, MessageResponse, UserProfile, 
     PasswordResetRequest, PasswordResetConfirm,
     EmailVerificationRequest, EmailVerificationConfirm,
-    AuthError, ValidationError, UserPreferencesUpdate, UserPreferencesResponse,
+    AuthError, ValidationError,
     ProfileResponse, ConnectedAccount
 )
 from back.auth.jwt_handler import (
@@ -33,6 +33,23 @@ security = HTTPBearer()
 # Global WhatsApp client manager for session cleanup
 whatsapp_manager = WhatsAppClientManager()
 
+# Session management stubs (disabled for now)
+async def create_user_session_async(db, session_data):
+    """Stub for session creation - disabled for now"""
+    return {"id": "stub_session_id"}
+
+async def get_active_user_session_async(db, user_id, refresh_token_hash):
+    """Stub for session retrieval - disabled for now"""
+    return {"id": "stub_session_id"}
+
+async def deactivate_user_session_async(db, session_id):
+    """Stub for session deactivation - disabled for now"""
+    return True
+
+async def cleanup_expired_sessions_async(db):
+    """Stub for session cleanup - disabled for now"""
+    return 0
+
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -40,9 +57,13 @@ async def get_current_user(
 ) -> User:
     """Get current authenticated user"""
     token = credentials.credentials
+    print(f"🔍 Received token: {token[:20]}..." if token else "🔍 No token received")
+    
     payload = TokenHandler.decode_token(token)
+    print(f"🔍 Token payload: {payload}")
     
     if not payload:
+        print("🔍 Token decode failed")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
@@ -74,7 +95,7 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"}
         )
     
-    user = await get_user_by_id_async(db, user_uuid)
+    user = await get_user_by_id_async(db, str(user_uuid))
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -363,30 +384,7 @@ async def update_current_user(
     return UserResponse.from_orm(updated_user)
 
 
-@router.get("/preferences", response_model=UserPreferencesResponse)
-async def get_user_preferences_endpoint(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db)
-):
-    """Get user preferences"""
-    preferences = await get_user_preferences_async(db, current_user.id)
-    if not preferences:
-        raise HTTPException(status_code=404, detail="Preferences not found")
-    return UserPreferencesResponse.from_orm(preferences)
 
-
-@router.put("/preferences", response_model=UserPreferencesResponse)
-async def update_user_preferences_endpoint(
-    preferences_update: UserPreferencesUpdate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db)
-):
-    """Update user preferences"""
-    update_data = preferences_update.dict(exclude_unset=True)
-    updated_preferences = await update_user_preferences_async(db, current_user.id, update_data)
-    if not updated_preferences:
-        raise HTTPException(status_code=404, detail="Preferences not found")
-    return UserPreferencesResponse.from_orm(updated_preferences)
 
 
 @router.post("/cleanup-sessions", response_model=MessageResponse)

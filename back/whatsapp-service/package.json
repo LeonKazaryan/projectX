@@ -1,11 +1,12 @@
 {
   "name": "whatsapp-service",
   "version": "1.0.0",
-  "description": "WhatsApp Web service for chathut (Development Mock)",
-  "main": "server.js",
+  "description": "WhatsApp Web service for chathut (Real WhatsApp Integration)",
+  "main": "real-whatsapp-server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node real-whatsapp-server.js",
+    "dev": "nodemon real-whatsapp-server.js",
+    "mock": "node server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

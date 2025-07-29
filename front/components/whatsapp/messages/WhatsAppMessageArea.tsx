@@ -1,81 +1,26 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Send, ChevronDown, Sparkles, Loader2 } from "lucide-react";
+import {
+  getMessages,
+  saveMessage,
+  setMessages,
+} from "../../utils/localMessageStore";
 import { useMessagingStore } from "../../messaging/MessagingStore";
 import type { Message } from "../../messaging/types";
-import { Button } from "../../../src/components/ui/button";
-import { Textarea } from "../../../src/components/ui/textarea";
-import { Avatar, AvatarFallback } from "../../../src/components/ui/avatar";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Send,
-  MessageCircle,
-  ChevronDown,
-  Loader2,
-  Bot,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
-import { RAGService } from "../../telegram/utils/ragService";
-import { API_BASE_URL } from "../../services/authService";
-
-import ChatBackground from "../../messaging/ChatBackground";
 
 interface WhatsAppMessageAreaProps {
   chatId: string;
   chatName: string;
-  isAIPanelOpen?: boolean;
-  setIsAIPanelOpen?: (open: boolean) => void;
+  setIsAIPanelOpen: (open: boolean) => void;
 }
-
-// AI settings interface
-interface AISettings {
-  enabled: boolean;
-  memory_limit: number;
-  suggestion_delay: number;
-}
-
-// Hook to load AI settings for the current WhatsApp session
-const useAISettings = (sessionId: string) => {
-  const [aiSettings, setAiSettings] = useState<AISettings>({
-    enabled: true,
-    memory_limit: 20,
-    suggestion_delay: 1,
-  });
-
-  useEffect(() => {
-    if (!sessionId) return;
-
-    (async () => {
-      try {
-        const res = await fetch(
-          `${API_BASE_URL}/ai/settings?session_id=${sessionId}`
-        );
-        const data = await res.json();
-        if (data.success && data.settings) {
-          setAiSettings(data.settings);
-        }
-      } catch (e) {
-        console.error("Failed to load AI settings:", e);
-      }
-    })();
-  }, [sessionId]);
-
-  return { aiSettings };
-};
 
 const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   chatId,
   chatName,
-
   setIsAIPanelOpen,
 }) => {
-  const {
-    messages: allMessages,
-    sendMessage,
-    loadMessages,
-    refreshMessages,
-    providers,
-  } = useMessagingStore();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessagesState] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [loadedChatId, setLoadedChatId] = useState<string | null>(null);
@@ -83,7 +28,11 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
 
-  // Refs like in Telegram
+  // Infinite scroll state
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [oldestMessageId, setOldestMessageId] = useState<string>("");
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -91,61 +40,69 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   const isChatSwitchRef = useRef(true);
   const justSentMessageRef = useRef(false);
 
-  // WhatsApp session for AI backend
-  const whatsappSessionId =
-    (providers?.whatsapp as any)?.getSessionId?.() || "";
-  const { aiSettings } = useAISettings(whatsappSessionId);
-
-  // AI suggestion states
-  const [aiSuggestion, setAiSuggestion] = useState("");
-  const [showAiSuggestion, setShowAiSuggestion] = useState(false);
-  const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
-
-  // Refs – (reserved for future enhancements)
-
-  // Auto-load messages when chat changes, but only once per chat
   useEffect(() => {
     if (chatId && chatId !== loadedChatId) {
-      console.log("Auto-loading messages for chatId:", chatId);
       const isSwitch = previousChatIdRef.current !== chatId;
       if (isSwitch) {
         isChatSwitchRef.current = true;
-        setMessages([]);
+        setMessagesState([]);
         setShowScrollButton(false);
+        // Reset pagination state
+        setIsLoadingMore(false);
+        setHasMoreMessages(true);
+        setOldestMessageId("");
         previousChatIdRef.current = chatId;
       }
-      loadMessages(chatId);
+      loadLocalMessages();
       setLoadedChatId(chatId);
     }
   }, [chatId]);
 
-  useEffect(() => {
-    const chatMessages = allMessages[chatId] || [];
-    setMessages(chatMessages);
-  }, [allMessages, chatId]);
+  const {
+    loadMessages: loadMessagesFromStore,
+    getChatMessages,
+    sendMessage,
+  } = useMessagingStore();
 
-  // Auto-scroll logic copied from Telegram
+  const loadLocalMessages = async () => {
+    console.log("💬 Loading messages for chat:", chatId);
+
+    // First load from local storage (instant)
+    const localMsgs = await getMessages(chatId);
+    console.log("📱 Local messages count:", localMsgs.length);
+    setMessagesState(localMsgs);
+
+    // Then load from WhatsApp API (fresh data)
+    try {
+      await loadMessagesFromStore(chatId);
+      const freshMessages = getChatMessages(chatId);
+      console.log("🌐 Fresh messages count:", freshMessages.length);
+      if (freshMessages.length > 0) {
+        // Save fresh messages to local storage
+        await setMessages(chatId, freshMessages);
+        setMessagesState(freshMessages);
+      }
+    } catch (error) {
+      console.error("❌ Failed to load messages from WhatsApp:", error);
+    }
+  };
+
   useEffect(() => {
     if (messages.length === 0) return;
-
     if (isChatSwitchRef.current) {
-      // INSTANT scroll on chat switch only
       scrollToBottom(false);
       isChatSwitchRef.current = false;
       setIsNearBottom(true);
-      // Focus input after chat switch
       setTimeout(() => {
         if (textareaRef.current) {
           textareaRef.current.focus();
         }
       }, 100);
     } else if (isNearBottom) {
-      // Auto-scroll if user is near bottom when new message arrives
       setTimeout(() => scrollToBottom(true), 100);
     }
   }, [messages, isNearBottom]);
 
-  // Maintain focus after sending message
   useEffect(() => {
     if (justSentMessageRef.current && textareaRef.current) {
       const focusTimer = setTimeout(() => {
@@ -159,40 +116,53 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
-
     setIsSending(true);
     setIsTyping(false);
-    try {
-      await sendMessage("whatsapp", chatId, newMessage.trim());
-      setNewMessage("");
-      justSentMessageRef.current = true;
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-      }
-      // Keep focus on the input after sending message
-      setTimeout(() => {
-        if (textareaRef.current && justSentMessageRef.current) {
-          textareaRef.current.focus();
-          justSentMessageRef.current = false;
-        }
-      }, 100);
-      // Force scroll to bottom after sending your own message
-      setIsNearBottom(true);
-      setTimeout(() => scrollToBottom(true), 150);
 
-      // Reload messages after sending to see the new message
+    const messageText = newMessage.trim();
+    setNewMessage(""); // Clear input immediately
+
+    try {
+      console.log("📤 Sending WhatsApp message to chat:", chatId);
+
+      // Send message through MessagingStore (which will use WhatsApp Provider)
+      await sendMessage("whatsapp", chatId, messageText);
+
+      console.log("✅ Message sent successfully");
+      justSentMessageRef.current = true;
+      setIsNearBottom(true);
+
+      // Reload messages to get the sent message
       setTimeout(() => {
-        refreshMessages(chatId);
+        loadLocalMessages();
+        scrollToBottom(true);
       }, 500);
     } catch (error) {
-      console.error("Failed to send message:", error);
+      console.error("❌ Failed to send message:", error);
+      // Restore message text if sending failed
+      setNewMessage(messageText);
     } finally {
       setIsSending(false);
     }
   };
 
-  // Scroll functions copied from Telegram
-  const scrollToBottom = (smooth = false) => {
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNewMessage(e.target.value);
+    if (e.target.value.trim()) {
+      setIsTyping(true);
+    } else {
+      setIsTyping(false);
+    }
+  };
+
+  const scrollToBottom = (smooth: boolean = true) => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({
         behavior: smooth ? "smooth" : "auto",
@@ -201,488 +171,247 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
     }
   };
 
-  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    const target = event.currentTarget;
-    const { scrollTop, scrollHeight, clientHeight } = target;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } =
+      scrollContainerRef.current;
+    const isBottom = scrollTop + clientHeight >= scrollHeight - 100;
+    setIsNearBottom(isBottom);
+    setShowScrollButton(!isBottom);
 
-    // Track if user is near bottom (within 100px)
-    const nearBottom = distanceFromBottom <= 100;
-    setIsNearBottom(nearBottom);
+    // Infinite scroll: load more messages when near top
+    const distanceFromTop = scrollTop;
+    const nearTop = distanceFromTop <= 100;
 
-    // Show button when scrolled up more than 100px from bottom
-    setShowScrollButton(!nearBottom);
+    if (nearTop && hasMoreMessages && !isLoadingMore) {
+      console.log("🔄 Near top, loading more WhatsApp messages...");
+      loadMoreMessages();
+    }
   };
 
-  const handleScrollToBottom = () => {
-    scrollToBottom(true);
-    setIsNearBottom(true);
-  };
+  const loadMoreMessages = async () => {
+    if (isLoadingMore || !hasMoreMessages) return;
 
-  // Real-time messages now come via Socket.IO, no need for polling
-  // The MessagingStore automatically handles new message events from providers
+    setIsLoadingMore(true);
 
-  const getAISuggestion = useCallback(async () => {
-    if (!aiSettings.enabled || aiSuggestionLoading) return;
-
-    setAiSuggestionLoading(true);
-    setAiSuggestion("");
-
-    const recentHistory = messages.slice(-15);
-    const lastIncoming = [...recentHistory].filter((m) => !m.isOutgoing).pop();
-    const query = lastIncoming?.text || "Что ответить?";
+    // Сохраняем текущую позицию скролла
+    const scrollContainer = scrollContainerRef.current;
+    const scrollTop = scrollContainer?.scrollTop || 0;
+    const scrollHeight = scrollContainer?.scrollHeight || 0;
 
     try {
-      // Extract numeric part of chatId for backend that expects int
-      const numericChatId = parseInt(chatId.replace(/\D/g, "")) || 0;
+      console.log("📱 Loading more WhatsApp messages from server...");
 
-      const rag = new RAGService();
-      const suggestion = await rag.getAgentResponse(
-        whatsappSessionId,
-        numericChatId,
-        query,
-        recentHistory.map((m) => ({
-          sender: m.isOutgoing ? "user" : "contact",
-          text: m.text,
-        })) as any
+      // Load more messages from MessagingStore
+      await loadMessagesFromStore(chatId);
+      const allMessages = getChatMessages(chatId);
+
+      // Update local storage and state
+      await setMessages(chatId, allMessages);
+      setMessagesState(allMessages);
+
+      // Check if we have more messages to load
+      setHasMoreMessages(
+        allMessages.length % 100 === 0 && allMessages.length > 0
       );
 
-      console.log("AI suggestion response:", suggestion);
+      console.log(`📱 Loaded total ${allMessages.length} WhatsApp messages`);
 
-      if (suggestion) {
-        setAiSuggestion(suggestion.suggestion);
-        setShowAiSuggestion(true);
-      }
-    } catch (e) {
-      console.error("AI suggestion error:", e);
+      // Восстанавливаем позицию скролла после загрузки
+      setTimeout(() => {
+        if (scrollContainer) {
+          const newScrollHeight = scrollContainer.scrollHeight;
+          const scrollDifference = newScrollHeight - scrollHeight;
+          scrollContainer.scrollTop = scrollTop + scrollDifference;
+        }
+      }, 50);
+    } catch (error) {
+      console.error("❌ Failed to load more WhatsApp messages:", error);
+      setHasMoreMessages(false);
     } finally {
-      setAiSuggestionLoading(false);
-    }
-  }, [aiSettings, aiSuggestionLoading, messages, whatsappSessionId, chatId]);
-
-  const useAISuggestion = () => {
-    setNewMessage(aiSuggestion);
-    setShowAiSuggestion(false);
-    if (textareaRef.current) textareaRef.current.focus();
-  };
-
-  const dismissAISuggestion = () => {
-    setShowAiSuggestion(false);
-  };
-
-  // Key handler with AI suggestion shortcuts
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Tab" && showAiSuggestion) {
-      e.preventDefault();
-      useAISuggestion();
-    } else if (e.key === "Escape" && showAiSuggestion) {
-      e.preventDefault();
-      dismissAISuggestion();
-    } else if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      setIsTyping(false);
-      handleSendMessage();
+      setIsLoadingMore(false);
     }
   };
 
-  // Textarea auto-resize like in Telegram
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setNewMessage(value);
+  const formatTime = (dateString: string) => {
+    if (!dateString) {
+      return "??:??";
+    }
 
-    // Auto-resize textarea
-    const textarea = e.target;
-    textarea.style.height = "auto";
-    textarea.style.height = Math.min(textarea.scrollHeight, 150) + "px";
+    try {
+      const date = new Date(dateString);
 
-    // Show typing indicator when user starts typing
-    if (value.length > 0 && !isTyping) {
-      setIsTyping(true);
-    } else if (value.length === 0 && isTyping) {
-      setIsTyping(false);
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn("Invalid date string:", dateString);
+        return "??:??";
+      }
+
+      return date.toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      console.error("Error formatting time:", error, "for date:", dateString);
+      return "??:??";
     }
   };
 
-  const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  // Check if current chat is a group chat
+  const isGroupChat = () => {
+    // WhatsApp group chats end with @g.us, personal chats end with @c.us
+    return chatId.includes("@g.us");
   };
 
-  if (!chatId) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-muted/30">
-        <div className="text-center space-y-4">
-          <MessageCircle className="h-16 w-16 text-muted-foreground mx-auto" />
+  // Get contact name from phone number/ID
+  const getContactName = (contactId: string) => {
+    // Extract phone number without @c.us or @g.us
+    const phoneNumber = contactId.split("@")[0];
+
+    // For now, just return the phone number
+    // TODO: In the future, we could implement contact name lookup
+    return phoneNumber;
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-gradient-to-br from-green-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-green-200/60 dark:border-green-800/40 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
+            <span className="text-white font-semibold text-sm">
+              {chatName.charAt(0).toUpperCase()}
+            </span>
+          </div>
           <div>
-            <h3 className="text-lg font-medium text-foreground">
-              Выберите чат
+            <h3 className="font-semibold text-gray-900 dark:text-white">
+              {chatName}
             </h3>
-            <p className="text-sm text-muted-foreground">
-              Выберите чат из списка, чтобы начать переписку
+            <p className="text-xs text-green-600 dark:text-green-400">
+              WhatsApp
             </p>
           </div>
         </div>
-      </div>
-    );
-  }
 
-  return (
-    <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden max-h-screen">
-      {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-border bg-card">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-green-100 dark:bg-green-900 text-green-600">
-                {chatName.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h2 className="text-lg font-medium text-foreground">
-                {chatName}
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                {isTyping ? "печатает..." : "WhatsApp"}
-              </p>
-            </div>
-          </div>
-
-          {/* AI Chat Button */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsAIPanelOpen?.(true)}
-              className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-all"
-            >
-              <Bot className="h-4 w-4" />
-              <span className="text-sm font-medium">AI</span>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <ChatBackground platform="whatsapp">
-        <div
-          ref={scrollContainerRef}
-          className="h-full px-4 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-green-200/60 dark:scrollbar-thumb-green-900/40 scrollbar-track-transparent"
-          onScroll={handleScroll}
+        <button
+          onClick={() => setIsAIPanelOpen(true)}
+          className="p-2 rounded-full bg-gradient-to-r from-orange-400 to-orange-600 text-white hover:from-orange-500 hover:to-orange-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-orange-500/25"
         >
-          {messages.length === 0 && loadedChatId === chatId && (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <MessageCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Нет сообщений в этом чате</p>
-            </div>
-          )}
-          {messages.length === 0 && loadedChatId !== chatId && (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center space-y-4">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-                <p className="text-sm text-muted-foreground">
-                  Загрузка сообщений...
-                </p>
-              </div>
-            </div>
-          )}
+          <Sparkles size={20} />
+        </button>
+      </div>
 
-          {messages.length > 0 && (
-            <div className="space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    message.isOutgoing ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`group max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-md transition-all duration-300 border border-transparent ${
-                      message.isOutgoing
-                        ? "bg-gradient-to-br from-green-400/90 to-green-600/90 text-white shadow-green-200/40 dark:shadow-green-900/30"
-                        : "bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-gray-100 border-gray-200/60 dark:border-gray-700/60 shadow-gray-200/30 dark:shadow-gray-900/20"
-                    }`}
-                    style={{
-                      boxShadow: message.isOutgoing
-                        ? "0 4px 24px 0 rgba(37,211,102,0.10)"
-                        : "0 2px 12px 0 rgba(80,80,120,0.08)",
-                      backdropFilter: "blur(2px)",
-                    }}
-                  >
-                    <div className="space-y-1">
-                      <p className="text-sm whitespace-pre-wrap break-words">
-                        {message.text}
-                      </p>
-                      <div className="flex items-center justify-end">
-                        <span className="text-xs opacity-70">
-                          {formatTime(message.timestamp)}
-                        </span>
-                      </div>
+      {/* Messages Area */}
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 py-6 space-y-4 scrollbar-thin scrollbar-thumb-green-200 dark:scrollbar-thumb-green-800 scrollbar-track-transparent"
+      >
+        {/* Loading more indicator */}
+        {isLoadingMore && (
+          <div className="flex justify-center py-4">
+            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Загружаем старые сообщения...</span>
+            </div>
+          </div>
+        )}
+
+        <AnimatePresence>
+          {messages.map((message, index) => (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
+              className={`flex ${
+                message.isOutgoing ? "justify-end" : "justify-start"
+              }`}
+            >
+              <div
+                className={`group max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-md transition-all duration-300 border border-transparent ${
+                  message.isOutgoing
+                    ? "bg-gradient-to-br from-green-400/90 to-green-600/90 text-white shadow-green-200/40 dark:shadow-green-900/30"
+                    : "bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-gray-100 border-gray-200/60 dark:border-gray-700/60 shadow-gray-200/30 dark:shadow-gray-900/20"
+                }`}
+                style={{
+                  boxShadow: message.isOutgoing
+                    ? "0 4px 24px 0 rgba(37,211,102,0.10)"
+                    : "0 2px 12px 0 rgba(80,80,120,0.08)",
+                }}
+              >
+                <div className="flex flex-col space-y-1">
+                  {!message.isOutgoing && isGroupChat() && (
+                    <div className="flex items-center mb-1">
+                      <span className="text-xs font-medium opacity-80 text-green-600 dark:text-green-400">
+                        {getContactName(message.from)}
+                      </span>
                     </div>
+                  )}
+                  <p className="text-sm leading-relaxed break-words">
+                    {message.text}
+                  </p>
+                  <div className="flex items-center justify-end">
+                    <span className="text-xs opacity-70">
+                      {formatTime(message.timestamp)}
+                    </span>
+                    {message.isOutgoing && (
+                      <span className="ml-1 text-xs opacity-70">✓</span>
+                    )}
                   </div>
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
-
-        {/* Scroll to bottom button with animation */}
-        <AnimatePresence>
-          {showScrollButton && (
-            <motion.div
-              className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20"
-              initial={{
-                opacity: 0,
-                y: 15,
-                scale: 0.7,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-                scale: 1,
-              }}
-              exit={{
-                opacity: 0,
-                y: 15,
-                scale: 0.7,
-              }}
-              transition={{
-                type: "spring",
-                stiffness: 400,
-                damping: 30,
-                duration: 0.3,
-              }}
-              whileHover={{
-                scale: 1.05,
-                y: -2,
-              }}
-              whileTap={{
-                scale: 0.95,
-              }}
-            >
-              <Button
-                onClick={handleScrollToBottom}
-                size="icon"
-                variant="secondary"
-                className="relative rounded-full shadow-lg hover:shadow-xl bg-background/95 backdrop-blur-sm border border-border hover:bg-muted/90 h-10 w-10"
-                title="Прокрутить вниз к новым сообщениям"
-              >
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              </Button>
+              </div>
             </motion.div>
-          )}
+          ))}
         </AnimatePresence>
-      </ChatBackground>
+        <div ref={messagesEndRef} />
+      </div>
 
-      {/* AI Suggestion Panel */}
-      {aiSettings.enabled && showAiSuggestion && aiSuggestion && (
-        <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.95 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          className="px-4 py-3 border-t border-border"
-        >
-          <div className="relative overflow-hidden bg-gradient-to-r from-green-500/10 via-emerald-500/8 to-teal-500/10 dark:from-green-500/20 dark:via-emerald-500/15 dark:to-teal-500/20 border border-green-200/50 dark:border-green-700/50 rounded-2xl p-4 backdrop-blur-sm shadow-lg">
-            {/* Animated background pattern */}
-            <div className="absolute inset-0 opacity-5">
-              <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 via-transparent to-emerald-400/20 animate-pulse" />
-              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(34,197,94,0.1),transparent_50%)] animate-ping" />
-            </div>
+      {/* Scroll to Bottom Button */}
+      <AnimatePresence>
+        {showScrollButton && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            onClick={() => scrollToBottom()}
+            className="absolute bottom-20 right-6 p-3 bg-gradient-to-r from-green-400 to-green-600 text-white rounded-full shadow-lg hover:shadow-green-500/25 transition-all duration-300 transform hover:scale-110"
+          >
+            <ChevronDown size={20} />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
-            <div className="relative flex items-start gap-3">
-              {/* Animated AI icon */}
-              <motion.div
-                animate={{
-                  rotate: [0, 10, -10, 0],
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg"
-              >
-                <Sparkles className="h-5 w-5 text-white" />
-              </motion.div>
-
-              <div className="flex-1 min-w-0 space-y-3">
-                {/* Header with animated elements */}
-                <motion.p
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-sm font-semibold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent"
-                >
-                  AI предлагает ответ:
-                </motion.p>
-
-                {/* Suggestion text with typing animation */}
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap break-words"
-                >
-                  {aiSuggestion}
-                </motion.p>
-              </div>
-
-              {/* Action buttons with animations */}
-              <div className="flex flex-col gap-3 min-w-[120px]">
-                {/* Main action button */}
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.8 }}
-                >
-                  <Button
-                    onClick={useAISuggestion}
-                    className="w-full px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl font-medium"
-                  >
-                    Использовать
-                  </Button>
-                </motion.div>
-
-                {/* Secondary action button */}
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.9 }}
-                >
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={dismissAISuggestion}
-                    className="w-full h-9 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-all duration-200 hover:scale-105 border border-red-200/50 dark:border-red-700/50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </motion.div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {aiSettings.enabled && aiSuggestionLoading && (
-        <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.95 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          className="px-4 py-3 border-t border-border"
-        >
-          <div className="relative overflow-hidden bg-gradient-to-r from-green-500/10 via-emerald-500/8 to-teal-500/10 dark:from-green-500/20 dark:via-emerald-500/15 dark:to-teal-500/20 border border-green-200/50 dark:border-green-700/50 rounded-2xl p-4 backdrop-blur-sm shadow-lg">
-            {/* Animated background pattern */}
-            <div className="absolute inset-0 opacity-5">
-              <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 via-transparent to-emerald-400/20 animate-pulse" />
-              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(34,197,94,0.1),transparent_50%)] animate-ping" />
-            </div>
-
-            <div className="relative flex items-center gap-3">
-              {/* Animated loading icon */}
-              <motion.div
-                animate={{
-                  rotate: 360,
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{
-                  rotate: { duration: 2, repeat: Infinity, ease: "linear" },
-                  scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
-                }}
-                className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg"
-              >
-                <Loader2 className="h-5 w-5 text-white" />
-              </motion.div>
-
-              <div className="flex-1">
-                <motion.p
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-sm font-semibold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent"
-                >
-                  AI анализирует переписку...
-                </motion.p>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="text-xs text-gray-600 dark:text-gray-400 mt-1"
-                >
-                  Изучаю контекст и ваш стиль общения
-                </motion.p>
-              </div>
-
-              {/* Animated dots */}
-              <div className="flex gap-1">
-                {[0, 1, 2].map((i) => (
-                  <motion.div
-                    key={i}
-                    animate={{
-                      y: [0, -8, 0],
-                      opacity: [0.5, 1, 0.5],
-                    }}
-                    transition={{
-                      duration: 1.2,
-                      repeat: Infinity,
-                      delay: i * 0.2,
-                    }}
-                    className="w-2 h-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full"
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Input */}
-      <div className="flex-shrink-0 p-4 border-t border-border bg-gradient-to-br from-white/80 to-green-50/60 dark:from-gray-900/80 dark:to-green-950/80 backdrop-blur-md">
-        <div className="flex items-end gap-2 max-h-32 overflow-hidden">
-          {aiSettings.enabled && (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={getAISuggestion}
-              disabled={aiSuggestionLoading}
-              className="flex-shrink-0 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30"
-            >
-              {aiSuggestionLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Bot className="h-4 w-4" />
-              )}
-            </Button>
-          )}
-          <div className="flex-1 min-h-0">
-            <Textarea
+      {/* Input Area */}
+      <div className="p-4 border-t border-green-200/60 dark:border-green-800/40 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+        <div className="flex items-end space-x-3">
+          <div className="flex-1 relative">
+            <textarea
               ref={textareaRef}
               value={newMessage}
               onChange={handleTextareaChange}
-              onKeyDown={handleKeyPress}
+              onKeyPress={handleKeyPress}
               placeholder="Написать сообщение..."
-              className="min-h-[40px] max-h-[80px] resize-none rounded-xl bg-white/70 dark:bg-gray-900/70 shadow-inner border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-green-400/40 transition-all overflow-y-auto"
-              disabled={isSending}
+              className="w-full px-4 py-3 pr-12 bg-white/80 dark:bg-gray-700/80 border border-green-200/60 dark:border-green-800/40 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-green-400/50 focus:border-green-400 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-300"
+              style={{ minHeight: "44px", maxHeight: "120px" }}
+              rows={1}
             />
           </div>
-          <Button
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleSendMessage}
             disabled={!newMessage.trim() || isSending}
-            size="icon"
-            className="flex-shrink-0 bg-gradient-to-br from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 text-white shadow-lg transform-gpu transition-all duration-200"
+            className={`p-3 rounded-full transition-all duration-300 ${
+              newMessage.trim() && !isSending
+                ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-lg hover:shadow-green-500/25"
+                : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+            }`}
           >
-            {isSending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+            <Send size={20} />
+          </motion.button>
         </div>
       </div>
     </div>

@@ -12,64 +12,108 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Get the database URL from environment variables, provided by DigitalOcean
-DATABASE_URL_PROD = os.getenv("DATABASE_URL")
-LOCAL_DEV_DATABASE_URL = "postgresql://chathut_user:chathut_pass_dev_2024@localhost:5432/chathut"
-IS_LOCAL = os.getenv("ENV") == "development"
+# Use SQLite for development, PostgreSQL for production
+IS_LOCAL = os.getenv("ENV") == "development" or not os.getenv("DATABASE_URL")
 
-DATABASE_URL = LOCAL_DEV_DATABASE_URL if IS_LOCAL else DATABASE_URL_PROD
-
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-# Ensure SSL is required for production database connections
-if "ondigitalocean.com" in DATABASE_URL:
-    ASYNC_DATABASE_URL = f"{DATABASE_URL}?ssl=require"
+if IS_LOCAL:
+    # SQLite for local development - in back folder
+    DATABASE_URL = "sqlite:///./chathut_dev.db"
+    ASYNC_DATABASE_URL = "sqlite:///./chathut_dev.db"  # Temporarily use sync SQLite
 else:
-    ASYNC_DATABASE_URL = DATABASE_URL
+    # PostgreSQL for production
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    
+    # Ensure SSL is required for production database connections
+    if "ondigitalocean.com" in DATABASE_URL:
+        ASYNC_DATABASE_URL = f"{DATABASE_URL}?ssl=require"
+    else:
+        ASYNC_DATABASE_URL = DATABASE_URL
 
 # SQLAlchemy engines
-async_engine = create_async_engine(ASYNC_DATABASE_URL.replace("postgresql", "postgresql+asyncpg"), echo=False)
-sync_engine = None
+if IS_LOCAL:
+    # Use sync SQLite for local development
+    async_engine = None
+    sync_engine = create_engine(DATABASE_URL, echo=False)
+else:
+    # Use async engine for production
+    async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=False)
+    sync_engine = create_engine(DATABASE_URL, echo=False)
 
 # Session makers
-SessionLocal = None
-AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+if IS_LOCAL:
+    # Use sync session for local development
+    AsyncSessionLocal = None
+else:
+    AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
 # Database instance for direct queries
 database = Database(ASYNC_DATABASE_URL)
 
 
 def get_db() -> Session:
-    """Dependency to get database session - TEMPORARILY DISABLED"""
-    raise Exception("Sync database sessions are temporarily disabled. Use async sessions instead.")
+    """Dependency to get database session"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency to get async database session"""
-    async with AsyncSessionLocal() as session:
+    if IS_LOCAL:
+        # Use sync session for local development
+        db = SessionLocal()
         try:
-            yield session
+            yield db
         finally:
-            await session.close()
+            db.close()
+    else:
+        # Use async session for production
+        async with AsyncSessionLocal() as session:
+            try:
+                yield session
+            finally:
+                await session.close()
 
 
 async def connect_database():
     """Connect to database on startup"""
-    await database.connect()
-    print("🤖 Database connected successfully!")
+    try:
+        await database.connect()
+        print("🤖 Database connected successfully!")
+    except Exception as e:
+        print(f"🚨 Database connection failed: {e}")
+        # Continue without database for development
+        pass
 
 
 async def disconnect_database():
     """Disconnect from database on shutdown"""
-    await database.disconnect()
-    print("🤖 Database disconnected!")
+    try:
+        await database.disconnect()
+        print("🤖 Database disconnected!")
+    except Exception as e:
+        print(f"🚨 Database disconnection failed: {e}")
 
 
 def test_connection():
-    """Test database connection - TEMPORARILY SIMPLIFIED"""
+    """Test database connection"""
     try:
-        print("🤖 Database connection test skipped (async only mode)")
+        if IS_LOCAL:
+            # For SQLite, just check if we can create a connection
+            with sync_engine.connect() as conn:
+                conn.execute("SELECT 1")
+            print("🤖 SQLite database connection successful!")
+            return True
+        else:
+            # For PostgreSQL, test the connection
+            with sync_engine.connect() as conn:
+                conn.execute("SELECT 1")
+            print("🤖 PostgreSQL database connection successful!")
         return True
     except Exception as e:
         print(f"🚨 Database connection failed: {e}")
@@ -77,9 +121,11 @@ def test_connection():
 
 
 def init_database():
-    """Initialize database tables - TEMPORARILY DISABLED"""
+    """Initialize database tables"""
     try:
-        print("🤖 Database table creation skipped (async only mode)")
+        from back.models.database import Base
+        Base.metadata.create_all(bind=sync_engine)
+        print("🤖 Database tables created successfully!")
         return True
     except Exception as e:
         print(f"🚨 Database initialization failed: {e}")

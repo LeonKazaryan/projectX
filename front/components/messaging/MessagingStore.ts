@@ -1,7 +1,8 @@
-import { create } from 'zustand';
-import type { Chat, Message, MessagingEvent, IMessagingProvider } from './types';
-import { TelegramProvider } from './TelegramProvider';
-import { WhatsAppProvider } from './WhatsAppProvider';
+import { create } from "zustand";
+import { TelegramProvider } from "./TelegramProvider";
+import { WhatsAppProvider } from "./WhatsAppProvider";
+import { getMessages, saveMessage, setMessages } from "../utils/localMessageStore";
+import type { Chat, Message, MessagingEvent, IMessagingProvider } from "./types";
 
 interface MessagingState {
   // Providers
@@ -47,12 +48,11 @@ interface MessagingState {
   restoreProviderStates: () => Promise<void>;
 }
 
-// LocalStorage helpers for message caching
+// Local storage helpers for caching
 function getCachedMessages(chatId: string): Message[] {
   try {
-    const raw = localStorage.getItem(`chathut_messages_${chatId}`);
-    if (!raw) return [];
-    return JSON.parse(raw);
+    const cached = localStorage.getItem(`chathut_messages_${chatId}`);
+    return cached ? JSON.parse(cached) : [];
   } catch {
     return [];
   }
@@ -60,8 +60,10 @@ function getCachedMessages(chatId: string): Message[] {
 
 function setCachedMessages(chatId: string, messages: Message[]) {
   try {
-    localStorage.setItem(`chathut_messages_${chatId}` , JSON.stringify(messages));
-  } catch {}
+    localStorage.setItem(`chathut_messages_${chatId}`, JSON.stringify(messages));
+  } catch (error) {
+    console.warn('Failed to cache messages:', error);
+  }
 }
 
 export const useMessagingStore = create<MessagingState>((set, get) => ({
@@ -74,70 +76,41 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
   isLoading: false,
   error: null,
   showArchived: false,
-  showReadOnly: true,
+  showReadOnly: false,
   showGroups: true,
   unifiedView: false,
 
   // Initialize providers
   initializeProviders: () => {
-    const providers = {
+    const providers: Record<string, IMessagingProvider> = {
       telegram: new TelegramProvider(),
       whatsapp: new WhatsAppProvider(),
     };
-    
     set({ providers });
-    
-    // Subscribe to events from all providers
-    Object.values(providers).forEach(provider => {
-      provider.subscribe((event) => get().handleEvent(event));
-    });
-
-    // Auto-restore provider states after initialization
-    setTimeout(async () => {
-      try {
-        // Try to restore WhatsApp session
-        const whatsappRestored = await providers.whatsapp.init();
-        if (whatsappRestored) {
-          console.log("WhatsApp session restored successfully");
-        }
-
-        // Try to restore Telegram session
-        const telegramRestored = await providers.telegram.init();
-        if (telegramRestored) {
-          console.log("Telegram session restored successfully");
-        }
-      } catch (error) {
-        console.error("Error restoring provider states:", error);
-      }
-    }, 100); // Small delay to allow providers to fully initialize
   },
 
-  // Connect to a specific provider
+  // Connect to a provider
   connectProvider: async (source) => {
     const { providers } = get();
     const provider = providers[source];
     
     if (!provider) {
-      set({ error: `Provider ${source} not found` });
+      console.error(`Provider ${source} not found`);
       return false;
     }
-
-    set({ isLoading: true, error: null });
     
     try {
       const success = await provider.connect();
       if (success) {
         set({ activeProvider: source });
+        // Auto-load chats after successful connection
         await get().loadChats(source);
-      } else {
-        set({ error: `Failed to connect to ${source}` });
       }
       return success;
     } catch (error) {
-      set({ error: `Error connecting to ${source}: ${error}` });
+      console.error(`Failed to connect ${source}:`, error);
+      set({ error: `Failed to connect ${source}: ${error}` });
       return false;
-    } finally {
-      set({ isLoading: false });
     }
   },
 
@@ -146,135 +119,135 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
     const { providers } = get();
     const provider = providers[source];
     
-    if (provider) {
+    if (!provider) return;
+
+    try {
       await provider.disconnect();
+      if (get().activeProvider === source) {
       set({ activeProvider: null });
+      }
+    } catch (error) {
+      console.error(`Failed to disconnect ${source}:`, error);
     }
   },
 
-  // Load chats for a specific provider or all
+  // Load chats from a provider
   loadChats: async (source) => {
     const { providers } = get();
-    set({ isLoading: true });
 
-    try {
       if (source) {
         const provider = providers[source];
-        if (provider && provider.isConnected()) {
-          const chats = await provider.getChats();
+      if (!provider) return;
+
+      set({ isLoading: true });
+      try {
+        const newChats = await provider.getChats();
           set((state) => ({
-            chats: state.unifiedView 
-              ? [...state.chats.filter(c => c.source !== source), ...chats]
-              : chats
+          chats: [...state.chats.filter(c => c.source !== source), ...newChats],
           }));
+      } catch (error) {
+        set({ error: `Failed to load ${source} chats: ${error}` });
+      } finally {
+        set({ isLoading: false });
         }
       } else {
-        // Load from all connected providers
+      // Load from all providers
+      set({ isLoading: true });
+      try {
         const allChats: Chat[] = [];
-        for (const [, provider] of Object.entries(providers)) {
-          if (provider.isConnected()) {
+        for (const [source, provider] of Object.entries(providers)) {
+          try {
             const chats = await provider.getChats();
             allChats.push(...chats);
+          } catch (error) {
+            console.error(`Failed to load ${source} chats:`, error);
           }
         }
         set({ chats: allChats });
-      }
     } catch (error) {
       set({ error: `Failed to load chats: ${error}` });
     } finally {
       set({ isLoading: false });
+      }
     }
   },
 
-  // Load messages for a specific chat
+  // Load messages for a specific chat from provider
   loadMessages: async (chatId: string) => {
-    const { providers, chats, messages } = get();
+    const { chats, providers } = get();
 
-    // 0. Валидация chatId
+    // Validate chatId
     if (!chatId || typeof chatId !== 'string') {
       console.warn('Invalid chatId for loadMessages:', chatId);
       return;
     }
+    
     const chat = chats.find((c) => c.id === chatId);
     if (!chat) {
       console.warn('Chat not found in store for chatId:', chatId);
-      // Чистим кэш если чат не найден
-      localStorage.removeItem(`chathut_messages_${chatId}`);
-      set((state) => {
-        const newMessages = { ...state.messages };
-        delete newMessages[chatId];
-        return { messages: newMessages };
-      });
       return;
     }
+
+    // Get the provider for this chat's source
     const provider = providers[chat.source];
     if (!provider) {
-      console.warn('Provider not found for chat:', chat);
+      console.warn(`Provider ${chat.source} not found for chat:`, chatId);
       return;
     }
 
-    // 1. Показать кэшированные сообщения сразу
-    const cached = getCachedMessages(chatId);
-    if (cached.length > 0) {
-      set((state) => ({
-        messages: {
-          ...state.messages,
-          [chatId]: cached,
-        },
-      }));
-    }
-
-    // 2. Не грузить с сервера, если уже есть актуальные сообщения
-    if (messages[chatId] && messages[chatId].length > 0) {
-      return;
-    }
-
-    set({ isLoading: true });
     try {
+      console.log(`📡 Loading messages from ${chat.source} provider for chat:`, chatId);
+      
+      // Load fresh messages from the provider
       const freshMessages = await provider.loadHistory(chatId);
+      console.log(`📨 Loaded ${freshMessages.length} messages from ${chat.source}`);
+      
+      // Update store with fresh messages
       set((state) => ({
         messages: {
           ...state.messages,
           [chatId]: freshMessages,
         },
       }));
-      // 3. Обновить кэш
-      setCachedMessages(chatId, freshMessages);
-    } catch (error: any) {
-      // Если сервер вернул 400 — чистим кэш и удаляем чат
-      if (error?.response?.status === 400 || (error + '').includes('400')) {
-        console.warn('Server returned 400 for chatId:', chatId, ' — removing cache and hiding chat');
-        localStorage.removeItem(`chathut_messages_${chatId}`);
-        set((state) => {
-          const newMessages = { ...state.messages };
-          delete newMessages[chatId];
-          return { messages: newMessages };
-        });
-        // Можно также скрыть чат из списка, если нужно:
-        set((state) => ({
-          chats: state.chats.filter((c) => c.id !== chatId),
-        }));
+
+      // Save to local storage for caching
+      try {
+        await setMessages(chatId, freshMessages);
+      } catch (error) {
+        console.warn('Failed to save messages to local storage:', error);
       }
-      set({ error: `Failed to load messages: ${error}` });
-    } finally {
-      set({ isLoading: false });
+
+    } catch (error) {
+      console.error(`Failed to load messages from ${chat.source}:`, error);
+      
+      // Fallback: try to load from local storage
+      try {
+        const localMessages = await getMessages(chatId);
+        set((state) => ({
+          messages: {
+            ...state.messages,
+            [chatId]: localMessages,
+          },
+        }));
+      } catch (localError) {
+        console.error('Failed to load messages from local storage:', localError);
+        set({ error: `Failed to load messages: ${error}` });
+      }
     }
   },
 
-  // Refresh messages for a chat (force reload)
+  // Refresh messages - NOW ONLY FROM LOCAL STORAGE
   refreshMessages: async (chatId: string) => {
-    const { providers, chats } = get();
+    const { chats } = get();
     const chat = chats.find(c => c.id === chatId);
     
     if (!chat) return;
 
-    const provider = providers[chat.source];
-    if (!provider) return;
-
     console.log(`Refreshing messages for chat: ${chatId}`);
 
     try {
-      const messages = await provider.loadHistory(chatId);
+      // Just reload from local storage
+      const messages = await getMessages(chatId);
       set((state) => ({
         messages: {
           ...state.messages,
@@ -287,196 +260,166 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
     }
   },
 
-  // Send message through provider
-  sendMessage: async (source: 'telegram' | 'whatsapp', chatId: string, text: string) => {
-    const provider = get().providers[source];
+  // Send a message
+  sendMessage: async (source, chatId, text) => {
+    const { providers } = get();
+    const provider = providers[source];
+    
     if (!provider) {
-      console.error(`Provider ${source} not found`);
-      return;
-    }
-
-    if (!provider.sendMessage) {
-      console.error(`Provider ${source} does not support sending messages`);
-      return;
+      throw new Error(`Provider ${source} not found`);
     }
 
     try {
+      // Send message through provider
+      if (provider.sendMessage) {
       await provider.sendMessage(chatId, text);
+      }
+      
+      // Save message to local storage
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        chatId,
+        from: 'You',
+        text,
+        timestamp: new Date().toISOString(),
+        source,
+        isOutgoing: true,
+      };
+      
+      await saveMessage(chatId, newMessage);
+      
+      // Update local state
+      set((state) => ({
+        messages: {
+          ...state.messages,
+          [chatId]: [...(state.messages[chatId] || []), newMessage],
+        },
+      }));
     } catch (error) {
-      console.error(`Error sending message via ${source}:`, error);
+      console.error(`Failed to send message via ${source}:`, error);
+      throw error;
     }
   },
 
   // Select a chat
   selectChat: (chat) => {
     set({ selectedChat: chat });
-    // Don't auto-load messages here - let the component handle it
+    if (chat) {
+      // Auto-load messages for selected chat
+      get().loadMessages(chat.id);
+    }
   },
 
-  // Handle events from providers
-  handleEvent: (event: MessagingEvent) => {
-    switch (event.type) {
-      case 'message:new':
-        const newMessage = event.data as Message;
-        console.log('Handling new message event:', newMessage);
-        
-        // Add message to messages
-        set((state) => {
-          const updated = {
+  // Handle messaging events
+  handleEvent: (event) => {
+    const { messages } = get();
+    
+    if (event.type === "message:new") {
+      const messageData = event.data as Message;
+      
+      set((state) => ({
+        messages: {
             ...state.messages,
-            [newMessage.chatId]: [
-              ...(state.messages[newMessage.chatId] || []),
-              newMessage,
-            ],
-          };
-          // Обновить кэш
-          setCachedMessages(newMessage.chatId, updated[newMessage.chatId]);
-          return { messages: updated };
-        });
+          [messageData.chatId]: [...(state.messages[messageData.chatId] || []), messageData],
+        },
+      }));
         
-        // Update chat list immediately for better UX
-        set((state) => {
-          const updatedChats = state.chats.map(chat => {
-            if (chat.id === newMessage.chatId) {
-              return {
-                ...chat,
-                lastMessage: {
-                  text: newMessage.text,
-                  date: newMessage.timestamp
-                }
-              };
-            }
-            return chat;
-          });
-          
-          // Sort chats by last message timestamp
-          updatedChats.sort((a, b) => {
-            if (a.lastMessage && !b.lastMessage) return -1;
-            if (!a.lastMessage && b.lastMessage) return 1;
-            if (a.lastMessage && b.lastMessage) {
-              const aTime = new Date(a.lastMessage.date).getTime();
-              const bTime = new Date(b.lastMessage.date).getTime();
-              return bTime - aTime;
-            }
-            return 0;
-          });
-          
-          return { chats: updatedChats };
-        });
-        
-        // Also reload chats from provider to ensure consistency
-        setTimeout(() => {
-          get().loadChats();
-        }, 100);
-        break;
-        
-      case 'chat:updated':
-        // Reload chats to get updates
-        get().loadChats();
-        break;
-        
-      case 'status:changed':
-        // Handle connection status changes
-        break;
+      // Save new message to local storage
+      saveMessage(messageData.chatId, messageData).catch(console.error);
     }
   },
 
   // Update settings
   updateSettings: (settings) => {
     set(settings);
-    // Reload chats with new filters
-    get().loadChats();
   },
 
   // Selectors
   getFilteredChats: () => {
     const { chats, showArchived, showReadOnly, showGroups } = get();
-    
-    return chats.filter(chat => {
+    return chats.filter((chat) => {
       if (!showArchived && chat.isArchived) return false;
       if (!showReadOnly && !chat.canSendMessages) return false;
-      if (!showGroups && chat.isGroup) return false;
+      if (!showGroups && (chat.isGroup || chat.isChannel)) return false;
       return true;
     });
   },
 
-  getChatMessages: (chatId: string) => {
+  getChatMessages: (chatId) => {
     const { messages } = get();
     return messages[chatId] || [];
   },
 
-  getProviderStatus: (source: 'telegram' | 'whatsapp') => {
+  getProviderStatus: (source) => {
     const { providers } = get();
     const provider = providers[source];
     return provider ? provider.isConnected() : false;
   },
 
-  // Reset all providers (for user switching)
+  // Reset all providers
   resetAllProviders: async () => {
-    console.log("Resetting all messaging providers");
+    const { providers } = get();
     
-    const providers = get().providers;
-    
-    // Reset each provider
-    await Promise.all(
-      Object.values(providers).map(async (provider) => {
+    for (const provider of Object.values(providers)) {
         try {
           if (provider.reset) {
             await provider.reset();
           }
         } catch (error) {
-          console.error(`Error resetting ${provider.getSource()}:`, error);
+        console.error('Failed to reset provider:', error);
         }
-      })
-    );
+    }
     
-    console.log("All providers reset complete");
+    set({
+      chats: [],
+      messages: {},
+      selectedChat: null,
+      activeProvider: null,
+      error: null,
+    });
   },
 
-  // Clear all user sessions (for user switching)
+  // Clear all user sessions
   clearAllUserSessions: () => {
-    console.log("Clearing all user sessions");
+    const { providers } = get();
     
-    const providers = get().providers;
-    
-    // Clear all sessions for each provider
-    Object.values(providers).forEach((provider) => {
+    for (const provider of Object.values(providers)) {
       try {
         if (provider.clearAllSessions) {
           provider.clearAllSessions();
         }
       } catch (error) {
-        console.error(`Error clearing sessions for ${provider.getSource()}:`, error);
+        console.error('Failed to clear provider sessions:', error);
       }
-    });
-    
-    console.log("All user sessions cleared");
+    }
   },
 
-  // Restore provider states (can be called manually when needed)
+  // Restore provider states
   restoreProviderStates: async () => {
-    console.log("Restoring provider states");
+    const { providers } = get();
     
-    const providers = get().providers;
-    
-    try {
-      // Try to restore WhatsApp session
-      if (providers.whatsapp?.init) {
-        const whatsappRestored = await providers.whatsapp.init();
-        if (whatsappRestored) {
-          console.log("WhatsApp session restored successfully");
+    for (const [source, provider] of Object.entries(providers)) {
+      try {
+        console.log(`🔄 Checking ${source} provider state...`);
+        
+        // Try to restore from saved session first
+        if (provider.init) {
+          const restored = await provider.init();
+          if (restored) {
+            console.log(`✅ ${source} provider restored from saved session`);
+            await get().loadChats(source as 'telegram' | 'whatsapp');
+            continue;
+          }
         }
-      }
-
-      // Try to restore Telegram session
-      if (providers.telegram?.init) {
-        const telegramRestored = await providers.telegram.init();
-        if (telegramRestored) {
-          console.log("Telegram session restored successfully");
+        
+        // Check if already connected
+        if (provider.isConnected()) {
+          console.log(`${source} provider already connected, loading chats...`);
+          await get().loadChats(source as 'telegram' | 'whatsapp');
         }
+      } catch (error) {
+        console.error(`Failed to restore ${source} provider state:`, error);
       }
-    } catch (error) {
-      console.error("Error restoring provider states:", error);
     }
   },
 })); 
