@@ -496,3 +496,7 @@
 ## 0.9.0a
 
 - Fixed nonused variables issue
+
+## 0.9.0c
+
+- Registration fix

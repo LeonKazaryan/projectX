@@ -7,7 +7,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 from sqlalchemy import (
     Boolean, Column, DateTime, Integer, String, Text, 
-    ForeignKey, BigInteger, Index, JSON, func
+    ForeignKey, BigInteger, Index, JSON, func, select
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session, selectinload
@@ -163,22 +163,25 @@ def update_user_last_login(db: Session, user_id: UUID):
 # ==============================================================================
 # ASYNC DATABASE UTILITY FUNCTIONS
 # ==============================================================================
-async def get_user_by_email_async(db, email: str) -> Optional[User]:
+async def get_user_by_email_async(db: AsyncSession, email: str) -> Optional[User]:
     """Fetch a user by email asynchronously."""
-    return db.query(User).filter(User.email == email).first()
+    result = await db.execute(select(User).where(User.email == email))
+    return result.scalar_one_or_none()
 
 
-async def get_user_by_username_async(db, username: str) -> Optional[User]:
+async def get_user_by_username_async(db: AsyncSession, username: str) -> Optional[User]:
     """Fetch a user by username asynchronously."""
-    return db.query(User).filter(User.username == username).first()
+    result = await db.execute(select(User).where(User.username == username))
+    return result.scalar_one_or_none()
 
 
-async def get_user_by_id_async(db, user_id: str) -> Optional[User]:
+async def get_user_by_id_async(db: AsyncSession, user_id: str) -> Optional[User]:
     """Get user by ID asynchronously"""
-    return db.query(User).filter(User.id == user_id).first()
+    result = await db.execute(select(User).where(User.id == user_id))
+    return result.scalar_one_or_none()
 
 
-async def get_user_by_email_or_username_async(db, email_or_username: str) -> Optional[User]:
+async def get_user_by_email_or_username_async(db: AsyncSession, email_or_username: str) -> Optional[User]:
     """Get user by email or username asynchronously"""
     if "@" in email_or_username:
         return await get_user_by_email_async(db, email_or_username)
@@ -186,21 +189,24 @@ async def get_user_by_email_or_username_async(db, email_or_username: str) -> Opt
         return await get_user_by_username_async(db, email_or_username)
 
 
-async def create_user_async(db, user_data: dict) -> User:
+async def create_user_async(db: AsyncSession, user_data: dict) -> User:
     """Create a new user (async)"""
     user = User(**user_data)
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return user
 
 
-async def update_user_last_login_async(db, user_id: UUID):
+async def update_user_last_login_async(db: AsyncSession, user_id: str):
     """Update user's last login timestamp (async)"""
-    db.query(User).filter(User.id == user_id).update({
-        "last_login": datetime.now(timezone.utc)
-    })
-    db.commit()
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+    if user:
+        user.last_login = datetime.now(timezone.utc)
+        await db.commit()
 
 
 

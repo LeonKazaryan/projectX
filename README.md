@@ -10,6 +10,9 @@ A modern AI-powered messaging client for Telegram and WhatsApp with intelligent 
 - **Unused Variable Cleanup**: Removed or properly marked unused variables and imports
 - **Production Ready**: Frontend now builds successfully without any TypeScript errors
 - **Code Quality**: Improved code organization and removed dead code
+- **Database Async Fixes**: Fixed async SQLAlchemy operations for proper database connectivity
+- **Authentication Fixes**: Resolved 500 errors in registration and login endpoints
+- **Production Database**: Fixed async driver configuration for PostgreSQL in production
 
 ### v2.1.0 - Local Message Storage & Session Persistence
 
