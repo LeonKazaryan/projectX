@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.orm import sessionmaker, Session
 from databases import Database
 from dotenv import load_dotenv
+from sqlalchemy import text
 
 load_dotenv()
 
@@ -18,23 +19,24 @@ IS_LOCAL = os.getenv("ENV") == "development" or not os.getenv("DATABASE_URL")
 if IS_LOCAL:
     # SQLite for local development - in back folder
     DATABASE_URL = "sqlite:///./chathut_dev.db"
-    ASYNC_DATABASE_URL = "sqlite:///./chathut_dev.db"  # Temporarily use sync SQLite
+    ASYNC_DATABASE_URL = "sqlite+aiosqlite:///./chathut_dev.db"  # Use aiosqlite for async SQLite
 else:
     # PostgreSQL for production
     DATABASE_URL = os.getenv("DATABASE_URL")
     if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
     
+    # Use asyncpg for async PostgreSQL connections
+    ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+    
     # Ensure SSL is required for production database connections
     if "ondigitalocean.com" in DATABASE_URL:
-        ASYNC_DATABASE_URL = f"{DATABASE_URL}?ssl=require"
-    else:
-        ASYNC_DATABASE_URL = DATABASE_URL
+        ASYNC_DATABASE_URL = f"{ASYNC_DATABASE_URL}?ssl=require"
 
 # SQLAlchemy engines
 if IS_LOCAL:
     # Use sync SQLite for local development
-    async_engine = None
+    async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=False)
     sync_engine = create_engine(DATABASE_URL, echo=False)
 else:
     # Use async engine for production
@@ -43,11 +45,7 @@ else:
 
 # Session makers
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
-if IS_LOCAL:
-    # Use sync session for local development
-    AsyncSessionLocal = None
-else:
-    AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
+AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
 # Database instance for direct queries
 database = Database(ASYNC_DATABASE_URL)
@@ -64,20 +62,11 @@ def get_db() -> Session:
 
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency to get async database session"""
-    if IS_LOCAL:
-        # Use sync session for local development
-        db = SessionLocal()
+    async with AsyncSessionLocal() as session:
         try:
-            yield db
+            yield session
         finally:
-            db.close()
-    else:
-        # Use async session for production
-        async with AsyncSessionLocal() as session:
-            try:
-                yield session
-            finally:
-                await session.close()
+            await session.close()
 
 
 async def connect_database():
@@ -106,13 +95,13 @@ def test_connection():
         if IS_LOCAL:
             # For SQLite, just check if we can create a connection
             with sync_engine.connect() as conn:
-                conn.execute("SELECT 1")
+                conn.execute(text("SELECT 1"))
             print("🤖 SQLite database connection successful!")
             return True
         else:
             # For PostgreSQL, test the connection
             with sync_engine.connect() as conn:
-                conn.execute("SELECT 1")
+                conn.execute(text("SELECT 1"))
             print("🤖 PostgreSQL database connection successful!")
         return True
     except Exception as e:
