@@ -521,3 +521,8 @@
 
 - Restore-session fix
 - Chats Load fix
+
+## 0.9.3a
+
+- Session Restoration logic fix
+- UI Improvement

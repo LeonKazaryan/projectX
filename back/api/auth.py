@@ -124,36 +124,36 @@ async def register(
     print(f"🔍 Register attempt for user: {user_data.username} ({user_data.email})")
     
     try:
-        password_validation = validate_password_strength(user_data.password)
-        if not password_validation["valid"]:
+    password_validation = validate_password_strength(user_data.password)
+    if not password_validation["valid"]:
             print(f"❌ Password validation failed for {user_data.username}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "message": "Password does not meet security requirements",
-                    "errors": password_validation["errors"],
-                    "strength": password_validation["strength"]
-                }
-            )
-        
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": "Password does not meet security requirements",
+                "errors": password_validation["errors"],
+                "strength": password_validation["strength"]
+            }
+        )
+    
         print(f"✅ Password validation passed for {user_data.username}")
         
-        existing_user = await get_user_by_email_async(db, user_data.email)
-        if existing_user:
+    existing_user = await get_user_by_email_async(db, user_data.email)
+    if existing_user:
             print(f"❌ Email already exists: {user_data.email}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User with this email already exists"
-            )
-        
-        existing_username = await get_user_by_username_async(db, user_data.username)
-        if existing_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exists"
+        )
+    
+    existing_username = await get_user_by_username_async(db, user_data.username)
+    if existing_username:
             print(f"❌ Username already taken: {user_data.username}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already taken"
-            )
-        
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already taken"
+        )
+    
         print(f"✅ User validation passed for {user_data.username}")
         
         hashed_password = TokenHandler.hash_password(user_data.password)

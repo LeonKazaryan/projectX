@@ -8,9 +8,9 @@ import ChatList from "./chats/ChatList";
 import MessageArea from "./messages/MessageArea";
 import MTProtoAuth from "./auth/MTProtoAuth";
 import { Button } from "../../src/components/ui/button";
-import { ArrowLeft, MessageSquare } from "lucide-react";
+import { ArrowLeft, MessageSquare, Settings, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Settings } from "./ui/Settings";
+import { Settings as SettingsComponent } from "./ui/Settings";
 import { API_BASE_URL } from "../services/authService";
 import { useMessagingStore } from "../messaging/MessagingStore";
 import AIPanel from "../messaging/AIPanel";
@@ -51,17 +51,36 @@ const useTelegramSession = () => {
               setIsAuthenticated(true);
               setError(null);
             } else {
-              // Session is invalid, remove it
+              // Session is invalid, remove it and show auth screen
+              console.log(
+                "Session validation failed, removing invalid session"
+              );
               localStorage.removeItem("telegram_session_string");
-              throw new Error("Invalid session");
+              setIsAuthenticated(false);
+              setSessionString(null);
+              setError("Session expired. Please reconnect to Telegram.");
             }
           } catch (sessionError) {
             console.log("Failed to restore session:", sessionError);
             localStorage.removeItem("telegram_session_string");
+            setIsAuthenticated(false);
+            setSessionString(null);
+            setError(
+              "Failed to restore session. Please reconnect to Telegram."
+            );
           }
+        } else {
+          // No saved session, user needs to authenticate
+          setIsAuthenticated(false);
+          setSessionString(null);
         }
       } catch (error) {
         console.error("Error during session restoration:", error);
+        setIsAuthenticated(false);
+        setSessionString(null);
+        setError(
+          "Error during session restoration. Please reconnect to Telegram."
+        );
       } finally {
         setIsRestoring(false);
       }
@@ -217,6 +236,32 @@ const TelegramClient: React.FC = () => {
 
   return (
     <>
+      <div className="flex items-center justify-between p-4 border-b bg-background">
+        <div className="flex items-center space-x-2">
+          <h1 className="text-lg font-semibold">Telegram</h1>
+          {error && <span className="text-sm text-destructive">({error})</span>}
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsSettingsOpen(true)}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Настройки
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSessionExpired}
+            className="text-destructive hover:text-destructive"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Выйти
+          </Button>
+        </div>
+      </div>
+
       <ResizablePanelGroup direction="horizontal" className="h-full">
         <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
           <ChatList
@@ -265,7 +310,7 @@ const TelegramClient: React.FC = () => {
         </ResizablePanel>
       </ResizablePanelGroup>
 
-      <Settings
+      <SettingsComponent
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
       />

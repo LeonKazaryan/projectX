@@ -208,17 +208,19 @@ async def suggest_response(
 """
 
         # Get suggestion from AI service
-        suggestion = await ai_service.process_request(
+        suggestion_result = await ai_service.process_chat_query(
             user_id=current_user.id,
+            session_id=request.session_id,
             chat_id=request.chat_id,
+            source=request.source,
+            chat_name=request.chat_name,
             query=prompt,
-            context_messages=[],  # Using embedded context in prompt
-            source=request.source
+            context_messages=[]  # Using embedded context in prompt
         )
         
         return SuggestionResponse(
             success=True,
-            suggestion=suggestion.strip()
+            suggestion=suggestion_result["response"].strip()
         )
         
     except Exception as e:

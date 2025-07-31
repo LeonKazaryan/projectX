@@ -104,8 +104,8 @@ class PlatformSession(Base, TimestampMixin):
     
     # Use UUID for PostgreSQL, String for SQLite
     if IS_LOCAL:
-        id = Column(String(36), primary_key=True, default=generate_uuid)
-        user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     else:
         from sqlalchemy.dialects.postgresql import UUID as PGUUID
         id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -209,15 +209,15 @@ async def create_user_async(db: AsyncSession, user_data: dict) -> User:
     """Create a new user (async)"""
     try:
         print(f"🔧 Creating user with data: {user_data.get('username', 'unknown')}")
-        user = User(**user_data)
+    user = User(**user_data)
         print(f"🔧 User object created: {user.id}")
-        db.add(user)
+    db.add(user)
         print(f"🔧 User added to session")
         await db.commit()
         print(f"🔧 Database commit successful")
         await db.refresh(user)
         print(f"🔧 User refreshed from database: {user.id}")
-        return user
+    return user
     except Exception as e:
         print(f"❌ Error creating user: {e}")
         print(f"❌ Error type: {type(e)}")
