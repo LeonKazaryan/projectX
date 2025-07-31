@@ -147,8 +147,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                             pass
                 except asyncio.TimeoutError:
                     # No message received in 30 seconds, send heartbeat
-                await websocket.send_text('{"type": "ping"}')
-                ws_monitor.log_message_sent(session_id, "ping", True)
+                    await websocket.send_text('{"type": "ping"}')
+                    ws_monitor.log_message_sent(session_id, "ping", True)
                     
             except Exception as e:
                 ws_monitor.log_connection(session_id, "HEARTBEAT_FAILED", f"Connection error: {str(e)}")
@@ -161,8 +161,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     finally:
         # Cleanup in all cases
         try:
-        await telegram_manager.remove_websocket_connection(session_id, websocket)
-        ws_monitor.cleanup_session(session_id)
+            await telegram_manager.remove_websocket_connection(session_id, websocket)
+            ws_monitor.cleanup_session(session_id)
         except Exception as cleanup_error:
             print(f"Error during WebSocket cleanup: {cleanup_error}")
 
