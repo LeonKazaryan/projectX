@@ -535,3 +535,7 @@
 
 - Nginx whatsapp fix
 - Telegram API ID fix
+
+## 0.9.4d
+
+- Logging
