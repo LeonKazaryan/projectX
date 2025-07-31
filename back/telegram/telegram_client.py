@@ -13,11 +13,20 @@ class TelegramClientManager:
     def __init__(self):
         self.active_clients: Dict[str, TelegramClient] = {}
         self.websockets: Dict[str, List[any]] = {}  # Changed to support multiple connections per session
-        self.api_id = int(os.getenv('TELEGRAM_API_ID', ''))
+        self.api_id_str = os.getenv('TELEGRAM_API_ID', '')
         self.api_hash = os.getenv('TELEGRAM_API_HASH', '')
-        
-        if not self.api_id or not self.api_hash:
+
+        if not self.api_id_str or not self.api_hash:
+            print("❌ FATAL: TELEGRAM_API_ID and TELEGRAM_API_HASH must be set in environment variables")
             raise ValueError("TELEGRAM_API_ID and TELEGRAM_API_HASH must be set in environment variables")
+
+        try:
+            self.api_id = int(self.api_id_str)
+        except (ValueError, TypeError):
+            print(f"❌ FATAL: Invalid TELEGRAM_API_ID: '{self.api_id_str}'. Must be an integer.")
+            raise ValueError("Invalid TELEGRAM_API_ID. Must be an integer.")
+
+        print(f"✅ Telegram API credentials loaded: ID ends with ...{self.api_id_str[-4:]}, HASH ends with ...{self.api_hash[-4:]}")
     
     async def create_client(self, session_string: str = "") -> TelegramClient:
         """Создать новый Telegram клиент"""

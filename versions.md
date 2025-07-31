@@ -530,3 +530,8 @@
 # 0.9.4
 
 - WhatsApp fixes
+
+## 0.9.4a
+
+- Nginx whatsapp fix
+- Telegram API ID fix
