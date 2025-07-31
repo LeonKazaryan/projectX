@@ -7,9 +7,11 @@ import type {
 import { io, Socket } from "socket.io-client";
 import authService from "../services/authService";
 
-// Use environment variable or default to localhost
-const WHATSAPP_API_URL =
-  (import.meta as any).env?.VITE_WHATSAPP_API_URL || "http://localhost:3000";
+// Use environment variable for production, otherwise default to localhost
+// @ts-ignore
+const WHATSAPP_API_URL = import.meta.env.PROD
+  ? "https://chathut.net"
+  : "http://localhost:3000";
 
 export class WhatsAppProvider implements IMessagingProvider {
   private isConnectedState: boolean = false;

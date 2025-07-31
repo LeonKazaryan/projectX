@@ -17,6 +17,11 @@ interface WhatsAppAuthProps {
   onAuthError: (error: string) => void;
 }
 
+// @ts-ignore
+const WHATSAPP_API_URL = import.meta.env.PROD
+  ? "https://chathut.net"
+  : "http://localhost:3000";
+
 const WhatsAppAuth: React.FC<WhatsAppAuthProps> = ({
   onAuthSuccess,
   // onAuthError, // Unused parameter
@@ -108,7 +113,7 @@ const WhatsAppAuth: React.FC<WhatsAppAuthProps> = ({
       }
 
       // Request QR code from WhatsApp service
-      const response = await fetch("http://localhost:3000/whatsapp/connect", {
+      const response = await fetch(`${WHATSAPP_API_URL}/whatsapp/connect`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -169,7 +174,7 @@ const WhatsAppAuth: React.FC<WhatsAppAuthProps> = ({
       socket.disconnect();
     }
 
-    const newSocket = io("http://localhost:3000", {
+    const newSocket = io(WHATSAPP_API_URL, {
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 5,

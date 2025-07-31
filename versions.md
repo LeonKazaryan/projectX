@@ -526,3 +526,7 @@
 
 - Session Restoration logic fix
 - UI Improvement
+
+# 0.9.4
+
+- WhatsApp fixes

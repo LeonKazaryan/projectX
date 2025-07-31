@@ -40,6 +40,8 @@ class TelegramClientManager:
             # Отправить код
             print(f"🔐 [TELEGRAM] Sending code request to phone: {phone}")
             code_request = await client.send_code_request(phone)
+            # Log the full response from Telegram for debugging
+            print(f"🔐 [TELEGRAM] Full response from Telegram: {code_request.to_json()}")
             print(f"🔐 [TELEGRAM] Code request successful! Hash: {code_request.phone_code_hash[:10]}...")
             
             # Сохранить клиент временно
