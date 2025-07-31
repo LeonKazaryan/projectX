@@ -16,6 +16,10 @@ load_dotenv()
 # Use SQLite for development, PostgreSQL for production
 IS_LOCAL = os.getenv("ENV") == "development" or not os.getenv("DATABASE_URL")
 
+print(f"🔧 ENV variable: '{os.getenv('ENV')}'")
+print(f"🔧 DATABASE_URL exists: {bool(os.getenv('DATABASE_URL'))}")
+print(f"🔧 IS_LOCAL determined as: {IS_LOCAL}")
+
 if IS_LOCAL:
     # SQLite for local development - in back folder
     DATABASE_URL = "sqlite:///./chathut_dev.db"
@@ -23,31 +27,57 @@ if IS_LOCAL:
 else:
     # PostgreSQL for production
     DATABASE_URL = os.getenv("DATABASE_URL")
+    print(f"🔧 Raw DATABASE_URL: {DATABASE_URL}")
+    
     if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        print(f"🔧 Fixed DATABASE_URL: {DATABASE_URL}")
     
     # Use asyncpg for async PostgreSQL connections
-    ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if DATABASE_URL:
+        ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+        print(f"🔧 ASYNC_DATABASE_URL: {ASYNC_DATABASE_URL}")
+    else:
+        print("🚨 ERROR: DATABASE_URL is None!")
+        ASYNC_DATABASE_URL = None
     
     # Ensure SSL is required for production database connections
-    if "ondigitalocean.com" in DATABASE_URL:
+    if DATABASE_URL and "ondigitalocean.com" in DATABASE_URL:
         ASYNC_DATABASE_URL = f"{ASYNC_DATABASE_URL}?ssl=require"
+        print(f"🔧 ASYNC_DATABASE_URL with SSL: {ASYNC_DATABASE_URL}")
 
 # SQLAlchemy engines
+print(f"🔧 Database Config - IS_LOCAL: {IS_LOCAL}")
+print(f"🔧 DATABASE_URL: {DATABASE_URL[:50]}...")
+print(f"🔧 ASYNC_DATABASE_URL: {ASYNC_DATABASE_URL[:50]}...")
+
 if IS_LOCAL:
     # Use sync SQLite for local development
     async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=False)
     sync_engine = create_engine(DATABASE_URL, echo=False)
+    print("🔧 Created SQLite engines (local)")
 else:
     # Use async engine for production
-    async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=False)
-    sync_engine = create_engine(DATABASE_URL, echo=False)
+    if not DATABASE_URL or not ASYNC_DATABASE_URL:
+        raise ValueError("🚨 DATABASE_URL and ASYNC_DATABASE_URL must be set for production!")
+    
+    try:
+        async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=False)
+        sync_engine = create_engine(DATABASE_URL, echo=False)
+        print("🔧 Created PostgreSQL engines (production)")
+    except Exception as e:
+        print(f"🚨 Error creating database engines: {e}")
+        raise
 
 # Session makers
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
 AsyncSessionLocal = async_sessionmaker(
     async_engine, class_=AsyncSession, expire_on_commit=False
 )
+
+print(f"🔧 sync_engine type: {type(sync_engine)}")
+print(f"🔧 async_engine type: {type(async_engine)}")
+print(f"🔧 AsyncSessionLocal type: {type(AsyncSessionLocal)}")
 
 # Database instance for direct queries
 database = Database(ASYNC_DATABASE_URL)
