@@ -45,7 +45,7 @@ else:
 
 # Session makers
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
-    AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
+AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
 # Database instance for direct queries
 database = Database(ASYNC_DATABASE_URL)
@@ -62,11 +62,11 @@ def get_db() -> Session:
 
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency to get async database session"""
-        async with AsyncSessionLocal() as session:
-            try:
-                yield session
-            finally:
-                await session.close()
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
 
 
 async def connect_database():
