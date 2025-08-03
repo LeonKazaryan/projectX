@@ -236,32 +236,6 @@ const TelegramClient: React.FC = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between p-4 border-b bg-background">
-        <div className="flex items-center space-x-2">
-          <h1 className="text-lg font-semibold">Telegram</h1>
-          {error && <span className="text-sm text-destructive">({error})</span>}
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsSettingsOpen(true)}
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Настройки
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSessionExpired}
-            className="text-destructive hover:text-destructive"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Выйти
-          </Button>
-        </div>
-      </div>
-
       <ResizablePanelGroup direction="horizontal" className="h-full">
         <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
           <ChatList

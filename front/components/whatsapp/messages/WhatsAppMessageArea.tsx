@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, ChevronDown, Sparkles, Loader2 } from "lucide-react";
+import {
+  Send,
+  ChevronDown,
+  Sparkles,
+  Loader2,
+  RotateCcw,
+  Trash2,
+  Clock,
+} from "lucide-react";
 import {
   getMessages,
   // saveMessage, // Unused import
@@ -8,6 +16,7 @@ import {
 } from "../../utils/localMessageStore";
 import { useMessagingStore } from "../../messaging/MessagingStore";
 import type { Message } from "../../messaging/types";
+import { API_BASE_URL } from "../../services/authService";
 
 interface WhatsAppMessageAreaProps {
   chatId: string;
@@ -32,6 +41,12 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [_oldestMessageId, setOldestMessageId] = useState<string>("");
+
+  // AI Suggestions state
+  const [aiSuggestion, setAiSuggestion] = useState<string>("");
+  const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
+  const [showAiSuggestion, setShowAiSuggestion] = useState(false);
+  const [dismissedSuggestion, setDismissedSuggestion] = useState<string>("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -147,6 +162,33 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
+    // AI Suggestion keyboard shortcuts - handle first to prevent browser defaults
+    if (e.key === "Tab" && showAiSuggestion) {
+      e.preventDefault();
+      e.stopPropagation();
+      useAISuggestion();
+      return;
+    }
+    if (e.key === "Escape" && showAiSuggestion) {
+      e.preventDefault();
+      e.stopPropagation();
+      dismissAISuggestion();
+      return;
+    }
+    if (e.key === "F1") {
+      e.preventDefault();
+      e.stopPropagation();
+      generateAISuggestion();
+      return;
+    }
+    if (e.ctrlKey && e.key === " ") {
+      e.preventDefault();
+      e.stopPropagation();
+      generateAISuggestion();
+      return;
+    }
+
+    // Message sending
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -273,8 +315,202 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
     return phoneNumber;
   };
 
+  // AI Suggestion functions
+  const generateAISuggestion = async () => {
+    // Multiple safeguards to prevent infinite loops
+    if (aiSuggestionLoading || messages.length === 0) {
+      console.log("🤖 AI suggestion skipped: loading or no messages");
+      return;
+    }
+
+    // Allow regeneration even if suggestion is showing
+    // This enables users to get new suggestions
+
+    setAiSuggestionLoading(true);
+    setAiSuggestion("");
+
+    try {
+      const historyForAgent = messages.slice(-15);
+
+      // Check if we have any messages to work with
+      if (historyForAgent.length === 0) {
+        console.log("🤖 AI suggestion skipped: no messages");
+        return;
+      }
+
+      const token = localStorage.getItem("chathut_access_token");
+
+      const response = await fetch(`${API_BASE_URL}/ai/suggest-response`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          session_id: "whatsapp", // WhatsApp doesn't use session_id like Telegram
+          chat_id: chatId,
+          source: "whatsapp",
+          chat_name: chatName,
+          recent_messages: messages.slice(-15).map((msg) => ({
+            id: msg.id,
+            text: msg.text,
+            isOutgoing: msg.isOutgoing,
+            from: msg.from || (msg.isOutgoing ? "You" : "Contact"),
+            timestamp: msg.timestamp,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.suggestion) {
+        setAiSuggestion(data.suggestion);
+        setShowAiSuggestion(true);
+        setDismissedSuggestion("");
+        console.log(
+          "🤖 AI suggestion generated successfully:",
+          data.suggestion
+        );
+      } else {
+        throw new Error(data.error || "Failed to generate suggestion");
+      }
+    } catch (error) {
+      console.error("Error generating AI suggestion:", error);
+
+      // Don't show error suggestion to avoid infinite loops
+      setAiSuggestion("");
+      setShowAiSuggestion(false);
+      setDismissedSuggestion("");
+    } finally {
+      setAiSuggestionLoading(false);
+    }
+  };
+
+  const useAISuggestion = () => {
+    if (aiSuggestion) {
+      setNewMessage(aiSuggestion);
+      setShowAiSuggestion(false);
+      setDismissedSuggestion(aiSuggestion);
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }
+  };
+
+  const dismissAISuggestion = () => {
+    setDismissedSuggestion(aiSuggestion);
+    setShowAiSuggestion(false);
+  };
+
+  const restoreAISuggestion = () => {
+    if (dismissedSuggestion) {
+      setAiSuggestion(dismissedSuggestion);
+      setShowAiSuggestion(true);
+      setDismissedSuggestion("");
+    }
+  };
+
+  const regenerateAISuggestion = () => {
+    generateAISuggestion();
+  };
+
+  // Auto-generate suggestion when new messages arrive
+  useEffect(() => {
+    if (
+      messages.length > 0 &&
+      !aiSuggestionLoading &&
+      !showAiSuggestion &&
+      !dismissedSuggestion
+    ) {
+      const lastMessage = messages[messages.length - 1];
+      if (!lastMessage.isOutgoing) {
+        // Small delay to avoid spam
+        const timer = setTimeout(() => {
+          generateAISuggestion();
+        }, 3000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [messages, aiSuggestionLoading, showAiSuggestion, dismissedSuggestion]);
+
+  // Global keyboard shortcuts for AI suggestions
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Only handle if not in input field
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      // AI Suggestion keyboard shortcuts
+      if (e.key === "Tab" && showAiSuggestion) {
+        e.preventDefault();
+        e.stopPropagation();
+        useAISuggestion();
+        return;
+      }
+      if (e.key === "Escape" && showAiSuggestion) {
+        e.preventDefault();
+        e.stopPropagation();
+        dismissAISuggestion();
+        return;
+      }
+      if (e.key === "F1") {
+        e.preventDefault();
+        e.stopPropagation();
+        generateAISuggestion();
+        return;
+      }
+      if (e.ctrlKey && e.key === " ") {
+        e.preventDefault();
+        e.stopPropagation();
+        generateAISuggestion();
+        return;
+      }
+    };
+
+    document.addEventListener("keydown", handleGlobalKeyDown);
+    return () => document.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [showAiSuggestion, aiSuggestionLoading]);
+
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-green-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div
+      className="flex flex-col h-full bg-gradient-to-br from-green-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900"
+      onKeyDown={(e) => {
+        // Handle AI suggestion keys at component level
+        if (e.key === "Tab" && showAiSuggestion) {
+          e.preventDefault();
+          e.stopPropagation();
+          useAISuggestion();
+          return;
+        }
+        if (e.key === "Escape" && showAiSuggestion) {
+          e.preventDefault();
+          e.stopPropagation();
+          dismissAISuggestion();
+          return;
+        }
+        if (e.key === "F1") {
+          e.preventDefault();
+          e.stopPropagation();
+          generateAISuggestion();
+          return;
+        }
+        if (e.ctrlKey && e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+          generateAISuggestion();
+          return;
+        }
+      }}
+      tabIndex={-1} // Make div focusable for keyboard events
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-green-200/60 dark:border-green-800/40 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
         <div className="flex items-center space-x-3">
@@ -383,15 +619,100 @@ const WhatsAppMessageArea: React.FC<WhatsAppMessageAreaProps> = ({
         )}
       </AnimatePresence>
 
+      {/* AI Suggestion */}
+      {showAiSuggestion && (
+        <div className="px-4 py-2 border-t border-green-200/60 dark:border-green-800/40">
+          <div className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                    ⚡ AI предлагает ответ:
+                  </span>
+                </div>
+                <p className="text-sm text-orange-900 dark:text-orange-100 mb-2">
+                  {aiSuggestion}
+                </p>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="bg-orange-100 dark:bg-orange-800/30 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded">
+                    Tab - использовать
+                  </span>
+                  <span className="bg-orange-100 dark:bg-orange-800/30 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded">
+                    Esc - скрыть
+                  </span>
+                  <span className="bg-orange-100 dark:bg-orange-800/30 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded">
+                    F1/Ctrl+Space - обновить
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={regenerateAISuggestion}
+                  className="text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-800/30 p-1 rounded"
+                  disabled={aiSuggestionLoading}
+                >
+                  <RotateCcw className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={dismissAISuggestion}
+                  className="text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-800/30 p-1 rounded"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={useAISuggestion}
+                  className="text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-800/30 px-2 py-1 rounded text-xs font-medium"
+                >
+                  Использовать
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Loading */}
+      {aiSuggestionLoading && (
+        <div className="px-4 py-2 border-t border-green-200/60 dark:border-green-800/40">
+          <div className="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 animate-pulse text-gray-600 dark:text-gray-400" />
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                AI анализирует переписку...
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Input Area */}
       <div className="p-4 border-t border-green-200/60 dark:border-green-800/40 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-        <div className="flex items-end space-x-3">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={
+              dismissedSuggestion ? restoreAISuggestion : generateAISuggestion
+            }
+            disabled={aiSuggestionLoading}
+            className="flex-shrink-0 w-11 h-11 rounded-lg border border-orange-200 dark:border-orange-800 bg-white/60 dark:bg-gray-900/60 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30 shadow-md transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            title={
+              dismissedSuggestion
+                ? "Показать предложение AI"
+                : "Получить предложение AI"
+            }
+          >
+            {aiSuggestionLoading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Sparkles size={16} />
+            )}
+          </button>
           <div className="flex-1 relative">
             <textarea
               ref={textareaRef}
               value={newMessage}
               onChange={handleTextareaChange}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               placeholder="Написать сообщение..."
               className="w-full px-4 py-3 pr-12 bg-white/80 dark:bg-gray-700/80 border border-green-200/60 dark:border-green-800/40 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-green-400/50 focus:border-green-400 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-300"
               style={{ minHeight: "44px", maxHeight: "120px" }}

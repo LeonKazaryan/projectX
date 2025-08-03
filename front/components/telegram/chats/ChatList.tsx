@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ScrollArea } from "../../../src/components/ui/scroll-area";
 import { Button } from "../../../src/components/ui/button";
 import { Badge } from "../../../src/components/ui/badge";
 import {
@@ -316,7 +315,7 @@ const ChatList: React.FC<ChatListProps & { onSessionExpired?: () => void }> = ({
   }
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-blue-50/60 via-white/80 to-purple-100/60 dark:from-gray-900/80 dark:via-gray-900/90 dark:to-blue-950/80 border-r backdrop-blur-md transition-colors duration-500">
+    <div className="flex flex-col h-full min-w-0 bg-gradient-to-br from-blue-50/60 via-white/80 to-purple-100/60 dark:from-gray-900/80 dark:via-gray-900/90 dark:to-blue-950/80 border-r backdrop-blur-md transition-colors duration-500">
       <div className="p-4 border-b bg-white/70 dark:bg-gray-900/70 backdrop-blur-md">
         <h2 className="text-xl font-semibold tracking-tight text-blue-600 dark:text-blue-300">
           Чаты
@@ -331,75 +330,73 @@ const ChatList: React.FC<ChatListProps & { onSessionExpired?: () => void }> = ({
           />
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto">
-        <ScrollArea className="h-full">
-          <div className="p-2 space-y-1">
-            <AnimatePresence initial={false}>
-              {loading ? (
+      <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <div className="p-2 space-y-1">
+          <AnimatePresence initial={false}>
+            {loading ? (
+              <motion.div
+                key="loader"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex justify-center items-center h-full p-8"
+              >
+                <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+              </motion.div>
+            ) : (
+              filteredDialogs.map((dialog) => (
                 <motion.div
-                  key="loader"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex justify-center items-center h-full p-8"
+                  key={dialog.id}
+                  initial={{ opacity: 0, x: -30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -30 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 >
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
-                </motion.div>
-              ) : (
-                filteredDialogs.map((dialog) => (
-                  <motion.div
-                    key={dialog.id}
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -30 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  <div
+                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group shadow-sm hover:bg-blue-100/60 dark:hover:bg-blue-900/30 ${
+                      selectedChatId === dialog.id
+                        ? "bg-blue-200/80 dark:bg-blue-900/60 border border-blue-400/40"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      onChatSelect(
+                        dialog.id,
+                        dialog.name,
+                        dialog.is_group,
+                        dialog.is_channel
+                      )
+                    }
                   >
-                    <div
-                      className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group shadow-sm hover:bg-blue-100/60 dark:hover:bg-blue-900/30 ${
-                        selectedChatId === dialog.id
-                          ? "bg-blue-200/80 dark:bg-blue-900/60 border border-blue-400/40"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        onChatSelect(
-                          dialog.id,
-                          dialog.name,
-                          dialog.is_group,
-                          dialog.is_channel
-                        )
-                      }
-                    >
-                      <Avatar className="h-10 w-10 shadow-md">
-                        {dialog.photo ? (
-                          <AvatarImage src={dialog.photo} alt={dialog.name} />
-                        ) : (
-                          <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-400 text-white font-bold">
-                            {dialog.name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-blue-900 dark:text-blue-200 truncate">
-                            {dialog.name}
-                          </span>
-                          {dialog.unread_count > 0 && (
-                            <Badge className="ml-2 bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs animate-pulse">
-                              {dialog.unread_count}
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {dialog.last_message?.text}
+                    <Avatar className="h-10 w-10 shadow-md">
+                      {dialog.photo ? (
+                        <AvatarImage src={dialog.photo} alt={dialog.name} />
+                      ) : (
+                        <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-400 text-white font-bold">
+                          {dialog.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-blue-900 dark:text-blue-200 truncate">
+                          {dialog.name}
                         </span>
+                        {dialog.unread_count > 0 && (
+                          <Badge className="ml-2 bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs animate-pulse">
+                            {dialog.unread_count}
+                          </Badge>
+                        )}
                       </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {dialog.last_message?.text}
+                      </span>
                     </div>
-                  </motion.div>
-                ))
-              )}
-            </AnimatePresence>
-          </div>
-        </ScrollArea>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );

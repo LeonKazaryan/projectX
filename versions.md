@@ -539,3 +539,9 @@
 ## 0.9.4d
 
 - Logging
+
+## 0.9.5
+
+- AI Suggestions fix
+- UI/UX fixed in Whatsapp And Telegram
+- Fix of scrollbars

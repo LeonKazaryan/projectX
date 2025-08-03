@@ -21,10 +21,10 @@ const AppLayout = () => {
   }, []);
   const location = useLocation();
   const noNavRoutes = ["/", "/home", "/profile", "/security"];
-  const mainClass =
-    location.pathname === "/profile"
-      ? "flex-grow"
-      : "flex-grow overflow-y-auto";
+  const noOverflowRoutes = ["/profile"];
+  const mainClass = noOverflowRoutes.includes(location.pathname)
+    ? "flex-grow"
+    : "flex-grow overflow-y-auto";
 
   const handleSettingsClick = () => {
     console.log("Settings clicked");

@@ -4,7 +4,6 @@ import type { Chat } from "../../messaging/types";
 import { Badge } from "../../../src/components/ui/badge";
 import { Button } from "../../../src/components/ui/button";
 import { Input } from "../../../src/components/ui/input";
-import { ScrollArea } from "../../../src/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "../../../src/components/ui/avatar";
 import { MessageCircle, Search, Loader2, RotateCcw } from "lucide-react";
 import { cn } from "../../../src/lib/utils";
@@ -140,92 +139,88 @@ const WhatsAppChatList: React.FC<WhatsAppChatListProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <ScrollArea className="h-full">
-          <div className="p-2 space-y-1">
-            {isLoading ? (
-              <div className="flex justify-center items-center h-full p-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : filteredChats.length === 0 && searchTerm ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                <Search className="mx-auto h-6 w-6 mb-2 opacity-50" />
-                <p>Чаты не найдены</p>
-                <p className="text-xs">Попробуйте другой поисковый запрос</p>
-              </div>
-            ) : filteredChats.length === 0 && !searchTerm ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                <MessageCircle className="mx-auto h-6 w-6 mb-2 opacity-50" />
-                <p>Нет чатов</p>
-                <p className="text-xs">Начните общение в WhatsApp</p>
-              </div>
-            ) : (
-              filteredChats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={() => onChatSelect(chat)}
-                  className={cn(
-                    "flex items-start w-full text-left p-2 rounded-lg transition-colors",
-                    selectedChatId === chat.id
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted"
-                  )}
-                >
-                  <Avatar className="h-10 w-10 mr-3">
-                    <AvatarFallback
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="p-2 space-y-1">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-full p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filteredChats.length === 0 && searchTerm ? (
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              <Search className="mx-auto h-6 w-6 mb-2 opacity-50" />
+              <p>Чаты не найдены</p>
+              <p className="text-xs">Попробуйте другой поисковый запрос</p>
+            </div>
+          ) : filteredChats.length === 0 && !searchTerm ? (
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              <MessageCircle className="mx-auto h-6 w-6 mb-2 opacity-50" />
+              <p>Нет чатов</p>
+              <p className="text-xs">Начните общение в WhatsApp</p>
+            </div>
+          ) : (
+            filteredChats.map((chat) => (
+              <button
+                key={chat.id}
+                onClick={() => onChatSelect(chat)}
+                className={cn(
+                  "flex items-start w-full text-left p-2 rounded-lg transition-colors",
+                  selectedChatId === chat.id
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted"
+                )}
+              >
+                <Avatar className="h-10 w-10 mr-3">
+                  <AvatarFallback
+                    className={cn(
+                      "text-sm bg-green-100 dark:bg-green-900 text-green-600",
+                      selectedChatId === chat.id &&
+                        "bg-primary-foreground text-primary"
+                    )}
+                  >
+                    {chat.title.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 overflow-hidden">
+                  <div className="flex justify-between items-center">
+                    <p className="font-semibold truncate pr-2">{chat.title}</p>
+                    <time
                       className={cn(
-                        "text-sm bg-green-100 dark:bg-green-900 text-green-600",
-                        selectedChatId === chat.id &&
-                          "bg-primary-foreground text-primary"
+                        "text-xs",
+                        selectedChatId === chat.id
+                          ? "text-primary-foreground/80"
+                          : "text-muted-foreground"
                       )}
                     >
-                      {chat.title.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 overflow-hidden">
-                    <div className="flex justify-between items-center">
-                      <p className="font-semibold truncate pr-2">
-                        {chat.title}
-                      </p>
-                      <time
-                        className={cn(
-                          "text-xs",
-                          selectedChatId === chat.id
-                            ? "text-primary-foreground/80"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {formatTime(chat.lastMessage?.date || null)}
-                      </time>
-                    </div>
-                    <div className="flex justify-between items-end">
-                      <p
-                        className={cn(
-                          "text-sm truncate pr-2",
-                          selectedChatId === chat.id
-                            ? "text-primary-foreground/90"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {chat.lastMessage?.text || "Нет сообщений"}
-                      </p>
-                      {chat.unreadCount > 0 && (
-                        <Badge
-                          variant={
-                            selectedChatId === chat.id ? "secondary" : "default"
-                          }
-                          className="h-5 px-1.5 text-xs"
-                        >
-                          {chat.unreadCount}
-                        </Badge>
-                      )}
-                    </div>
+                      {formatTime(chat.lastMessage?.date || null)}
+                    </time>
                   </div>
-                </button>
-              ))
-            )}
-          </div>
-        </ScrollArea>
+                  <div className="flex justify-between items-end">
+                    <p
+                      className={cn(
+                        "text-sm truncate pr-2",
+                        selectedChatId === chat.id
+                          ? "text-primary-foreground/90"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      {chat.lastMessage?.text || "Нет сообщений"}
+                    </p>
+                    {chat.unreadCount > 0 && (
+                      <Badge
+                        variant={
+                          selectedChatId === chat.id ? "secondary" : "default"
+                        }
+                        className="h-5 px-1.5 text-xs"
+                      >
+                        {chat.unreadCount}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
